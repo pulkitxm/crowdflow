@@ -7,7 +7,7 @@ export function CircuitPicker() {
   const active = CIRCUIT_SPECS.find((c) => c.id === circuitId) ?? CIRCUIT_SPECS[0]!;
 
   return (
-    <label className="relative flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5">
+    <label className="relative flex min-w-0 items-center gap-2 rounded-md border border-border bg-secondary px-2 py-1.5 sm:px-3">
       <span aria-hidden className="text-base leading-none">
         {active.flag}
       </span>
@@ -15,7 +15,7 @@ export function CircuitPicker() {
       <select
         value={circuitId}
         onChange={(e) => simActions.setCircuit(e.target.value)}
-        className="appearance-none bg-transparent pr-5 font-mono text-xs uppercase tracking-widest text-foreground outline-none"
+        className="w-[7.5rem] appearance-none truncate bg-transparent pr-5 font-mono text-[11px] uppercase tracking-widest text-foreground outline-none sm:w-auto sm:text-xs"
       >
         {CIRCUIT_SPECS.map((c) => (
           <option key={c.id} value={c.id} className="bg-background text-foreground">

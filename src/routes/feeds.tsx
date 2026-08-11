@@ -42,7 +42,7 @@ function FeedsPage() {
         subtitle="Everything the model sees. Counts are fused across cameras, Wi-Fi probes, ticket scans and walkway LiDAR — when a device drops out, confidence in that area falls and the model leans on its neighbours."
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Devices" value={String(summary.total)} />
         <Stat label="Online" value={String(summary.online)} tone="ok" />
         <Stat
@@ -74,12 +74,12 @@ function FeedsPage() {
         })}
       </div>
 
-      <div className="panel p-4">
+      <div className="panel p-3 sm:p-4">
         <div className="label-xs mb-3">
           {kind === "all" ? "All devices" : FEED_META[kind].label} · {shown.length}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs">
+          <table className="w-full min-w-[36rem] text-left font-mono text-xs">
             <thead className="text-muted-foreground">
               <tr>
                 <th className="py-2">Device</th>

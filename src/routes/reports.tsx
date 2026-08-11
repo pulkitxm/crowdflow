@@ -86,7 +86,7 @@ function ReportsPage() {
         right={<Button onClick={exportCsv}>Export CSV</Button>}
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Peak inside" value={Math.round(peakInside).toLocaleString()} hint={circuit.name} />
         <Stat label="Peak gate queue" value={Math.round(peakQueue).toLocaleString()} tone="warning" />
         <Stat label="Minutes in stress" value={String(riskyMinutes)} hint="queues above 3% of crowd" />
@@ -98,7 +98,7 @@ function ReportsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="panel p-4">
+        <div className="panel p-3 sm:p-4">
           <div className="label-xs mb-3">Occupancy timeline</div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +125,7 @@ function ReportsPage() {
           )}
         </div>
 
-        <div className="panel p-4">
+        <div className="panel p-3 sm:p-4">
           <div className="label-xs mb-3">Forecast peak density by zone (next 30 min)</div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -147,10 +147,10 @@ function ReportsPage() {
         </div>
       </div>
 
-      <div className="panel mt-4 p-4">
+      <div className="panel mt-4 p-3 sm:p-4">
         <div className="label-xs mb-3">Zone summary</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs">
+          <table className="w-full min-w-[36rem] text-left font-mono text-xs">
             <thead className="text-muted-foreground">
               <tr>
                 <th className="py-2">Zone</th>

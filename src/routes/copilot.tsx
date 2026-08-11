@@ -53,7 +53,7 @@ function CopilotPage() {
         subtitle="Plain-language answers grounded in the live simulation — no dashboard hunting during an incident."
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Questions asked" value={String(turns.length)} hint="this session" />
         <Stat label="Model clock" value={clockLabel(state.t)} />
         <Stat label="Rerouting" value={params.reroutingEnabled ? "ON" : "OFF"} tone={params.reroutingEnabled ? "ok" : "warning"} />
@@ -65,7 +65,7 @@ function CopilotPage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -95,14 +95,14 @@ function CopilotPage() {
           </div>
 
           {turns.length === 0 && (
-            <div className="panel p-6 text-sm text-muted-foreground">
+            <div className="panel p-4 sm:p-6 text-sm text-muted-foreground">
               Ask anything about the current crowd picture. Every answer is computed from the running
               simulation, so it changes minute by minute.
             </div>
           )}
 
           {turns.map((t, i) => (
-            <div key={`${t.at}-${i}`} className="panel p-4">
+            <div key={`${t.at}-${i}`} className="panel p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <span className="font-display text-sm">{t.q}</span>
                 <span className="ml-auto font-mono text-[11px] text-muted-foreground">
@@ -127,7 +127,7 @@ function CopilotPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-2">Auto shift briefing</div>
             <p className="text-sm leading-relaxed">{briefing(state, params)}</p>
             <Button
@@ -139,7 +139,7 @@ function CopilotPage() {
               Copy briefing
             </Button>
           </div>
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-2">How it works</div>
             <p className="text-xs leading-relaxed text-muted-foreground">
               The copilot reads the same state the map renders: per-zone density, walkway flow, gate

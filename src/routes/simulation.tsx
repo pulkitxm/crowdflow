@@ -166,7 +166,7 @@ function SimulationPage() {
             />
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Jump to a moment in the day</div>
             <div className="flex flex-wrap gap-2">
               {EVENT_SCHEDULE.map((e) => (
@@ -183,7 +183,7 @@ function SimulationPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Full race day · peak zone density (%)</div>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -202,7 +202,7 @@ function SimulationPage() {
             </div>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Gate queues across the day (people waiting)</div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -218,7 +218,7 @@ function SimulationPage() {
             </div>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Next 60 minutes · forecast density by zone (%)</div>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -243,7 +243,7 @@ function SimulationPage() {
 
           <CircuitMap state={state} params={params} showFacilities={false} />
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Bottlenecks in the current simulation state</div>
             <ul className="grid gap-2 sm:grid-cols-2">
               {detectBottlenecks(state, params)

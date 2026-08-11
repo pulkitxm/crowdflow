@@ -64,7 +64,7 @@ function LivePage() {
         <div className="space-y-4">
           <CircuitMap state={state} params={params} selected={selected} onSelect={setSelected} />
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Occupancy vs gate queues</div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -102,7 +102,7 @@ function LivePage() {
 
         <div className="space-y-4">
           {node && (
-            <div className="panel p-4">
+            <div className="panel p-3 sm:p-4">
               <div className="label-xs">Selected</div>
               <h3 className="mt-1 text-xl">{node.name}</h3>
               <dl className="mt-3 space-y-2 font-mono text-xs">
@@ -121,7 +121,7 @@ function LivePage() {
             </div>
           )}
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Live bottlenecks</div>
             {bottlenecks.length === 0 && (
               <p className="font-mono text-xs text-muted-foreground">All zones flowing normally.</p>
@@ -144,7 +144,7 @@ function LivePage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Optimiser recommendations</div>
             <ul className="space-y-2">
               {recs.length === 0 && (
@@ -160,7 +160,7 @@ function LivePage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Event schedule</div>
             <ol className="space-y-2">
               {EVENT_SCHEDULE.map((e) => {

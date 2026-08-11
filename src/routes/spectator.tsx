@@ -131,7 +131,7 @@ function SpectatorPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Simulate an attendee</div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -165,7 +165,7 @@ function SpectatorPage() {
             </div>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Live queue times shown in the app</div>
             <ul className="grid gap-2 sm:grid-cols-2">
               {facilityWaits.map(({ f, wait }) => (
@@ -185,7 +185,7 @@ function SpectatorPage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-2">Why this matters</div>
             <p className="text-xs leading-relaxed text-muted-foreground">
               Signage moves the crowd slowly; phones move it immediately. Every recommendation the

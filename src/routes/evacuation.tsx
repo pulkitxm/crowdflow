@@ -54,7 +54,7 @@ function EvacuationPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="People to move" value={Math.round(plan.totalPeople).toLocaleString()} />
         <Stat
           label="Full clearance"
@@ -76,7 +76,7 @@ function EvacuationPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Incident scenario</div>
             <div className="grid gap-2">
               {SCENARIOS.map((s) => (
@@ -117,7 +117,7 @@ function EvacuationPage() {
             </p>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Exit loading</div>
             <ul className="space-y-3">
               {plan.gateLoads.map((g) => (
@@ -149,10 +149,10 @@ function EvacuationPage() {
           </div>
         </div>
 
-        <div className="panel p-4">
+        <div className="panel p-3 sm:p-4">
           <div className="label-xs mb-3">Zone → exit assignments</div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
+            <table className="w-full min-w-[36rem] text-left font-mono text-xs">
               <thead className="text-muted-foreground">
                 <tr>
                   <th className="py-2">Zone</th>

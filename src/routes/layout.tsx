@@ -48,7 +48,7 @@ function LayoutPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Entry / exit gates" value={String(GATES.length)} hint={`${GATES.reduce((s, g) => s + g.capacity, 0).toLocaleString()} people/hr combined`} />
         <Stat label="Crowd zones" value={String(ZONES.length)} hint="grandstands, concourses, paddock" />
         <Stat label="Walkways" value={String(EDGES.length)} hint={`${closed.length} closed`} tone={closed.length ? "warning" : "default"} />
@@ -59,7 +59,7 @@ function LayoutPage() {
         <CircuitMap state={state} params={params} showFlows={false} />
 
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Walkway network</div>
             <ul className="max-h-[420px] space-y-1 overflow-y-auto pr-1">
               {EDGES.map((e) => {
@@ -90,7 +90,7 @@ function LayoutPage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Entry gates</div>
             <ul className="space-y-1">
               {GATES.map((g) => (
@@ -102,7 +102,7 @@ function LayoutPage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Facilities</div>
             <ul className="grid gap-1 sm:grid-cols-2 xl:grid-cols-1">
               {FACILITIES.map((f) => (
@@ -114,7 +114,7 @@ function LayoutPage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Event schedule (drives crowd intent)</div>
             <ul className="space-y-1">
               {EVENT_SCHEDULE.map((e) => (

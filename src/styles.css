@@ -117,6 +117,15 @@
   }
 }
 
+@layer base {
+  /* Grid and flex children default to min-width:auto, which lets wide tables
+     and charts blow out the page on small screens. */
+  .grid > *,
+  .flex > * {
+    min-width: 0;
+  }
+}
+
 @utility panel {
   background-color: color-mix(in oklab, var(--color-surface) 88%, transparent);
   border: 1px solid var(--color-border);
@@ -130,6 +139,14 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-muted-foreground);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @utility stripe-accent {

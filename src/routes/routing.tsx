@@ -71,7 +71,7 @@ function RoutingPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <Stat label="Shortest route" value={`${direct.minutes.toFixed(1)} min`} hint={`peak congestion ${Math.round(direct.congestion * 100)}%`} />
             <Stat
               label="Optimiser route"
@@ -87,7 +87,7 @@ function RoutingPage() {
             />
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-2">Recommended path</div>
             <ol className="space-y-1 font-mono text-xs">
               {optimised.path.map((id, i) => (
@@ -103,7 +103,7 @@ function RoutingPage() {
             </p>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Best gate for this destination</div>
             <ul className="space-y-2">
               {gateAdvice.slice(0, 5).map(({ gate, optimised: o }) => (

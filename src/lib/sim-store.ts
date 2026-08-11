@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   DEFAULT_PARAMS,
   SIM_END,
@@ -160,9 +160,14 @@ const serverSnapshot: Store = {
 };
 
 export function useSim() {
-  return useSyncExternalStore(
+  const live = useSyncExternalStore(
     subscribe,
     () => store,
     () => serverSnapshot,
   );
+  // Render the deterministic server snapshot for the first client paint so the
+  // markup matches what the server sent, then switch to the live store.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated ? live : serverSnapshot;
 }

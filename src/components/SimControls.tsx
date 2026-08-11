@@ -6,7 +6,7 @@ import { clockLabel } from "@/lib/venue";
 export function SimControls() {
   const { playing, speed, state } = useSim();
   return (
-    <div className="panel flex flex-wrap items-center gap-3 px-4 py-3">
+    <div className="panel flex flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
       <Button size="sm" variant={playing ? "secondary" : "default"} onClick={simActions.togglePlay}>
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         {playing ? "Pause" : "Play"}
@@ -31,7 +31,7 @@ export function SimControls() {
           </button>
         ))}
       </div>
-      <span className="ml-auto font-mono text-xs text-muted-foreground">
+      <span className="ml-auto whitespace-nowrap font-mono text-[11px] text-muted-foreground sm:text-xs">
         T+{Math.round(state.t)} min · {clockLabel(state.t)}
       </span>
     </div>

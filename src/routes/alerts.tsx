@@ -47,7 +47,7 @@ function AlertsPage() {
         subtitle="Bottlenecks the system has detected right now, pile-ups it expects in the next 45 minutes, and the action it recommends for each."
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Critical" value={String(counts.critical)} tone="critical" hint="act immediately" />
         <Stat label="Warning" value={String(counts.warning)} tone="warning" hint="act within 10 min" />
         <Stat label="Watch" value={String(counts.watch)} hint="monitoring" />
@@ -59,7 +59,7 @@ function AlertsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="panel p-4">
+        <div className="panel p-3 sm:p-4">
           <div className="label-xs mb-3">Active alerts</div>
           {bottlenecks.length === 0 && (
             <p className="font-mono text-xs text-muted-foreground">Nothing above threshold.</p>
@@ -115,7 +115,7 @@ function AlertsPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Predicted pile-ups (next 45 min)</div>
             <ul className="space-y-2">
               {risks.length === 0 && (
@@ -132,7 +132,7 @@ function AlertsPage() {
             </ul>
           </div>
 
-          <div className="panel p-4">
+          <div className="panel p-3 sm:p-4">
             <div className="label-xs mb-3">Recommended actions</div>
             <ul className="space-y-3">
               {recs.map((r) => (
