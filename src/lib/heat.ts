@@ -18,11 +18,11 @@ const CELL_AREA_M2 = (CELL * METRES_PER_UNIT) ** 2;
 
 /** density bands in people per m² */
 export const HEAT_BANDS = [
-  { value: 0.12, label: "Free flowing", color: "#38bdf8" },
-  { value: 0.4, label: "Steady", color: "#22c55e" },
-  { value: 0.8, label: "Busy", color: "#facc15" },
-  { value: 1.3, label: "Restricted", color: "#f97316" },
-  { value: 2, label: "Crush risk", color: "#ef4444" },
+  { value: 0.15, label: "Free flowing", color: "#22c55e" },
+  { value: 0.5, label: "Steady", color: "#a3e635" },
+  { value: 1, label: "Busy", color: "#facc15" },
+  { value: 1.6, label: "Restricted", color: "#f97316" },
+  { value: 2.2, label: "Crush risk", color: "#ef4444" },
 ];
 export const HEAT_MAX = 2.5;
 
@@ -202,13 +202,13 @@ export function computeHeatField(state: SimState): HeatField {
 }
 
 const RAMP: Array<[number, [number, number, number]]> = [
-  [0, [12, 32, 96]],
-  [0.12, [56, 189, 248]],
-  [0.4, [34, 197, 94]],
-  [0.8, [250, 204, 21]],
-  [1.3, [249, 115, 22]],
-  [2, [239, 68, 68]],
-  [2.6, [255, 235, 235]],
+  [0, [16, 122, 62]],
+  [0.15, [34, 197, 94]],
+  [0.5, [163, 230, 53]],
+  [1, [250, 204, 21]],
+  [1.6, [249, 115, 22]],
+  [2.2, [239, 68, 68]],
+  [2.6, [255, 210, 210]],
 ];
 
 /** people/m² -> rgba */
@@ -224,7 +224,7 @@ export function heatColor(raw: number): [number, number, number, number] {
   const [v1, c1] = RAMP[i + 1]!;
   const t = Math.min(1, Math.max(0, (v - v0) / (v1 - v0)));
   // Smooth, saturating opacity: quiet ground stays faint, busy ground reads solid.
-  const alpha = Math.min(1, Math.pow(Math.min(1, raw / 0.35), 0.5) * 0.9 + 0.1);
+  const alpha = Math.min(1, Math.pow(Math.min(1, raw / 0.3), 0.45) * 0.86 + 0.08);
   return [
     Math.round(c0[0] + (c1[0] - c0[0]) * t),
     Math.round(c0[1] + (c1[1] - c0[1]) * t),

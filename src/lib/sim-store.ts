@@ -31,11 +31,9 @@ const initialParams: SimParams = {
 };
 
 const STORAGE_KEY = "cfo.circuit";
-const savedId =
-  typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-const bootId =
-  savedId && CIRCUIT_SPECS.some((c) => c.id === savedId) ? savedId : DEFAULT_CIRCUIT_ID;
-if (bootId !== DEFAULT_CIRCUIT_ID) setCircuit(bootId);
+// The saved circuit is applied after mount (see useSim) so the first client
+// paint matches the server-rendered markup exactly.
+const bootId = DEFAULT_CIRCUIT_ID;
 
 let store: Store = {
   circuitId: bootId,
@@ -168,6 +166,12 @@ export function useSim() {
   // Render the deterministic server snapshot for the first client paint so the
   // markup matches what the server sent, then switch to the live store.
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved && saved !== store.circuitId && CIRCUIT_SPECS.some((c) => c.id === saved)) {
+      simActions.setCircuit(saved);
+    }
+    setHydrated(true);
+  }, []);
   return hydrated ? live : serverSnapshot;
 }

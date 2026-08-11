@@ -10,7 +10,8 @@ import {
 } from "@/lib/venue";
 import { density, edgeKey, severityOf, type SimParams, type SimState } from "@/lib/sim";
 import { HeatLayer } from "./HeatLayer";
-import { HEAT_BANDS, type HeatField } from "@/lib/heat";
+import { type HeatField } from "@/lib/heat";
+import { HeatLegend } from "./HeatLegend";
 
 const SEV_COLOR: Record<string, string> = {
   ok: "var(--color-ok)",
@@ -78,7 +79,7 @@ export function CircuitMap({
         <HeatLayer
           state={state}
           onField={setField}
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-95"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-80"
         />
 
         {/* Network + labels */}
@@ -219,29 +220,7 @@ export function CircuitMap({
         </svg>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-border px-4 py-3">
-        <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-          Crowd density
-        </span>
-        <div className="flex items-center gap-2">
-          <div
-            className="h-2.5 w-40 rounded-full"
-            style={{
-              background: `linear-gradient(90deg, #0c2060, ${HEAT_BANDS.map((b) => b.color).join(", ")}, #ffebeb)`,
-            }}
-          />
-          <span className="font-mono text-[11px] text-muted-foreground">0 → 2.5 people/m²</span>
-        </div>
-        {HEAT_BANDS.slice(1).map((b) => (
-          <span key={b.label} className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: b.color }} />
-            {b.label}
-          </span>
-        ))}
-        <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-          Peak {field ? field.peak.toFixed(1) : "—"} p/m² · {field ? Math.round(field.people).toLocaleString() : "—"} people mapped
-        </span>
-      </div>
+      <HeatLegend field={field} className="border-t border-border px-4 py-3" />
     </div>
   );
 }
