@@ -13,6 +13,23 @@ import { HeatLayer } from "./HeatLayer";
 import { type HeatField } from "@/lib/heat";
 import { HeatLegend } from "./HeatLegend";
 
+function HeatToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!on)}
+      aria-pressed={on}
+      className="absolute right-2 top-2 z-20 flex items-center gap-1.5 rounded-md border border-border bg-surface/90 px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur transition-colors hover:bg-surface-2"
+    >
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${on ? "bg-red-500" : "bg-muted-foreground/40"}`}
+        aria-hidden
+      />
+      {on ? "Heatmap on" : "Heatmap off"}
+    </button>
+  );
+}
+
 const SEV_COLOR: Record<string, string> = {
   ok: "var(--color-ok)",
   watch: "var(--color-watch)",
@@ -53,9 +70,13 @@ export function CircuitMap({
       })
       .join(" ");
 
+  const [showHeat, setShowHeat] = useState(true);
+
   return (
     <div className="panel relative overflow-hidden">
       <div className="relative">
+        <HeatToggle on={showHeat} onChange={setShowHeat} />
+
         {/* Base terrain */}
         <svg
           viewBox="0 0 1000 640"
@@ -76,11 +97,13 @@ export function CircuitMap({
         </svg>
 
         {/* Crowd-density heat map, computed from live head counts */}
-        <HeatLayer
-          state={state}
-          onField={setField}
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-80"
-        />
+        {showHeat && (
+          <HeatLayer
+            state={state}
+            onField={setField}
+            className="pointer-events-none absolute inset-0 h-full w-full opacity-80"
+          />
+        )}
 
         {/* Network + labels */}
         <svg
@@ -220,7 +243,7 @@ export function CircuitMap({
         </svg>
       </div>
 
-      <HeatLegend field={field} className="border-t border-border px-4 py-3" />
+      {showHeat && <HeatLegend field={field} className="border-t border-border px-4 py-3" />}
     </div>
   );
 }
