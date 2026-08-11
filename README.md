@@ -1,23 +1,55 @@
-# Welcome to your Lovable project
+# Crowd Flow Optimiser
 
-This project was built with [Lovable](https://lovable.dev).
+Simulating and rerouting crowds in real time.
 
-## Build with Lovable
+Problem Statement 03, AI Race Month.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+![Problem Statement 03: Crowd Flow Optimiser](docs/problem-statement.png)
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## The challenge
+
+Large venues and events, stadiums, railway stations, festivals, often see people bunch up at entry gates, food counters, or exits without warning. There is no easy way to spot these pile-ups before they become dangerous.
+
+## What we build
+
+- You feed in the layout of the venue: entry gates, walkways, concession points, and emergency exits.
+- The system simulates how crowds move through this layout under different crowd sizes and event schedules.
+- It automatically points out where and when bottlenecks are likely to form.
+- It suggests real-time rerouting, so people are guided away from crowded areas before things get risky.
+
+| | |
+|---|---|
+| **Input** | Venue layout, expected crowd size, and event schedule |
+| **Model** | Crowd simulation, bottleneck detection and rerouting |
+| **Output** | A live map of bottleneck zones and recommended rerouting paths |
+
+## This repository
+
+An MVP that takes an F1 circuit as the venue. Every figure on screen comes from a built-in crowd simulation: camera, Wi-Fi and turnstile feeds are mocked, so the whole control room runs without any live infrastructure.
+
+| Screen | What it does |
+|---|---|
+| Live Map | Circuit map with a crowd-density heatmap, per-zone head counts and live bottleneck list |
+| Zones | Every zone with capacity, occupancy and dwell time |
+| Alerts | Bottlenecks ranked by severity with time to clear |
+| Rerouting | Suggested alternative paths away from congested zones |
+| Simulation | Clock controls: pause, skip ahead, reset, and 1x to 10x speed |
+| Evacuation | Emergency exit routing and clearance estimates |
+| Copilot | Natural-language questions about the current crowd state |
+| Spectator | The attendee-facing view of a recommended route |
+| Feeds | Mock camera, Wi-Fi and turnstile sensor streams |
+| Report | Post-event summary of density, queues and incidents |
+| Layout | Tune gates, walkways, concessions and exits |
+| Circuits | Switch venue: Silverstone, Monza, Monaco, Spa, Interlagos, Marina Bay |
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requires Node.js.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/pulkitxm/vmax.git
+cd vmax
+npm install
 npm run dev
 ```
 
