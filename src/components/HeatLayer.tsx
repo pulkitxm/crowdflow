@@ -8,9 +8,15 @@ interface Props {
   className?: string;
 }
 
+/** Output resolution of the upscaled thermal image. */
+const OUT_W = 1000;
+const OUT_H = 640;
+
 /**
- * Draws the crowd-density field as a real heat map: one pixel per grid cell,
- * scaled up by the browser so it reads as a smooth thermal image.
+ * Draws the crowd-density field as a continuous thermal image: the coarse
+ * density grid is painted into a tiny buffer, then resampled up to map size
+ * with smoothing plus a light blur so the result is one flowing surface rather
+ * than a cluster of dots.
  */
 export function HeatLayer({ state, onField, className }: Props) {
   const ref = useRef<HTMLCanvasElement | null>(null);
@@ -24,7 +30,13 @@ export function HeatLayer({ state, onField, className }: Props) {
     if (!ctx) return;
 
     const field = computeHeatField(state);
-    const img = ctx.createImageData(GRID_W, GRID_H);
+
+    const buf = document.createElement("canvas");
+    buf.width = GRID_W;
+    buf.height = GRID_H;
+    const bctx = buf.getContext("2d");
+    if (!bctx) return;
+    const img = bctx.createImageData(GRID_W, GRID_H);
     for (let i = 0; i < field.grid.length; i++) {
       const [r, g, b, a] = heatColor(field.grid[i] ?? 0);
       img.data[i * 4] = r;
@@ -32,15 +44,23 @@ export function HeatLayer({ state, onField, className }: Props) {
       img.data[i * 4 + 2] = b;
       img.data[i * 4 + 3] = a;
     }
-    ctx.putImageData(img, 0, 0);
+    bctx.putImageData(img, 0, 0);
+
+    ctx.clearRect(0, 0, OUT_W, OUT_H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.filter = "blur(5px)";
+    ctx.drawImage(buf, 0, 0, OUT_W, OUT_H);
+    ctx.filter = "none";
+
     cb.current?.(field);
   }, [state]);
 
   return (
     <canvas
       ref={ref}
-      width={GRID_W}
-      height={GRID_H}
+      width={OUT_W}
+      height={OUT_H}
       aria-hidden
       className={className}
       style={{ imageRendering: "auto" }}

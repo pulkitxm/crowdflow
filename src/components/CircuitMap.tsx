@@ -78,7 +78,7 @@ export function CircuitMap({
         <HeatLayer
           state={state}
           onField={setField}
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-90 mix-blend-screen"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-95"
         />
 
         {/* Network + labels */}
@@ -227,10 +227,10 @@ export function CircuitMap({
           <div
             className="h-2.5 w-40 rounded-full"
             style={{
-              background: `linear-gradient(90deg, #0e3c5c, ${HEAT_BANDS.map((b) => b.color).join(", ")}, #fff0f0)`,
+              background: `linear-gradient(90deg, #0c2060, ${HEAT_BANDS.map((b) => b.color).join(", ")}, #ffebeb)`,
             }}
           />
-          <span className="font-mono text-[11px] text-muted-foreground">0 → 6 people/m²</span>
+          <span className="font-mono text-[11px] text-muted-foreground">0 → 2.5 people/m²</span>
         </div>
         {HEAT_BANDS.slice(1).map((b) => (
           <span key={b.label} className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">

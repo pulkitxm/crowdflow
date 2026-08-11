@@ -11,26 +11,87 @@ import { edgeKey, type SimState } from "./sim";
 /** metres per SVG unit */
 export const METRES_PER_UNIT = 1.5;
 /** grid resolution in SVG units */
-export const CELL = 8;
+export const CELL = 5;
 export const GRID_W = Math.ceil(1000 / CELL);
 export const GRID_H = Math.ceil(640 / CELL);
 const CELL_AREA_M2 = (CELL * METRES_PER_UNIT) ** 2;
 
 /** density bands in people per m² */
 export const HEAT_BANDS = [
-  { value: 0.3, label: "Free flowing", color: "#22c55e" },
-  { value: 1.2, label: "Busy", color: "#a3e635" },
-  { value: 2.2, label: "Restricted", color: "#facc15" },
-  { value: 3.5, label: "Congested", color: "#f97316" },
-  { value: 5, label: "Crush risk", color: "#ef4444" },
+  { value: 0.12, label: "Free flowing", color: "#38bdf8" },
+  { value: 0.4, label: "Steady", color: "#22c55e" },
+  { value: 0.8, label: "Busy", color: "#facc15" },
+  { value: 1.3, label: "Restricted", color: "#f97316" },
+  { value: 2, label: "Crush risk", color: "#ef4444" },
 ];
-export const HEAT_MAX = 6;
+export const HEAT_MAX = 2.5;
 
 /** How wide (SVG units) a crowd of this capacity spreads on the ground. */
 function spreadOf(n: VenueNode) {
-  if (n.kind === "gate") return 12;
-  if (n.kind === "facility") return 12;
-  return 8 + Math.sqrt(n.capacity) * 0.105;
+  if (n.kind === "gate") return 9;
+  if (n.kind === "facility") return 9;
+  return 7 + Math.sqrt(n.capacity) * 0.06;
+}
+
+/**
+ * Separable box blur, run three times, which approximates a gaussian. This is
+ * what turns a set of stamped blobs into one continuous field instead of a
+ * constellation of dots.
+ */
+function blur(grid: Float32Array, radius: number) {
+  if (radius < 1) return;
+  const tmp = new Float32Array(grid.length);
+  const w = GRID_W;
+  const h = GRID_H;
+  const passes = 3;
+  const denom = radius * 2 + 1;
+  for (let p = 0; p < passes; p++) {
+    // horizontal
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      let acc = 0;
+      for (let x = -radius; x <= radius; x++) {
+        acc += grid[row + Math.min(w - 1, Math.max(0, x))] ?? 0;
+      }
+      for (let x = 0; x < w; x++) {
+        tmp[row + x] = acc / denom;
+        const out = grid[row + Math.min(w - 1, Math.max(0, x - radius))] ?? 0;
+        const inc = grid[row + Math.min(w - 1, Math.max(0, x + radius + 1))] ?? 0;
+        acc += inc - out;
+      }
+    }
+    // vertical
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let y = -radius; y <= radius; y++) {
+        acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x] ?? 0;
+      }
+      for (let y = 0; y < h; y++) {
+        grid[y * w + x] = acc / denom;
+        const out = tmp[Math.min(h - 1, Math.max(0, y - radius)) * w + x] ?? 0;
+        const inc = tmp[Math.min(h - 1, Math.max(0, y + radius + 1)) * w + x] ?? 0;
+        acc += inc - out;
+      }
+    }
+  }
+}
+
+/** Smear `people` evenly along a line, so corridors read as ribbons. */
+function stampLine(
+  grid: Float32Array,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  people: number,
+  sigma: number,
+) {
+  const len = Math.hypot(bx - ax, by - ay);
+  const steps = Math.max(3, Math.round(len / (CELL * 1.2)));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    stamp(grid, ax + (bx - ax) * t, ay + (by - ay) * t, people / (steps + 1), sigma);
+  }
 }
 
 function stamp(grid: Float32Array, x: number, y: number, people: number, sigma: number) {
@@ -86,7 +147,22 @@ export function computeHeatField(state: SimState): HeatField {
     people += occ;
     // crowds compress as they fill up: the blob tightens rather than growing
     const load = Math.min(1.6, occ / n.capacity);
-    stamp(grid, n.x, n.y, occ, spreadOf(n) * (1 - 0.28 * Math.min(1, load)));
+    const sigma = spreadOf(n) * (1 - 0.22 * Math.min(1, load));
+    // 70% stands/dwells at the node, 30% is spread out along the walkways that
+    // leave it, so neighbouring crowds bleed into each other continuously.
+    stamp(grid, n.x, n.y, occ * 0.42, sigma);
+    // A wide, low halo: people spilling across the surrounding ground. This is
+    // what makes the map a continuous field instead of isolated hotspots.
+    stamp(grid, n.x, n.y, occ * 0.26, sigma * 4.2);
+    const links = EDGES.filter((e) => e.a === n.id || e.b === n.id);
+    if (links.length) {
+      const share = (occ * 0.32) / links.length;
+      for (const e of links) {
+        const other = NODE_MAP[e.a === n.id ? e.b : e.a];
+        if (!other) continue;
+        stampLine(grid, n.x, n.y, n.x + (other.x - n.x) * 0.45, n.y + (other.y - n.y) * 0.45, share, sigma * 0.7);
+      }
+    }
   }
 
   // Queues bunched outside the gates
@@ -94,7 +170,7 @@ export function computeHeatField(state: SimState): HeatField {
     const q = state.queues[g.id] ?? 0;
     if (q <= 0) continue;
     people += q;
-    stamp(grid, g.x, g.y, q, 8 + Math.sqrt(q) * 0.16);
+    stamp(grid, g.x, g.y, q, 7 + Math.sqrt(q) * 0.1);
   }
 
   // People in transit, smeared along each walkway
@@ -108,12 +184,11 @@ export function computeHeatField(state: SimState): HeatField {
     // people currently on the walkway ~= flow (per min) x minutes to walk it
     const walking = flow * Math.max(0.5, (len * METRES_PER_UNIT) / 80);
     people += walking;
-    const steps = Math.max(2, Math.round(len / 18));
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      stamp(grid, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, walking / (steps + 1), 7);
-    }
+    stampLine(grid, a.x, a.y, b.x, b.y, walking, 6);
   }
+
+  // One soft pass so the stamps fuse into a single continuous surface.
+  blur(grid, 2);
 
   // convert head counts per cell into people per m²
   let peak = 0;
@@ -127,24 +202,29 @@ export function computeHeatField(state: SimState): HeatField {
 }
 
 const RAMP: Array<[number, [number, number, number]]> = [
-  [0, [14, 60, 92]],
-  [0.3, [34, 197, 94]],
-  [1.2, [163, 230, 53]],
-  [2.2, [250, 204, 21]],
-  [3.5, [249, 115, 22]],
-  [5, [239, 68, 68]],
-  [6.5, [255, 240, 240]],
+  [0, [12, 32, 96]],
+  [0.12, [56, 189, 248]],
+  [0.4, [34, 197, 94]],
+  [0.8, [250, 204, 21]],
+  [1.3, [249, 115, 22]],
+  [2, [239, 68, 68]],
+  [2.6, [255, 235, 235]],
 ];
 
 /** people/m² -> rgba */
-export function heatColor(v: number): [number, number, number, number] {
-  if (v <= 0.02) return [0, 0, 0, 0];
+export function heatColor(raw: number): [number, number, number, number] {
+  if (raw <= 0.01) return [0, 0, 0, 0];
+  // Perceptual compression: real venue densities sit low over most of the
+  // ground, so we stretch the quiet end across the ramp instead of leaving
+  // 90% of the map flat blue.
+  const v = HEAT_MAX * Math.pow(Math.min(1, raw / HEAT_MAX), 0.55);
   let i = 0;
   while (i < RAMP.length - 2 && v > RAMP[i + 1]![0]) i++;
   const [v0, c0] = RAMP[i]!;
   const [v1, c1] = RAMP[i + 1]!;
   const t = Math.min(1, Math.max(0, (v - v0) / (v1 - v0)));
-  const alpha = Math.min(1, 0.18 + (v / 2.2) * 0.72);
+  // Smooth, saturating opacity: quiet ground stays faint, busy ground reads solid.
+  const alpha = Math.min(1, Math.pow(Math.min(1, raw / 0.35), 0.5) * 0.9 + 0.1);
   return [
     Math.round(c0[0] + (c1[0] - c0[0]) * t),
     Math.round(c0[1] + (c1[1] - c0[1]) * t),
