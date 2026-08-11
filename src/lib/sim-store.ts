@@ -7,8 +7,10 @@ import {
   type SimParams,
   type SimState,
 } from "./sim";
+import { CIRCUIT_SPECS, DEFAULT_CIRCUIT_ID, getCircuit, setCircuit } from "./venue";
 
 interface Store {
+  circuitId: string;
   state: SimState;
   params: SimParams;
   playing: boolean;
@@ -23,9 +25,22 @@ function warmState(params: SimParams) {
   return s;
 }
 
+const initialParams: SimParams = {
+  ...DEFAULT_PARAMS,
+  crowdSize: getCircuit(DEFAULT_CIRCUIT_ID).attendance,
+};
+
+const STORAGE_KEY = "cfo.circuit";
+const savedId =
+  typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+const bootId =
+  savedId && CIRCUIT_SPECS.some((c) => c.id === savedId) ? savedId : DEFAULT_CIRCUIT_ID;
+if (bootId !== DEFAULT_CIRCUIT_ID) setCircuit(bootId);
+
 let store: Store = {
-  state: warmState(DEFAULT_PARAMS),
-  params: { ...DEFAULT_PARAMS },
+  circuitId: bootId,
+  state: warmState({ ...initialParams, crowdSize: getCircuit(bootId).attendance }),
+  params: { ...initialParams, crowdSize: getCircuit(bootId).attendance },
   playing: true,
   speed: 2,
   history: [],
@@ -76,6 +91,25 @@ function tick(minutes: number) {
 }
 
 export const simActions = {
+  circuits: CIRCUIT_SPECS,
+  setCircuit: (id: string) => {
+    if (id === store.circuitId) return;
+    const circuit = setCircuit(id);
+    if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, circuit.id);
+    const params: SimParams = {
+      ...store.params,
+      crowdSize: circuit.attendance,
+      closedEdges: [],
+    };
+    store = {
+      ...store,
+      circuitId: circuit.id,
+      params,
+      state: warmState(params),
+      history: [],
+    };
+    emit();
+  },
   play: () => {
     store = { ...store, playing: true };
     emit();
@@ -117,8 +151,9 @@ export const simActions = {
 };
 
 const serverSnapshot: Store = {
-  state: warmState(DEFAULT_PARAMS),
-  params: { ...DEFAULT_PARAMS },
+  circuitId: DEFAULT_CIRCUIT_ID,
+  state: warmState(initialParams),
+  params: { ...initialParams },
   playing: false,
   speed: 2,
   history: [],

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
+import { Route as CircuitsRouteImport } from './routes/circuits'
 import { Route as LayoutRouteImport } from './routes/layout'
 import { Route as RoutingRouteImport } from './routes/routing'
 import { Route as SimulationRouteImport } from './routes/simulation'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AlertsRoute = AlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CircuitsRoute = CircuitsRouteImport.update({
+  id: '/circuits',
+  path: '/circuits',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutRoute = LayoutRouteImport.update({
@@ -50,6 +56,7 @@ const ZonesRoute = ZonesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/circuits': typeof CircuitsRoute
   '/layout': typeof LayoutRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/circuits': typeof CircuitsRoute
   '/layout': typeof LayoutRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/circuits': typeof CircuitsRoute
   '/layout': typeof LayoutRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
@@ -74,13 +83,28 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/alerts' | '/layout' | '/routing' | '/simulation' | '/zones'
+  fullPaths:
+    | '/'
+    | '/alerts'
+    | '/circuits'
+    | '/layout'
+    | '/routing'
+    | '/simulation'
+    | '/zones'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/alerts' | '/layout' | '/routing' | '/simulation' | '/zones'
+  to:
+    | '/'
+    | '/alerts'
+    | '/circuits'
+    | '/layout'
+    | '/routing'
+    | '/simulation'
+    | '/zones'
   id:
     | '__root__'
     | '/'
     | '/alerts'
+    | '/circuits'
     | '/layout'
     | '/routing'
     | '/simulation'
@@ -90,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
+  CircuitsRoute: typeof CircuitsRoute
   LayoutRoute: typeof LayoutRoute
   RoutingRoute: typeof RoutingRoute
   SimulationRoute: typeof SimulationRoute
@@ -110,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/alerts'
       fullPath: '/alerts'
       preLoaderRoute: typeof AlertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/circuits': {
+      id: '/circuits'
+      path: '/circuits'
+      fullPath: '/circuits'
+      preLoaderRoute: typeof CircuitsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/layout': {
@@ -146,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
+  CircuitsRoute: CircuitsRoute,
   LayoutRoute: LayoutRoute,
   RoutingRoute: RoutingRoute,
   SimulationRoute: SimulationRoute,

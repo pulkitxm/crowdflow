@@ -4,12 +4,14 @@ import {
   Activity,
   AlertTriangle,
   LayoutGrid,
+  Flag,
   Map,
   Route as RouteIcon,
   SlidersHorizontal,
 } from "lucide-react";
 import { useSim } from "@/lib/sim-store";
-import { clockLabel, scheduleAt } from "@/lib/venue";
+import { CircuitPicker } from "./CircuitPicker";
+import { CIRCUIT_SPECS, clockLabel, scheduleAt } from "@/lib/venue";
 import { detectBottlenecks, inside, queued } from "@/lib/sim";
 
 const NAV = [
@@ -19,10 +21,12 @@ const NAV = [
   { to: "/routing", label: "Rerouting", icon: RouteIcon },
   { to: "/simulation", label: "Simulation", icon: Activity },
   { to: "/layout", label: "Venue Layout", icon: SlidersHorizontal },
+  { to: "/circuits", label: "Circuits", icon: Flag },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { state, params, playing } = useSim();
+  const { state, params, playing, circuitId } = useSim();
+  const circuit = CIRCUIT_SPECS.find((c) => c.id === circuitId) ?? CIRCUIT_SPECS[0]!;
   const alerts = detectBottlenecks(state, params).filter(
     (b) => b.severity === "critical" || b.severity === "warning",
   ).length;
@@ -37,9 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="font-display text-lg leading-none tracking-wide">
                 CROWD FLOW OPTIMISER
               </div>
-              <div className="label-xs mt-1">Silverstone Circuit · mock control room</div>
+              <div className="label-xs mt-1">{circuit.name} · mock control room</div>
             </div>
           </Link>
+
+          <div className="order-2 lg:order-none">
+            <CircuitPicker />
+          </div>
 
           <nav className="order-3 flex w-full gap-1 overflow-x-auto lg:order-none lg:w-auto">
             {NAV.map(({ to, label, icon: Icon }) => (

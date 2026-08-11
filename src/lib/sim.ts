@@ -4,6 +4,7 @@ import {
   NODE_MAP,
   NODES,
   ZONES,
+  onVenueChange,
   scheduleAt,
   type VenueEdge,
 } from "./venue";
@@ -73,11 +74,17 @@ function arrivalCurve(t: number) {
   return Math.exp(-Math.pow((t - peak) / 150, 2));
 }
 
-const neighbours: Record<string, VenueEdge[]> = {};
-for (const e of EDGES) {
-  (neighbours[e.a] ||= []).push(e);
-  (neighbours[e.b] ||= []).push(e);
+let neighbours: Record<string, VenueEdge[]> = {};
+function buildNeighbours() {
+  const map: Record<string, VenueEdge[]> = {};
+  for (const e of EDGES) {
+    (map[e.a] ||= []).push(e);
+    (map[e.b] ||= []).push(e);
+  }
+  neighbours = map;
 }
+buildNeighbours();
+onVenueChange(buildNeighbours);
 
 export const density = (state: SimState, id: string) => {
   const node = NODE_MAP[id];
