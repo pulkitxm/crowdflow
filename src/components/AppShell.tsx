@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
+  BarChart3,
+  Bot,
+  Radio,
+  ShieldAlert,
+  Smartphone,
   LayoutGrid,
   Flag,
   Map,
@@ -20,6 +25,11 @@ const NAV = [
   { to: "/alerts", label: "Alerts", icon: AlertTriangle },
   { to: "/routing", label: "Rerouting", icon: RouteIcon },
   { to: "/simulation", label: "Simulation", icon: Activity },
+  { to: "/evacuation", label: "Evacuation", icon: ShieldAlert },
+  { to: "/copilot", label: "Copilot", icon: Bot },
+  { to: "/spectator", label: "Spectator App", icon: Smartphone },
+  { to: "/feeds", label: "Feeds", icon: Radio },
+  { to: "/reports", label: "Report", icon: BarChart3 },
   { to: "/layout", label: "Venue Layout", icon: SlidersHorizontal },
   { to: "/circuits", label: "Circuits", icon: Flag },
 ] as const;

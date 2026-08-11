@@ -12,9 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as CircuitsRouteImport } from './routes/circuits'
+import { Route as CopilotRouteImport } from './routes/copilot'
+import { Route as EvacuationRouteImport } from './routes/evacuation'
+import { Route as FeedsRouteImport } from './routes/feeds'
 import { Route as LayoutRouteImport } from './routes/layout'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RoutingRouteImport } from './routes/routing'
 import { Route as SimulationRouteImport } from './routes/simulation'
+import { Route as SpectatorRouteImport } from './routes/spectator'
 import { Route as ZonesRouteImport } from './routes/zones'
 
 const IndexRoute = IndexRouteImport.update({
@@ -32,9 +37,29 @@ const CircuitsRoute = CircuitsRouteImport.update({
   path: '/circuits',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CopilotRoute = CopilotRouteImport.update({
+  id: '/copilot',
+  path: '/copilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvacuationRoute = EvacuationRouteImport.update({
+  id: '/evacuation',
+  path: '/evacuation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedsRoute = FeedsRouteImport.update({
+  id: '/feeds',
+  path: '/feeds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LayoutRoute = LayoutRouteImport.update({
   id: '/layout',
   path: '/layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoutingRoute = RoutingRouteImport.update({
@@ -47,6 +72,11 @@ const SimulationRoute = SimulationRouteImport.update({
   path: '/simulation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SpectatorRoute = SpectatorRouteImport.update({
+  id: '/spectator',
+  path: '/spectator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZonesRoute = ZonesRouteImport.update({
   id: '/zones',
   path: '/zones',
@@ -57,18 +87,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/circuits': typeof CircuitsRoute
+  '/copilot': typeof CopilotRoute
+  '/evacuation': typeof EvacuationRoute
+  '/feeds': typeof FeedsRoute
   '/layout': typeof LayoutRoute
+  '/reports': typeof ReportsRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
+  '/spectator': typeof SpectatorRoute
   '/zones': typeof ZonesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/circuits': typeof CircuitsRoute
+  '/copilot': typeof CopilotRoute
+  '/evacuation': typeof EvacuationRoute
+  '/feeds': typeof FeedsRoute
   '/layout': typeof LayoutRoute
+  '/reports': typeof ReportsRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
+  '/spectator': typeof SpectatorRoute
   '/zones': typeof ZonesRoute
 }
 export interface FileRoutesById {
@@ -76,9 +116,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/circuits': typeof CircuitsRoute
+  '/copilot': typeof CopilotRoute
+  '/evacuation': typeof EvacuationRoute
+  '/feeds': typeof FeedsRoute
   '/layout': typeof LayoutRoute
+  '/reports': typeof ReportsRoute
   '/routing': typeof RoutingRoute
   '/simulation': typeof SimulationRoute
+  '/spectator': typeof SpectatorRoute
   '/zones': typeof ZonesRoute
 }
 export interface FileRouteTypes {
@@ -87,27 +132,42 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/circuits'
+    | '/copilot'
+    | '/evacuation'
+    | '/feeds'
     | '/layout'
+    | '/reports'
     | '/routing'
     | '/simulation'
+    | '/spectator'
     | '/zones'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/alerts'
     | '/circuits'
+    | '/copilot'
+    | '/evacuation'
+    | '/feeds'
     | '/layout'
+    | '/reports'
     | '/routing'
     | '/simulation'
+    | '/spectator'
     | '/zones'
   id:
     | '__root__'
     | '/'
     | '/alerts'
     | '/circuits'
+    | '/copilot'
+    | '/evacuation'
+    | '/feeds'
     | '/layout'
+    | '/reports'
     | '/routing'
     | '/simulation'
+    | '/spectator'
     | '/zones'
   fileRoutesById: FileRoutesById
 }
@@ -115,9 +175,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
   CircuitsRoute: typeof CircuitsRoute
+  CopilotRoute: typeof CopilotRoute
+  EvacuationRoute: typeof EvacuationRoute
+  FeedsRoute: typeof FeedsRoute
   LayoutRoute: typeof LayoutRoute
+  ReportsRoute: typeof ReportsRoute
   RoutingRoute: typeof RoutingRoute
   SimulationRoute: typeof SimulationRoute
+  SpectatorRoute: typeof SpectatorRoute
   ZonesRoute: typeof ZonesRoute
 }
 
@@ -144,11 +209,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CircuitsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/copilot': {
+      id: '/copilot'
+      path: '/copilot'
+      fullPath: '/copilot'
+      preLoaderRoute: typeof CopilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evacuation': {
+      id: '/evacuation'
+      path: '/evacuation'
+      fullPath: '/evacuation'
+      preLoaderRoute: typeof EvacuationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feeds': {
+      id: '/feeds'
+      path: '/feeds'
+      fullPath: '/feeds'
+      preLoaderRoute: typeof FeedsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/layout': {
       id: '/layout'
       path: '/layout'
       fullPath: '/layout'
       preLoaderRoute: typeof LayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/routing': {
@@ -165,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SimulationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/spectator': {
+      id: '/spectator'
+      path: '/spectator'
+      fullPath: '/spectator'
+      preLoaderRoute: typeof SpectatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zones': {
       id: '/zones'
       path: '/zones'
@@ -179,9 +279,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
   CircuitsRoute: CircuitsRoute,
+  CopilotRoute: CopilotRoute,
+  EvacuationRoute: EvacuationRoute,
+  FeedsRoute: FeedsRoute,
   LayoutRoute: LayoutRoute,
+  ReportsRoute: ReportsRoute,
   RoutingRoute: RoutingRoute,
   SimulationRoute: SimulationRoute,
+  SpectatorRoute: SpectatorRoute,
   ZonesRoute: ZonesRoute,
 }
 export const routeTree = rootRouteImport
