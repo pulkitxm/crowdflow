@@ -1,0 +1,22 @@
+diff --git a/node_modules/react-native-multi-ble-peripheral/android/src/main/java/com/fugood/reactnativemultibleperipheral/ReactNativeMultiBlePeripheralModule.kt b/node_modules/react-native-multi-ble-peripheral/android/src/main/java/com/fugood/reactnativemultibleperipheral/ReactNativeMultiBlePeripheralModule.kt
+index a05fd62..5096d4d 100644
+--- a/node_modules/react-native-multi-ble-peripheral/android/src/main/java/com/fugood/reactnativemultibleperipheral/ReactNativeMultiBlePeripheralModule.kt
++++ b/node_modules/react-native-multi-ble-peripheral/android/src/main/java/com/fugood/reactnativemultibleperipheral/ReactNativeMultiBlePeripheralModule.kt
+@@ -238,11 +238,12 @@ class ReactNativeMultiBlePeripheralModule(reactContext: ReactApplicationContext)
+     var value = Base64.decode(value, Base64.DEFAULT)
+     characteristic.value = value
+     for (device in registeredDevices) {
+-      val response = bluetoothGattServer.notifyCharacteristicChanged(
+-        device,
+-        characteristic,
+-        confirm
+-      )
++      val response = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
++        bluetoothGattServer.notifyCharacteristicChanged(device, characteristic, confirm, value)
++      } else {
++        @Suppress("DEPRECATION")
++        bluetoothGattServer.notifyCharacteristicChanged(device, characteristic, confirm)
++      }
+     }
+     promise.resolve(null)
+   }

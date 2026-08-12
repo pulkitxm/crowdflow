@@ -34,7 +34,7 @@ Variable packed payload: `expires_at`, fraction, priority, route ID, source/dest
 
 All available physical transports start concurrently:
 
-- BLE service beacon UUID `0000c0f1-0000-1000-8000-00805f9b34fb`
+- BLE rotating-ID beacon service `c0f10000-7a6b-4a40-9c73-97d98db48a01`
 - BLE mailbox service `c0f10001-7a6b-4a40-9c73-97d98db48a01`
 - BLE mailbox characteristic `c0f10002-7a6b-4a40-9c73-97d98db48a01`
 - mDNS service `_crowdflow._udp.local.` on UDP port 47317

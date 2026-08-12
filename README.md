@@ -5,7 +5,7 @@ A standalone Expo React Native implementation of the **P3 Mesh & Mobile** slice 
 ## Included
 
 - Simultaneous discoverability over **Bluetooth LE and Wi-Fi**
-  - BLE rotating-node advertisements + scans
+  - BLE rotating-node advertisements + scans + bidirectional GATT mailbox
   - Wi-Fi LAN mDNS publication/discovery + UDP packets
   - Android Wi-Fi Direct peer discovery/message fallback
   - HTTP loopback only when all physical radios fail
@@ -41,7 +41,7 @@ npm test
 npm run doctor
 ```
 
-A clean Expo prebuild and Android `assembleDebug` were run successfully against SDK 36 / JDK 17. Generated `android/` and `ios/` projects are intentionally ignored; native compatibility changes live in `patches/` and are reapplied by `postinstall`.
+A clean Expo prebuild and Android `assembleDebug` were run successfully against SDK 36 / JDK 17, including the BLE peripheral/GATT server. Generated `android/` and `ios/` projects are intentionally ignored; native compatibility changes live in `patches/` and are reapplied by `postinstall`.
 
 ## Phone test
 

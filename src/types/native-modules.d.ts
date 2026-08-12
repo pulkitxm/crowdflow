@@ -1,36 +1,3 @@
-declare module 'react-native-ble-advertiser' {
-  interface AdvertiseOptions {
-    advertiseMode?: number;
-    txPowerLevel?: number;
-    includeDeviceName?: boolean;
-    includeTxPowerLevel?: boolean;
-    connectable?: boolean;
-  }
-  interface ScanOptions {
-    scanMode?: number;
-    matchMode?: number;
-    numberOfMatches?: number;
-    reportDelay?: number;
-  }
-  interface BLEAdvertiserModule {
-    ADVERTISE_MODE_LOW_LATENCY: number;
-    ADVERTISE_TX_POWER_MEDIUM: number;
-    SCAN_MODE_LOW_LATENCY: number;
-    MATCH_MODE_AGGRESSIVE: number;
-    MATCH_NUM_MAX_ADVERTISEMENT: number;
-    setCompanyId(value: number): void;
-    broadcast(uuid: string, data: number[], options?: AdvertiseOptions): Promise<string>;
-    stopBroadcast(): Promise<string>;
-    scan(dataFilter: number[], options?: ScanOptions): Promise<string>;
-    scanByService(uuid: string, options?: ScanOptions): Promise<string>;
-    stopScan(): Promise<string>;
-    getAdapterState(): Promise<string>;
-    isActive(): Promise<boolean>;
-  }
-  const module: BLEAdvertiserModule;
-  export default module;
-}
-
 declare module 'react-native-zeroconf' {
   interface ZeroconfService {
     name: string;
