@@ -3,6 +3,7 @@ import { PermissionsAndroid, Platform, type EmitterSubscription, NativeModules }
 import * as WifiP2p from 'react-native-wifi-p2p';
 import type { PeerInfo } from '../core/contracts';
 import { BaseTransport } from './meshTransport';
+import { hasWifiDirectModule } from './nativeCapabilities';
 import { SessionHandles } from './sessionHandles';
 
 /** Android Wi-Fi Direct discovery and compact message path. */
@@ -26,7 +27,7 @@ export class WifiDirectTransport extends BaseTransport {
   }
 
   async isAvailable(): Promise<boolean> {
-    const available = Platform.OS === 'android' && Boolean(NativeModules.WiFiP2PManager);
+    const available = hasWifiDirectModule(Platform.OS, NativeModules);
     this.updateStatus({ available, detail: available ? 'Ready' : 'Unavailable on this platform' });
     return available;
   }
