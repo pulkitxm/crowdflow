@@ -51,16 +51,26 @@ export class WifiLanTransport extends BaseTransport {
     }
 
     this.socket = dgram.createSocket({ type: 'udp4', reusePort: true });
-    (this.socket as unknown as { on: (event: string, listener: (...args: any[]) => void) => void }).on('message', (message: Buffer, remote: { address: string; port: number }) => {
+    const socketEvents = this.socket as unknown as {
+      on: (event: string, listener: (...args: any[]) => void) => void;
+    };
+    socketEvents.on('message', (message: Buffer, remote: { address: string; port: number }) => {
+      if (message.length > 255) return;
       this.packets.emit({
         transport: this.kind, peerId: this.handles.get(`${remote.address}:${remote.port}`, 'lan-session'),
         bytes: new Uint8Array(message), receivedAt: Date.now(),
       });
     });
     await new Promise<void>((resolve, reject) => {
-      (this.socket as unknown as { once: (event: string, listener: (...args: any[]) => void) => void }).once('error', reject);
+      let settled = false;
+      socketEvents.on('error', (error: unknown) => {
+        if (!settled) { settled = true; reject(error); }
+        else this.reportError(error);
+      });
       this.socket!.bind(PORT, '0.0.0.0', () => {
-        try { this.socket!.setBroadcast(true); resolve(); } catch (error) { reject(error); }
+        if (settled) return;
+        try { this.socket!.setBroadcast(true); settled = true; resolve(); }
+        catch (error) { settled = true; reject(error); }
       });
     });
     const impl = Platform.OS === 'android' ? ImplType.DNSSD : undefined;
@@ -88,7 +98,11 @@ export class WifiLanTransport extends BaseTransport {
     this.updateStatus({ running: false, discoverable: false, detail: 'Stopped' });
   }
 
-  peers(): PeerInfo[] { return [...this.knownPeers.values()]; }
+  peers(): PeerInfo[] {
+    const now = Date.now();
+    // A resolved mDNS registration remains present until Zeroconf emits `remove`.
+    return [...this.knownPeers.values()].map((peer) => ({ ...peer, lastSeen: now }));
+  }
 
   async send(peerId: string, bytes: Uint8Array): Promise<void> {
     if (bytes.length > 255) throw new Error('Mesh packets must fit 255 bytes');

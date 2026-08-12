@@ -7,6 +7,7 @@ export class LoopbackTransport extends BaseTransport {
   readonly name = 'Backend loopback';
   readonly priority = 10;
   readonly fallbackOnly = true;
+  private readonly activeRequests = new Set<AbortController>();
   constructor(private readonly backendUrl: () => string) {
     super();
     this.currentStatus = {
@@ -21,6 +22,7 @@ export class LoopbackTransport extends BaseTransport {
     this.peersChanged.emit([]);
   }
   async stop(): Promise<void> {
+    this.activeRequests.forEach((request) => request.abort()); this.activeRequests.clear();
     this.updateStatus({ running: false, peerCount: 0, detail: 'Stopped' }); this.peersChanged.emit([]);
   }
   peers(): PeerInfo[] { return []; }
@@ -28,14 +30,21 @@ export class LoopbackTransport extends BaseTransport {
   async broadcast(bytes: Uint8Array): Promise<void> { await this.post(bytes); }
 
   private async post(bytes: Uint8Array): Promise<void> {
-    const response = await fetch(`${this.backendUrl().replace(/\/$/, '')}/mesh/message`, {
-      method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-CrowdFlow-Transport': 'loopback' },
-      body: bytes as unknown as BodyInit,
-    });
-    if (!response.ok) throw new Error(`Loopback backend returned ${response.status}`);
-    const reply = new Uint8Array(await response.arrayBuffer());
-    if (reply.length > 0) {
-      this.packets.emit({ transport: this.kind, peerId: 'loopback:gateway', bytes: reply, receivedAt: Date.now() });
+    if (bytes.length > 255) throw new Error('Mesh packets must fit 255 bytes');
+    const controller = new AbortController(); this.activeRequests.add(controller);
+    const timeout = setTimeout(() => controller.abort(), 4_500);
+    try {
+      const response = await fetch(`${this.backendUrl().replace(/\/$/, '')}/mesh/message`, {
+        method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-CrowdFlow-Transport': 'loopback' },
+        body: bytes as unknown as BodyInit, signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Loopback backend returned ${response.status}`);
+      const reply = new Uint8Array(await response.arrayBuffer());
+      if (reply.length > 0) {
+        this.packets.emit({ transport: this.kind, peerId: 'loopback:gateway', bytes: reply, receivedAt: Date.now() });
+      }
+    } finally {
+      clearTimeout(timeout); this.activeRequests.delete(controller);
     }
   }
 }

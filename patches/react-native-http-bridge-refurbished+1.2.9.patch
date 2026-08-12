@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native-http-bridge-refurbished/bridgeServer.js b/node_modules/react-native-http-bridge-refurbished/bridgeServer.js
+index af40f1a..6593a8e 100644
+--- a/node_modules/react-native-http-bridge-refurbished/bridgeServer.js
++++ b/node_modules/react-native-http-bridge-refurbished/bridgeServer.js
+@@ -106,6 +106,9 @@ class BridgeServer {
+   }
+   stop() {
+     httpServer.stop();
++    if (BridgeServer.server === this) {
++      BridgeServer.server = undefined;
++    }
+   }
+ }
+ module.exports = {

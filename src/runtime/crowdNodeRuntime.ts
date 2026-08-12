@@ -111,16 +111,20 @@ export class CrowdNodeRuntime {
   }
 
   async setBackendUrl(url: string): Promise<void> {
-    await this.settings.setBackendUrl(url); this.update({ backendUrl: this.settings.backendUrl });
+    try {
+      await this.settings.setBackendUrl(url);
+      this.update({ backendUrl: this.settings.backendUrl, lastError: undefined });
+    } catch (error) { this.update({ lastError: String(error) }); }
   }
 
   async setGatewayEnabled(enabled: boolean): Promise<void> {
-    await this.settings.setGatewayEnabled(enabled);
-    if (this.state.running) {
-      try { if (enabled) this.broadcastServer.start(); else this.broadcastServer.stop(); }
-      catch (error) { this.update({ lastError: String(error) }); }
-    }
-    this.update({ gatewayEnabled: enabled });
+    try {
+      await this.settings.setGatewayEnabled(enabled);
+      if (this.state.running) {
+        if (enabled) this.broadcastServer.start(); else this.broadcastServer.stop();
+      }
+      this.update({ gatewayEnabled: enabled, lastError: undefined });
+    } catch (error) { this.update({ lastError: String(error) }); }
   }
 
   injectPosition(x: number, y: number): void { this.location.inject({ x, y }); }
