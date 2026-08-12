@@ -70,6 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'CrowdFlow discovers anonymous nearby crowd nodes and relays local safety guidance.',
       },
     ],
+    './plugins/withBluetoothScanLocation',
   ],
   extra: {
     defaultBackendUrl: process.env.EXPO_PUBLIC_BACKEND_URL ?? 'http://10.0.2.2:8000',
