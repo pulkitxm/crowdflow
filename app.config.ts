@@ -37,6 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.ACCESS_WIFI_STATE',
       'android.permission.CHANGE_WIFI_STATE',
       'android.permission.CHANGE_NETWORK_STATE',
+      'android.permission.CHANGE_WIFI_MULTICAST_STATE',
       'android.permission.NEARBY_WIFI_DEVICES',
       'android.permission.BLUETOOTH',
       'android.permission.BLUETOOTH_ADMIN',
