@@ -10,6 +10,7 @@ export interface MeshTransport {
   readonly peersChanged: TypedEvent<PeerInfo[]>;
   readonly statusChanged: TypedEvent<TransportStatus>;
   status(): TransportStatus;
+  reportError(error: unknown): void;
   isAvailable(): Promise<boolean>;
   start(nodeId: string): Promise<void>;
   updateNodeId(nodeId: string): Promise<void>;
@@ -40,6 +41,14 @@ export abstract class BaseTransport implements MeshTransport {
   abstract broadcast(bytes: Uint8Array): Promise<void>;
 
   status(): TransportStatus { return this.currentStatus; }
+
+  reportError(error: unknown): void {
+    this.updateStatus({
+      running: false,
+      discoverable: false,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   async updateNodeId(nodeId: string): Promise<void> {
     if (!this.currentStatus.running) return;

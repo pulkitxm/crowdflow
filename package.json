@@ -6,6 +6,7 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
+          "react-native-http-bridge-refurbished",
           "react-native-multi-ble-peripheral",
           "react-native-udp",
           "react-native-wifi-p2p"
@@ -14,6 +15,11 @@
     }
   },
   "main": "index.ts",
+  "overrides": {
+    "react-native-http-bridge-refurbished": {
+      "react": "19.2.3"
+    }
+  },
   "scripts": {
     "start": "expo start --dev-client",
     "start:go": "expo start",
@@ -41,6 +47,7 @@
     "react": "19.2.3",
     "react-native": "0.86.2",
     "react-native-ble-plx": "^3.5.1",
+    "react-native-http-bridge-refurbished": "^1.2.9",
     "react-native-multi-ble-peripheral": "^0.1.8",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4",

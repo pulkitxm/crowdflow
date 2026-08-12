@@ -2,6 +2,7 @@ import type { Guidance, MeshMessage, NodeTelemetry, RerouteCommand, StateUpdate 
 import { TypedEvent, type Unsubscribe } from '../core/events';
 import { epochSeconds, RotatingNodeIdentity, SequenceCounter, shouldComply, type RandomBytes } from '../core/identity';
 import type { LocationEngine } from '../location/locationEngine';
+import { BroadcastServer } from '../gateway/broadcastServer';
 import { DensityEstimator } from '../mesh/densityEstimator';
 import { MeshRouter } from '../mesh/meshRouter';
 import { TelemetryUploader } from '../network/telemetryUploader';
@@ -19,6 +20,7 @@ export class CrowdNodeRuntime {
   private readonly sequence = new SequenceCounter();
   private readonly density = new DensityEstimator();
   private readonly router: MeshRouter;
+  private readonly broadcastServer: BroadcastServer;
   private readonly uploader: TelemetryUploader;
   private readonly subscriptions: Unsubscribe[] = [];
   private tick?: ReturnType<typeof setInterval>;
@@ -36,6 +38,7 @@ export class CrowdNodeRuntime {
   ) {
     this.identity = new RotatingNodeIdentity(randomBytes);
     this.router = new MeshRouter(transports);
+    this.broadcastServer = new BroadcastServer(this.router);
     this.uploader = new TelemetryUploader(settings);
     this.state = {
       ...initialRuntimeState,
@@ -51,6 +54,7 @@ export class CrowdNodeRuntime {
     this.update({ running: true, connectivity: 'starting', lastError: undefined });
     this.bindEvents();
     this.router.start(); this.uploader.start();
+    if (this.settings.gatewayEnabled) this.broadcastServer.start();
     const results = await Promise.allSettled([this.transports.start(this.identity.current()), this.location.start()]);
     results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
       .forEach((result) => this.update({ lastError: String(result.reason) }));
@@ -62,7 +66,7 @@ export class CrowdNodeRuntime {
   async stop(): Promise<void> {
     if (this.tick) clearInterval(this.tick); if (this.expiry) clearInterval(this.expiry);
     this.tick = undefined; this.expiry = undefined;
-    this.uploader.stop(); this.router.stop(); this.location.stop();
+    this.broadcastServer.stop(); this.uploader.stop(); this.router.stop(); this.location.stop();
     await this.transports.stop();
     this.subscriptions.splice(0).forEach((unsubscribe) => unsubscribe());
     this.update({ running: false, connectivity: 'stopped', activeTransport: 'Stopped', peers: [], transportStatuses: [] });
@@ -83,7 +87,11 @@ export class CrowdNodeRuntime {
   }
 
   async setGatewayEnabled(enabled: boolean): Promise<void> {
-    await this.settings.setGatewayEnabled(enabled); this.update({ gatewayEnabled: enabled });
+    await this.settings.setGatewayEnabled(enabled);
+    if (this.state.running) {
+      if (enabled) this.broadcastServer.start(); else this.broadcastServer.stop();
+    }
+    this.update({ gatewayEnabled: enabled });
   }
 
   injectPosition(x: number, y: number): void { this.location.inject({ x, y }); }

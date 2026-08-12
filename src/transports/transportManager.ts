@@ -39,7 +39,12 @@ export class TransportManager {
       });
     }
     await Promise.allSettled(this.transports.map(async (transport) => {
-      if (await transport.isAvailable()) await transport.start(nodeId);
+      try {
+        if (await transport.isAvailable()) await transport.start(nodeId);
+      } catch (error) {
+        this.markFailure(transport, error);
+        throw error;
+      }
     }));
     this.publishPeers(); this.statusesChanged.emit(this.statuses());
     this.monitor = setInterval(() => void this.refresh(), 10_000);
@@ -84,10 +89,19 @@ export class TransportManager {
 
   private async refresh(): Promise<void> {
     await Promise.allSettled(this.transports.map(async (transport) => {
-      const available = await transport.isAvailable();
-      if (available && !transport.status().running) await transport.start(this.nodeId);
-      if (!available && transport.status().running) await transport.stop();
+      try {
+        const available = await transport.isAvailable();
+        if (available && !transport.status().running) await transport.start(this.nodeId);
+        if (!available && transport.status().running) await transport.stop();
+      } catch (error) {
+        this.markFailure(transport, error);
+      }
     }));
+  }
+
+  private markFailure(transport: MeshTransport, error: unknown): void {
+    transport.reportError(error);
+    this.statusesChanged.emit(this.statuses());
   }
 
   private publishPeers(): void { this.peersChanged.emit(this.peers()); }

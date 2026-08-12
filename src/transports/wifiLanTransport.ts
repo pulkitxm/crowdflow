@@ -4,6 +4,7 @@ import dgram from 'react-native-udp';
 import Zeroconf, { ImplType } from 'react-native-zeroconf';
 import type { PeerInfo } from '../core/contracts';
 import { BaseTransport } from './meshTransport';
+import { SessionHandles } from './sessionHandles';
 
 const PORT = 47_317;
 const BROADCAST_HOST = '255.255.255.255';
@@ -18,6 +19,7 @@ export class WifiLanTransport extends BaseTransport {
   readonly name = 'Wi-Fi LAN';
   readonly priority = 90;
   private readonly zeroconf = new Zeroconf();
+  private readonly handles = new SessionHandles();
   private readonly knownPeers = new Map<string, PeerInfo>();
   private readonly endpoints = new Map<string, { host: string; port: number }>();
   private socket?: ReturnType<typeof dgram.createSocket>;
@@ -63,7 +65,7 @@ export class WifiLanTransport extends BaseTransport {
     this.socket = dgram.createSocket({ type: 'udp4', reusePort: true });
     (this.socket as unknown as { on: (event: string, listener: (...args: any[]) => void) => void }).on('message', (message: Buffer, remote: { address: string; port: number }) => {
       this.packets.emit({
-        transport: this.kind, peerId: `lan-host:${remote.address}:${remote.port}`,
+        transport: this.kind, peerId: this.handles.get(`${remote.address}:${remote.port}`, 'lan-session'),
         bytes: new Uint8Array(message), receivedAt: Date.now(),
       });
     });
@@ -93,7 +95,7 @@ export class WifiLanTransport extends BaseTransport {
     try { if (this.serviceName) this.zeroconf.unpublishService(this.serviceName, impl); } catch { /* not published */ }
     this.zeroconf.removeDeviceListeners();
     this.socket?.close(); this.socket = undefined;
-    this.knownPeers.clear(); this.endpoints.clear(); this.publishPeers([]);
+    this.knownPeers.clear(); this.endpoints.clear(); this.handles.clear(); this.publishPeers([]);
     this.updateStatus({ running: false, discoverable: false, detail: 'Stopped' });
   }
 

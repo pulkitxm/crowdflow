@@ -63,6 +63,8 @@ Wi-Fi Aware itself is vendor/hardware dependent and is not exposed by a stable E
 
 - `POST /ingest/telemetry` — `{ "batch": [NodeTelemetry, ...] }`
 - `POST /mesh/message` — packed bytes for loopback fallback
+- `POST http://PHONE_IP:8765/broadcast` — base64 packet body (or `{ "packet": "…" }`) injected into the phone mesh while gateway mode is enabled
+- `GET http://PHONE_IP:8765/health` — gateway liveness
 
 The backend URL and gateway relay toggle are in the long-press diagnostics screen. The emulator default is `http://10.0.2.2:8000`; use your laptop's LAN address on physical phones.
 

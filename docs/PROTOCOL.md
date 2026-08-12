@@ -41,3 +41,5 @@ All available physical transports start concurrently:
 - Android Wi-Fi Direct as a P2P fallback
 
 Receiving one packet over Bluetooth and Wi-Fi is expected. Cross-radio repeats are processed once by the application-layer dedupe key.
+
+When gateway mode is enabled, `POST http://PHONE_IP:8765/broadcast` accepts the complete packed packet as a base64 body or JSON `{ "packet": "base64" }`; it validates and injects it through the same router. `GET /health` reports gateway liveness.
