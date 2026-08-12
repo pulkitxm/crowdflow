@@ -5,6 +5,9 @@ import type { PeerInfo } from '../core/contracts';
 import { BaseTransport } from './meshTransport';
 import { hasWifiDirectModule } from './nativeCapabilities';
 import { SessionHandles } from './sessionHandles';
+import { parseWifiDirectPayload } from './wifiDirectPayload';
+
+const CONNECTION_TIMEOUT_MS = 4_500;
 
 /** Android Wi-Fi Direct discovery and compact message path. */
 export class WifiDirectTransport extends BaseTransport {
@@ -14,6 +17,8 @@ export class WifiDirectTransport extends BaseTransport {
   private readonly handles = new SessionHandles();
   private readonly knownPeers = new Map<string, PeerInfo>();
   private readonly physicalAddresses = new Map<string, string>();
+  private readonly peerEndpoints = new Map<string, string>();
+  private readonly dataEndpoints = new Set<string>();
   private peersSubscription?: EmitterSubscription;
   private connectionSubscription?: EmitterSubscription;
   private receiveLoop = false;
@@ -44,46 +49,90 @@ export class WifiDirectTransport extends BaseTransport {
         this.knownPeers.set(id, { id, transport: this.kind, lastSeen: Date.now() });
       });
       [...this.knownPeers.keys()].filter((id) => !active.has(id)).forEach((id) => {
-        this.knownPeers.delete(id); this.physicalAddresses.delete(id);
+        this.knownPeers.delete(id); this.physicalAddresses.delete(id); this.peerEndpoints.delete(id);
       });
       this.publishPeers(this.peers());
     });
-    this.connectionSubscription = WifiP2p.subscribeOnConnectionInfoUpdates((info) => {
-      if (info.groupFormed) this.startReceiveLoop();
-    });
+    this.connectionSubscription = WifiP2p.subscribeOnConnectionInfoUpdates((info) => this.recordConnection(info));
     await WifiP2p.startDiscoveringPeers();
-    this.updateStatus({ available: true, running: true, discoverable: true, detail: 'Discoverable + scanning' });
+    const info = await WifiP2p.getConnectionInfo().catch(() => undefined);
+    if (info) this.recordConnection(info);
+    this.updateStatus({ available: true, running: true, discoverable: true,
+      detail: info?.groupFormed ? 'Direct group + message socket' : 'Discoverable + scanning' });
   }
 
   async stop(): Promise<void> {
     this.receiveLoop = false;
-    WifiP2p.stopReceivingMessage();
+    try { WifiP2p.stopReceivingMessage(); } catch { /* not initialized */ }
     this.peersSubscription?.remove(); this.connectionSubscription?.remove();
     this.peersSubscription = undefined; this.connectionSubscription = undefined;
     await WifiP2p.stopDiscoveringPeers().catch(() => undefined);
-    this.knownPeers.clear(); this.physicalAddresses.clear(); this.handles.clear();
-    this.publishPeers([]);
+    await WifiP2p.cancelConnect().catch(() => undefined);
+    await WifiP2p.removeGroup().catch(() => undefined);
+    this.knownPeers.clear(); this.physicalAddresses.clear(); this.peerEndpoints.clear(); this.dataEndpoints.clear();
+    this.handles.clear(); this.publishPeers([]);
     this.updateStatus({ running: false, discoverable: false, detail: 'Stopped' });
   }
 
   peers(): PeerInfo[] { return [...this.knownPeers.values()]; }
 
   async send(peerId: string, bytes: Uint8Array): Promise<void> {
-    if (bytes.length > 255) throw new Error('Mesh packets must fit 255 bytes');
-    const address = this.physicalAddresses.get(peerId);
-    if (!address) throw new Error('Wi-Fi Direct peer is unavailable');
-    await WifiP2p.connect(address).catch(() => undefined);
-    const info = await WifiP2p.getConnectionInfo();
-    const destination = info.groupOwnerAddress?.hostAddress;
-    if (!destination) throw new Error('Wi-Fi Direct group has no data endpoint');
-    await WifiP2p.sendMessageTo(Buffer.from(bytes).toString('base64'), destination);
+    this.assertPacket(bytes);
+    let destination = this.peerEndpoints.get(peerId);
+    if (!destination) {
+      const address = this.physicalAddresses.get(peerId);
+      if (!address) throw new Error('Wi-Fi Direct peer is unavailable');
+      const info = await this.ensureConnection(address);
+      destination = !info.isGroupOwner ? info.groupOwnerAddress?.hostAddress : undefined;
+      if (destination) {
+        this.peerEndpoints.set(peerId, destination); this.dataEndpoints.add(destination);
+      }
+    }
+    if (!destination) throw new Error('Waiting for the Wi-Fi Direct peer data endpoint');
+    await this.sendTo(bytes, destination);
   }
 
   async broadcast(bytes: Uint8Array): Promise<void> {
-    const peers = this.peers();
-    if (peers.length === 0) return;
-    const results = await Promise.allSettled(peers.map((peer) => this.send(peer.id, bytes)));
-    if (!results.some((result) => result.status === 'fulfilled')) throw (results[0] as PromiseRejectedResult).reason;
+    this.assertPacket(bytes);
+    const endpoints = [...this.dataEndpoints];
+    if (endpoints.length > 0) {
+      const results = await Promise.allSettled(endpoints.map((address) => this.sendTo(bytes, address)));
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') this.dataEndpoints.delete(endpoints[index]);
+      });
+      if (results.some((result) => result.status === 'fulfilled')) return;
+      throw (results[0] as PromiseRejectedResult).reason;
+    }
+    const peer = this.peers()[0];
+    if (peer) await this.send(peer.id, bytes);
+  }
+
+  private recordConnection(info: WifiP2p.WifiP2pInfo): void {
+    if (!info.groupFormed) {
+      this.receiveLoop = false; this.dataEndpoints.clear(); this.peerEndpoints.clear();
+      try { WifiP2p.stopReceivingMessage(); } catch { /* no active socket */ }
+      return;
+    }
+    const ownerAddress = info.groupOwnerAddress?.hostAddress;
+    if (!info.isGroupOwner && ownerAddress) this.dataEndpoints.add(ownerAddress);
+    this.startReceiveLoop();
+    if (this.currentStatus.running) this.updateStatus({ detail: 'Direct group + message socket' });
+  }
+
+  private async ensureConnection(deviceAddress: string): Promise<WifiP2p.WifiP2pInfo> {
+    let info = await WifiP2p.getConnectionInfo();
+    if (!info.groupFormed) {
+      await WifiP2p.connect(deviceAddress);
+      const deadline = Date.now() + CONNECTION_TIMEOUT_MS;
+      do {
+        await delay(250);
+        info = await WifiP2p.getConnectionInfo();
+        if (info.groupFormed) break;
+      } while (Date.now() < deadline);
+    }
+    if (!info.groupFormed) throw new Error('Wi-Fi Direct connection timed out');
+    this.recordConnection(info);
+    return info;
   }
 
   private startReceiveLoop(): void {
@@ -92,18 +141,30 @@ export class WifiDirectTransport extends BaseTransport {
     void (async () => {
       while (this.receiveLoop) {
         try {
-          const encoded = await WifiP2p.receiveMessage({ meta: false });
-          if (typeof encoded === 'string' && encoded.length > 0) {
-            this.packets.emit({
-              transport: this.kind, peerId: 'direct:connected',
-              bytes: new Uint8Array(Buffer.from(encoded, 'base64')), receivedAt: Date.now(),
-            });
-          }
+          const raw = await WifiP2p.receiveMessage({ meta: true }) as unknown;
+          if (!this.receiveLoop) return;
+          const payload = parseWifiDirectPayload(raw);
+          if (!payload) continue;
+          if (payload.fromAddress) this.dataEndpoints.add(payload.fromAddress);
+          this.packets.emit({
+            transport: this.kind,
+            peerId: payload.fromAddress ? this.handles.get(payload.fromAddress, 'direct-session') : 'direct:connected',
+            bytes: new Uint8Array(Buffer.from(payload.encoded, 'base64')),
+            receivedAt: Date.now(),
+          });
         } catch {
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          if (this.receiveLoop) await delay(500);
         }
       }
     })();
+  }
+
+  private sendTo(bytes: Uint8Array, destination: string): Promise<unknown> {
+    return WifiP2p.sendMessageTo(Buffer.from(bytes).toString('base64'), destination);
+  }
+
+  private assertPacket(bytes: Uint8Array): void {
+    if (bytes.length > 255) throw new Error('Mesh packets must fit 255 bytes');
   }
 
   private async requestPermission(): Promise<void> {
@@ -111,6 +172,11 @@ export class WifiDirectTransport extends BaseTransport {
     const permission = Platform.Version >= 33
       ? PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES
       : PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION;
-    await PermissionsAndroid.request(permission);
+    const result = await PermissionsAndroid.request(permission);
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) throw new Error('Nearby Wi-Fi permission was not granted');
   }
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
