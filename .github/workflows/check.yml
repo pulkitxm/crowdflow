@@ -17,4 +17,5 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run doctor
       - run: npx expo config --type public >/dev/null

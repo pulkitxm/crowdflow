@@ -23,9 +23,10 @@ A standalone Expo React Native implementation of the **P3 Mesh & Mobile** slice 
 This cannot run fully in Expo Go. Expo Go does not include BLE peripheral advertising, UDP/mDNS, or Android Wi-Fi Direct native modules. Use an Expo development build, as documented for SDK 57.
 
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
+npm run doctor
 npx expo prebuild --clean
 npm run android          # physical Android phone strongly recommended
 npm start                # Metro for an installed development build
@@ -45,7 +46,7 @@ npm test
 npm run doctor
 ```
 
-A clean Expo prebuild and Android `assembleDebug` were run successfully against SDK 36 / JDK 17, including the BLE peripheral/GATT server. Generated `android/` and `ios/` projects are intentionally ignored; native compatibility changes live in `patches/` and are reapplied by `postinstall`.
+A clean dependency install, Expo prebuild, Hermes bundle, and Android `assembleDebug` were run successfully against SDK 36 / JDK 17, including the BLE peripheral/GATT server, Wi-Fi Direct patch, and inbound gateway. TypeScript, 30 tests, and all 20 Expo Doctor checks pass. Generated `android/` and `ios/` projects are intentionally ignored; native compatibility changes live in `patches/` and are reapplied by `postinstall`.
 
 ## Phone test
 
@@ -59,6 +60,8 @@ A clean Expo prebuild and Android `assembleDebug` were run successfully against 
 
 Wi-Fi Aware itself is vendor/hardware dependent and is not exposed by a stable Expo community module. This build provides Wi-Fi detection through cross-platform LAN mDNS/UDP plus Android Wi-Fi Direct, while keeping the transport abstraction ready for an Aware Expo module later.
 
+Expo SDK 57 foreground location and pedometer subscriptions stop delivering updates in the background. Keep the app open during node operation; this build does not claim background mesh execution.
+
 ## Backend surfaces
 
 - `POST /ingest/telemetry` — `{ "batch": [NodeTelemetry, ...] }`
@@ -66,7 +69,7 @@ Wi-Fi Aware itself is vendor/hardware dependent and is not exposed by a stable E
 - `POST http://PHONE_IP:8765/broadcast` — base64 packet body (or `{ "packet": "…" }`) injected into the phone mesh while gateway mode is enabled
 - `GET http://PHONE_IP:8765/health` — gateway liveness
 
-The backend URL and gateway relay toggle are in the long-press diagnostics screen. The emulator default is `http://10.0.2.2:8000`; use your laptop's LAN address on physical phones.
+The backend URL and gateway relay toggle are in the long-press diagnostics screen. The emulator default is `http://10.0.2.2:8000`; use your laptop's LAN address on physical phones. Unknown gateway routes return 404, malformed packets return 400, and radio injection failures return 503.
 
 ## Privacy
 
