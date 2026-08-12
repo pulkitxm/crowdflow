@@ -34,3 +34,14 @@ index a05fd62..884d9ef 100644
              params.putInt("offset", offset)
              params.putString("value", Base64.encodeToString(value, Base64.NO_WRAP))
              sendEvent("onWrite", params)
+diff --git a/node_modules/react-native-multi-ble-peripheral/ios/ReactNativeMultiBlePeripheral.swift b/node_modules/react-native-multi-ble-peripheral/ios/ReactNativeMultiBlePeripheral.swift
+index 46cdbb0..39d0e92 100644
+--- a/node_modules/react-native-multi-ble-peripheral/ios/ReactNativeMultiBlePeripheral.swift
++++ b/node_modules/react-native-multi-ble-peripheral/ios/ReactNativeMultiBlePeripheral.swift
+@@ -305,5 +305,6 @@ class ReactNativeMultiBlePeripheral: RCTEventEmitter, CBPeripheralManagerDelegat
+         "characteristicUUID": characteristicUUID,
+         "value": base64,
+       ])
++      peripheral.respond(to: request, withResult: .success)
+     }
+   }
