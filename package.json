@@ -2,6 +2,17 @@
   "name": "crowdflow-mesh",
   "version": "0.1.0",
   "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-multi-ble-peripheral",
+          "react-native-udp",
+          "react-native-wifi-p2p"
+        ]
+      }
+    }
+  },
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",

@@ -33,6 +33,10 @@ npm start                # Metro for an installed development build
 
 The first native build takes longer because it compiles React Native, Expo modules, and the mDNS responder. Physical devices are required to validate BLE advertising and Wi-Fi Direct; emulators do not model those radios accurately.
 
+## Native dependency note
+
+Expo Doctor flags some specialized radio libraries because React Native Directory lacks metadata or marks them unmaintained/untested on the New Architecture. They are explicitly excluded from that metadata-only check after a clean SDK 36 APK compile. Keep the physical-phone test plan mandatory; a directory badge is not a substitute for testing vendor radios.
+
 ## Verification
 
 ```bash
