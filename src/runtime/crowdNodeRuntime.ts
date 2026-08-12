@@ -1,4 +1,4 @@
-import type { Guidance, MeshMessage, NodeTelemetry, RerouteCommand, StateUpdate } from '../core/contracts';
+import type { MeshMessage, NodeTelemetry, RerouteCommand, StateUpdate } from '../core/contracts';
 import { TypedEvent, type Unsubscribe } from '../core/events';
 import { epochSeconds, RotatingNodeIdentity, SequenceCounter, shouldComply, type RandomBytes } from '../core/identity';
 import type { LocationEngine } from '../location/locationEngine';
@@ -27,7 +27,7 @@ export class CrowdNodeRuntime {
   private expiry?: ReturnType<typeof setInterval>;
   private lastStateAt = 0;
   private lastHeartbeatAt = 0;
-  private guidanceBeforeReroute?: Guidance;
+  private destinationBeforeReroute?: string;
 
   constructor(
     private readonly graph: VenueGraph,
@@ -74,12 +74,9 @@ export class CrowdNodeRuntime {
 
   setDestination(destination: string): void {
     const current = this.location.current()?.zoneId ?? 'gate_a';
-    const route = this.graph.shortestPath(current, destination);
-    const next = route[1] ? this.graph.zone(route[1]).label : this.graph.zone(destination).label;
-    this.update({
-      destination, route,
-      guidance: { route, headline: `Recommended route: ${next}`, detail: this.estimateTime(route) },
-    });
+    const guidance = this.normalGuidance(current, destination);
+    this.destinationBeforeReroute = undefined;
+    this.update({ destination, ...guidance });
   }
 
   async setBackendUrl(url: string): Promise<void> {
@@ -105,6 +102,7 @@ export class CrowdNodeRuntime {
       this.update({ peers, localDensity: this.density.estimate(peers) })));
     this.subscriptions.push(this.location.changed.subscribe((position) => this.update({
       position: position.point, positionAccuracy: position.accuracy, currentZone: position.zoneId,
+      ...this.guidanceFor(position.zoneId),
     })));
     this.subscriptions.push(this.router.statsChanged.subscribe((meshStats) => this.update({ meshStats })));
     this.subscriptions.push(this.router.messages.subscribe((message) => this.handleMessage(message)));
@@ -172,12 +170,8 @@ export class CrowdNodeRuntime {
     const current = this.location.current()?.zoneId ?? this.state.currentZone; if (!current) return false;
     const route = this.graph.shortestPath(current, command.destination_zone, new Set(command.avoid), new Set(command.preferred));
     if (route.length === 0) return false;
-    this.guidanceBeforeReroute = this.state.guidance;
-    const next = route[1] ? this.graph.zone(route[1]).label : this.graph.zone(command.destination_zone).label;
-    this.update({
-      destination: command.destination_zone, route,
-      guidance: { route, headline: 'Crowd building ahead', detail: `Take ${next} instead · ${this.estimateTime(route)}`, command },
-    });
+    if (!this.state.guidance?.command) this.destinationBeforeReroute = this.state.destination;
+    this.update({ destination: command.destination_zone, ...this.rerouteGuidance(command, route) });
     return true;
   }
 
@@ -185,9 +179,38 @@ export class CrowdNodeRuntime {
     const command = this.state.guidance?.command;
     if (!command || epochSeconds() < command.expires_at) return;
     const current = this.location.current()?.zoneId ?? this.state.currentZone ?? 'gate_a';
-    const route = this.graph.shortestPath(current, this.state.destination);
-    this.update({ route, guidance: this.guidanceBeforeReroute ?? { route, headline: 'Route restored', detail: this.estimateTime(route) } });
-    this.guidanceBeforeReroute = undefined;
+    this.update(this.guidanceFor(current));
+  }
+
+  private guidanceFor(current: string): Partial<RuntimeState> {
+    const command = this.state.guidance?.command;
+    if (command && epochSeconds() < command.expires_at) {
+      const route = this.graph.shortestPath(current, command.destination_zone, new Set(command.avoid), new Set(command.preferred));
+      return route.length > 0 ? this.rerouteGuidance(command, route) : {};
+    }
+    if (command) {
+      const destination = this.destinationBeforeReroute ?? this.state.destination;
+      this.destinationBeforeReroute = undefined;
+      return { destination, ...this.normalGuidance(current, destination, 'Route restored') };
+    }
+    return this.normalGuidance(current, this.state.destination);
+  }
+
+  private normalGuidance(current: string, destination: string, headline?: string): Pick<RuntimeState, 'route' | 'guidance'> {
+    const route = this.graph.shortestPath(current, destination);
+    const next = route[1] ? this.graph.zone(route[1]).label : this.graph.zone(destination).label;
+    return {
+      route,
+      guidance: { route, headline: headline ?? `Recommended route: ${next}`, detail: this.estimateTime(route) },
+    };
+  }
+
+  private rerouteGuidance(command: RerouteCommand, route: string[]): Pick<RuntimeState, 'route' | 'guidance'> {
+    const next = route[1] ? this.graph.zone(route[1]).label : this.graph.zone(command.destination_zone).label;
+    return {
+      route,
+      guidance: { route, headline: 'Crowd building ahead', detail: `Take ${next} instead · ${this.estimateTime(route)}`, command },
+    };
   }
 
   private estimateTime(route: string[]): string {
