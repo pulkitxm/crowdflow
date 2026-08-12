@@ -25,6 +25,7 @@ export class WifiLanTransport extends BaseTransport {
   private socket?: ReturnType<typeof dgram.createSocket>;
   private serviceName = '';
   private nodeId = '';
+  private nativeListenersActive = true;
 
   constructor() {
     super();
@@ -32,6 +33,7 @@ export class WifiLanTransport extends BaseTransport {
       kind: this.kind, name: this.name, available: Platform.OS !== 'web', running: false,
       discoverable: false, peerCount: 0, detail: 'mDNS + UDP',
     };
+    this.bindZeroconfEvents();
   }
 
   async isAvailable(): Promise<boolean> {
@@ -44,23 +46,9 @@ export class WifiLanTransport extends BaseTransport {
     if (!(await this.isAvailable())) throw new Error('Wi-Fi LAN transport is unavailable');
     this.nodeId = nodeId;
     this.serviceName = `crowdflow-${nodeId}`;
-    this.zeroconf.on('resolved', (service) => {
-      const peerNodeId = service.txt?.node;
-      if (!peerNodeId || peerNodeId === this.nodeId) return;
-      const host = service.addresses?.find((address) => /^\d+\.\d+\.\d+\.\d+$/.test(address)) ?? service.host;
-      if (!host) return;
-      const id = `lan:${peerNodeId}`;
-      this.endpoints.set(id, { host, port: service.port });
-      this.knownPeers.set(id, {
-        id, nodeId: peerNodeId, transport: this.kind, lastSeen: Date.now(),
-      });
-      this.publishPeers(this.peers());
-    });
-    this.zeroconf.on('remove', (name) => {
-      const id = [...this.knownPeers.entries()].find(([, peer]) => name.endsWith(peer.nodeId ?? ''))?.[0];
-      if (id) { this.knownPeers.delete(id); this.endpoints.delete(id); this.publishPeers(this.peers()); }
-    });
-    this.zeroconf.on('error', (error) => this.updateStatus({ detail: `mDNS: ${error.message}` }));
+    if (!this.nativeListenersActive) {
+      this.zeroconf.addDeviceListeners(); this.nativeListenersActive = true;
+    }
 
     this.socket = dgram.createSocket({ type: 'udp4', reusePort: true });
     (this.socket as unknown as { on: (event: string, listener: (...args: any[]) => void) => void }).on('message', (message: Buffer, remote: { address: string; port: number }) => {
@@ -93,8 +81,9 @@ export class WifiLanTransport extends BaseTransport {
     const impl = Platform.OS === 'android' ? ImplType.DNSSD : undefined;
     try { this.zeroconf.stop(impl); } catch { /* already stopped */ }
     try { if (this.serviceName) this.zeroconf.unpublishService(this.serviceName, impl); } catch { /* not published */ }
-    this.zeroconf.removeDeviceListeners();
-    this.socket?.close(); this.socket = undefined;
+    this.zeroconf.removeDeviceListeners(); this.nativeListenersActive = false;
+    try { this.socket?.close(); } catch { /* already closed */ }
+    this.socket = undefined;
     this.knownPeers.clear(); this.endpoints.clear(); this.handles.clear(); this.publishPeers([]);
     this.updateStatus({ running: false, discoverable: false, detail: 'Stopped' });
   }
@@ -116,6 +105,26 @@ export class WifiLanTransport extends BaseTransport {
       if (results.some((result) => result.status === 'fulfilled')) return;
     }
     await this.sendTo(bytes, PORT, BROADCAST_HOST);
+  }
+
+  private bindZeroconfEvents(): void {
+    this.zeroconf.on('resolved', (service) => {
+      const peerNodeId = service.txt?.node;
+      if (!peerNodeId || peerNodeId === this.nodeId) return;
+      const host = service.addresses?.find((address) => /^\d+\.\d+\.\d+\.\d+$/.test(address)) ?? service.host;
+      if (!host) return;
+      const id = `lan:${peerNodeId}`;
+      this.endpoints.set(id, { host, port: service.port });
+      this.knownPeers.set(id, {
+        id, nodeId: peerNodeId, transport: this.kind, lastSeen: Date.now(),
+      });
+      this.publishPeers(this.peers());
+    });
+    this.zeroconf.on('remove', (name) => {
+      const id = [...this.knownPeers.entries()].find(([, peer]) => name.endsWith(peer.nodeId ?? ''))?.[0];
+      if (id) { this.knownPeers.delete(id); this.endpoints.delete(id); this.publishPeers(this.peers()); }
+    });
+    this.zeroconf.on('error', (error) => this.updateStatus({ detail: `mDNS: ${error.message}` }));
   }
 
   private sendTo(bytes: Uint8Array, port: number, host: string): Promise<void> {

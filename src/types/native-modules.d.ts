@@ -16,6 +16,7 @@ declare module 'react-native-zeroconf' {
     stop(implType?: string): void;
     publishService(type: string, protocol: string, domain: string, name: string, port: number, txt?: Record<string, string>, implType?: string): void;
     unpublishService(name: string, implType?: string): void;
+    addDeviceListeners(): void;
     removeDeviceListeners(): void;
   }
 }
