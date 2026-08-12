@@ -26,6 +26,19 @@ describe('mesh relay router', () => {
     vi.useRealTimers();
   });
 
+  it('applies backend injection locally and safely rebroadcasts retries', async () => {
+    const manager = new FakeManager(); const router = new MeshRouter(manager as never);
+    const handled: MeshMessage[] = []; router.messages.subscribe((message) => handled.push(message));
+    const message: MeshMessage = {
+      type: 'REROUTE', source: '1000', sequence: 2, ttl: 4, timestamp: 100,
+      payload: new Uint8Array([1]),
+    };
+    expect(await router.inject(message)).toBe(true);
+    expect(await router.inject(message)).toBe(false);
+    expect(handled).toEqual([message]);
+    expect(manager.sent).toHaveLength(2);
+  });
+
   it('does not relay ttl-one packets', async () => {
     const manager = new FakeManager(); const router = new MeshRouter(manager as never); router.start();
     manager.packets.emit({ transport: 'bluetooth', peerId: 'peer', bytes: encodeMeshMessage({

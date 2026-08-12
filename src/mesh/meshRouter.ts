@@ -38,6 +38,17 @@ export class MeshRouter {
     this.increment('sent');
   }
 
+  /** Inject a backend packet into both this phone and the radio mesh. */
+  async inject(message: MeshMessage): Promise<boolean> {
+    const bytes = encodeMeshMessage(message);
+    const duplicate = this.seen.seenOrAdd(messageKey(message));
+    if (!duplicate) this.messages.emit(message);
+    // Retries are still broadcast; downstream nodes dedupe them and a prior attempt may have failed locally.
+    await this.transports.broadcast(bytes);
+    this.increment('sent');
+    return !duplicate;
+  }
+
   private async onPacket(packet: ReceivedPacket): Promise<void> {
     let message: MeshMessage;
     try { message = decodeMeshMessage(packet.bytes); }

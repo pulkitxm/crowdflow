@@ -1,7 +1,8 @@
-import { Buffer } from 'buffer';
-import { BridgeServer, type Request } from 'react-native-http-bridge-refurbished';
+import { BridgeServer } from 'react-native-http-bridge-refurbished';
+import type { MeshMessage } from '../core/contracts';
 import { decodeMeshMessage } from '../protocol/meshCodec';
 import type { MeshRouter } from '../mesh/meshRouter';
+import { decodeBroadcastBody } from './broadcastPayload';
 
 export const GATEWAY_BROADCAST_PORT = 8_765;
 
@@ -13,17 +14,25 @@ export class BroadcastServer {
 
   start(): void {
     if (this.server) return;
-    const server = new BridgeServer('crowdflow_mesh_gateway');
+    const server = new BridgeServer('crowdflow_mesh_gateway', __DEV__);
     server.get('/health', async () => ({ status: 'ok' }));
     server.post('/broadcast', async (request, response) => {
+      let message: MeshMessage;
       try {
-        const bytes = decodeRequestBody(request);
-        if (bytes.length === 0) throw new Error('Empty mesh packet');
-        await this.router.originate(decodeMeshMessage(bytes));
-        response.json({ accepted: true }, 202);
+        message = decodeMeshMessage(decodeBroadcastBody(request.postData));
       } catch (error) {
-        response.json({ accepted: false, error: error instanceof Error ? error.message : String(error) }, 400);
+        response.json({ accepted: false, error: errorMessage(error) }, 400);
+        return;
       }
+      try {
+        const applied = await this.router.inject(message);
+        response.json({ accepted: true, duplicate: !applied }, 202);
+      } catch (error) {
+        response.json({ accepted: false, error: errorMessage(error) }, 503);
+      }
+    });
+    server.use(async (_request, response) => {
+      response.json({ error: 'Not found' }, 404);
     });
     server.listen(GATEWAY_BROADCAST_PORT);
     this.server = server;
@@ -34,15 +43,6 @@ export class BroadcastServer {
   }
 }
 
-function decodeRequestBody(request: Request<unknown>): Uint8Array {
-  const raw = request.postData;
-  if (typeof raw !== 'string') return new Uint8Array();
-  const trimmed = raw.trim();
-  // Primary format is base64 because the bridge exposes parsed HTTP bodies as UTF-8 strings.
-  if (/^[A-Za-z0-9+/]+={0,2}$/.test(trimmed)) return new Uint8Array(Buffer.from(trimmed, 'base64'));
-  try {
-    const json = JSON.parse(trimmed) as { packet?: string };
-    if (typeof json.packet === 'string') return new Uint8Array(Buffer.from(json.packet, 'base64'));
-  } catch { /* let the protocol validator reject arbitrary bytes */ }
-  return new Uint8Array(Buffer.from(raw, 'latin1'));
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
