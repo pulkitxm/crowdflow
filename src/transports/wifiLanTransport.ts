@@ -19,6 +19,7 @@ export class WifiLanTransport extends BaseTransport {
   readonly priority = 90;
   private readonly zeroconf = new Zeroconf();
   private readonly knownPeers = new Map<string, PeerInfo>();
+  private readonly endpoints = new Map<string, { host: string; port: number }>();
   private socket?: ReturnType<typeof dgram.createSocket>;
   private serviceName = '';
   private nodeId = '';
@@ -47,14 +48,15 @@ export class WifiLanTransport extends BaseTransport {
       const host = service.addresses?.find((address) => /^\d+\.\d+\.\d+\.\d+$/.test(address)) ?? service.host;
       if (!host) return;
       const id = `lan:${peerNodeId}`;
+      this.endpoints.set(id, { host, port: service.port });
       this.knownPeers.set(id, {
-        id, nodeId: peerNodeId, transport: this.kind, host, port: service.port, lastSeen: Date.now(),
+        id, nodeId: peerNodeId, transport: this.kind, lastSeen: Date.now(),
       });
       this.publishPeers(this.peers());
     });
     this.zeroconf.on('remove', (name) => {
       const id = [...this.knownPeers.entries()].find(([, peer]) => name.endsWith(peer.nodeId ?? ''))?.[0];
-      if (id) { this.knownPeers.delete(id); this.publishPeers(this.peers()); }
+      if (id) { this.knownPeers.delete(id); this.endpoints.delete(id); this.publishPeers(this.peers()); }
     });
     this.zeroconf.on('error', (error) => this.updateStatus({ detail: `mDNS: ${error.message}` }));
 
@@ -91,7 +93,7 @@ export class WifiLanTransport extends BaseTransport {
     try { if (this.serviceName) this.zeroconf.unpublishService(this.serviceName, impl); } catch { /* not published */ }
     this.zeroconf.removeDeviceListeners();
     this.socket?.close(); this.socket = undefined;
-    this.knownPeers.clear(); this.publishPeers([]);
+    this.knownPeers.clear(); this.endpoints.clear(); this.publishPeers([]);
     this.updateStatus({ running: false, discoverable: false, detail: 'Stopped' });
   }
 
@@ -99,9 +101,9 @@ export class WifiLanTransport extends BaseTransport {
 
   async send(peerId: string, bytes: Uint8Array): Promise<void> {
     if (bytes.length > 255) throw new Error('Mesh packets must fit 255 bytes');
-    const peer = this.knownPeers.get(peerId);
-    if (!peer?.host || !peer.port) throw new Error('Wi-Fi peer endpoint is unavailable');
-    await this.sendTo(bytes, peer.port, peer.host);
+    const endpoint = this.endpoints.get(peerId);
+    if (!endpoint) throw new Error('Wi-Fi peer endpoint is unavailable');
+    await this.sendTo(bytes, endpoint.port, endpoint.host);
   }
 
   async broadcast(bytes: Uint8Array): Promise<void> {

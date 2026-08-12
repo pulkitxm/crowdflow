@@ -69,8 +69,6 @@ export interface PeerInfo {
   transport: TransportKind;
   rssi?: number;
   distanceMetres?: number;
-  host?: string;
-  port?: number;
   lastSeen: number;
 }
 

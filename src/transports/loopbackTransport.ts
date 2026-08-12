@@ -7,10 +7,6 @@ export class LoopbackTransport extends BaseTransport {
   readonly name = 'Backend loopback';
   readonly priority = 10;
   readonly fallbackOnly = true;
-  private readonly gateway: PeerInfo = {
-    id: 'loopback:gateway', transport: 'loopback', lastSeen: Date.now(),
-  };
-
   constructor(private readonly backendUrl: () => string) {
     super();
     this.currentStatus = {
@@ -21,13 +17,13 @@ export class LoopbackTransport extends BaseTransport {
 
   async isAvailable(): Promise<boolean> { return true; }
   async start(_nodeId: string): Promise<void> {
-    this.updateStatus({ available: true, running: true, peerCount: 1, detail: 'HTTP fallback ready' });
-    this.peersChanged.emit(this.peers());
+    this.updateStatus({ available: true, running: true, peerCount: 0, detail: 'HTTP fallback ready' });
+    this.peersChanged.emit([]);
   }
   async stop(): Promise<void> {
     this.updateStatus({ running: false, peerCount: 0, detail: 'Stopped' }); this.peersChanged.emit([]);
   }
-  peers(): PeerInfo[] { return this.currentStatus.running ? [this.gateway] : []; }
+  peers(): PeerInfo[] { return []; }
   async send(_peerId: string, bytes: Uint8Array): Promise<void> { await this.post(bytes); }
   async broadcast(bytes: Uint8Array): Promise<void> { await this.post(bytes); }
 
@@ -39,7 +35,7 @@ export class LoopbackTransport extends BaseTransport {
     if (!response.ok) throw new Error(`Loopback backend returned ${response.status}`);
     const reply = new Uint8Array(await response.arrayBuffer());
     if (reply.length > 0) {
-      this.packets.emit({ transport: this.kind, peerId: this.gateway.id, bytes: reply, receivedAt: Date.now() });
+      this.packets.emit({ transport: this.kind, peerId: 'loopback:gateway', bytes: reply, receivedAt: Date.now() });
     }
   }
 }
