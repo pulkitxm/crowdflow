@@ -107,12 +107,8 @@ export class CrowdNodeRuntime {
     this.subscriptions.push(this.router.statsChanged.subscribe((meshStats) => this.update({ meshStats })));
     this.subscriptions.push(this.router.messages.subscribe((message) => this.handleMessage(message)));
     this.subscriptions.push(this.uploader.statsChanged.subscribe((uploadStats) => this.update({ uploadStats })));
-    this.subscriptions.push(this.uploader.connectivityChanged.subscribe((connectivity) => {
-      this.update({ connectivity });
-      if (connectivity === 'restored') setTimeout(() => {
-        if (this.state.connectivity === 'restored') this.update({ connectivity: 'online' });
-      }, 2_000);
-    }));
+    this.subscriptions.push(this.uploader.connectivityChanged.subscribe((connectivity) =>
+      this.update({ connectivity })));
   }
 
   private async onTick(): Promise<void> {
