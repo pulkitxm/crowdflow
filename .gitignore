@@ -1,0 +1,26 @@
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Generated native projects; use Expo prebuild/dev builds
+/android/
+/ios/
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Tooling and local configuration
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+coverage/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
