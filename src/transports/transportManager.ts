@@ -39,7 +39,19 @@ export class TransportManager {
     if (this.active) return;
     this.active = true; this.nodeId = nodeId;
     this.bindEvents();
-    await Promise.allSettled(this.transports.map((transport) => this.startIfAvailable(transport)));
+    const prepared: MeshTransport[] = [];
+    // Permission prompts are deliberately serialized; native radios start concurrently afterwards.
+    for (const transport of this.transports) {
+      if (!this.active) break;
+      try {
+        await transport.prepare();
+        if (!this.active) break;
+        if (await transport.isAvailable()) prepared.push(transport);
+      } catch (error) {
+        await this.cleanFailure(transport, error);
+      }
+    }
+    await Promise.allSettled(prepared.map((transport) => this.startPrepared(transport)));
     this.publishPeers(); this.statusesChanged.emit(this.statuses());
     if (this.active) this.monitor = setInterval(() => void this.refresh(), 10_000);
   }
@@ -133,6 +145,7 @@ export class TransportManager {
           if (this.started.has(transport)) {
             await transport.stop().catch(() => undefined); this.started.delete(transport);
           }
+          await transport.prepare();
           await transport.start(this.nodeId); this.started.add(transport);
         }
       } catch (error) {
@@ -142,9 +155,9 @@ export class TransportManager {
     this.publishPeers();
   }
 
-  private async startIfAvailable(transport: MeshTransport): Promise<void> {
+  private async startPrepared(transport: MeshTransport): Promise<void> {
     try {
-      if (!this.active || !(await transport.isAvailable()) || !this.active) return;
+      if (!this.active) return;
       await transport.start(this.nodeId);
       if (this.active) this.started.add(transport); else await transport.stop();
     } catch (error) {

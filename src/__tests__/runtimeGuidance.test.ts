@@ -19,14 +19,16 @@ import { CrowdNodeRuntime } from '../runtime/crowdNodeRuntime';
 class FakeTransports {
   packets = new TypedEvent(); peersChanged = new TypedEvent(); statusesChanged = new TypedEvent();
   activeName = 'Test';
-  async start() {} async stop() {} async updateNodeId() {} async broadcast() {}
+  startCalls = 0; stopCalls = 0;
+  async start() { this.startCalls += 1; } async stop() { this.stopCalls += 1; }
+  async updateNodeId() {} async broadcast() {}
   peers() { return []; } statuses() { return []; }
 }
 
 class FakeLocation {
   changed = new TypedEvent<VenuePosition>();
   latest?: VenuePosition;
-  async start() {} stop() {}
+  async prepare() {} async start() {} stop() {}
   current() { return this.latest; }
   inject() {}
   move(zoneId: string): void {
@@ -86,5 +88,27 @@ describe('runtime guidance lifecycle', () => {
     expect(runtime.snapshot().route[0]).toBe('plaza_a');
     expect(runtime.snapshot().guidance?.command).toBeUndefined();
     await runtime.stop();
+  });
+});
+
+describe('runtime startup isolation', () => {
+  it('does not start radios after stop wins a pending permission request', async () => {
+    let release!: () => void;
+    const location = new FakeLocation();
+    location.prepare = () => new Promise<void>((resolve) => { release = resolve; });
+    const transports = new FakeTransports();
+    const runtime = new CrowdNodeRuntime(
+      demoVenue, transports as never, location as never, new FakeSettings() as never,
+      () => Uint8Array.from([0x12, 0x34]),
+    );
+
+    const starting = runtime.start();
+    await Promise.resolve();
+    await runtime.stop();
+    release(); await starting;
+
+    expect(transports.startCalls).toBe(0);
+    expect(runtime.snapshot().running).toBe(false);
+    expect(runtime.snapshot().connectivity).toBe('stopped');
   });
 });

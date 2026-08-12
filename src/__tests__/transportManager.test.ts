@@ -7,9 +7,10 @@ class FakeTransport extends BaseTransport {
   readonly name: string;
   readonly priority: number;
   override readonly fallbackOnly: boolean;
-  startCalls = 0; stopCalls = 0; broadcastCalls = 0;
+  prepareCalls = 0; startCalls = 0; stopCalls = 0; broadcastCalls = 0;
   available = true;
   failStart?: Error;
+  prepareOperation: () => Promise<void> = async () => {};
   broadcastOperation: () => Promise<void> = async () => {};
 
   constructor(
@@ -26,6 +27,9 @@ class FakeTransport extends BaseTransport {
     };
   }
 
+  override async prepare(): Promise<void> {
+    this.prepareCalls += 1; await this.prepareOperation();
+  }
   async isAvailable(): Promise<boolean> { return this.available; }
   async start(): Promise<void> {
     this.startCalls += 1;
@@ -43,6 +47,24 @@ class FakeTransport extends BaseTransport {
 afterEach(() => vi.useRealTimers());
 
 describe('transport manager failure isolation', () => {
+  it('serializes permission preparation before starting radios together', async () => {
+    let release!: () => void;
+    const first = new FakeTransport('bluetooth');
+    first.prepareOperation = () => new Promise<void>((resolve) => { release = resolve; });
+    const second = new FakeTransport('wifi-direct');
+    const manager = new TransportManager([first, second]);
+
+    const starting = manager.start('1234');
+    await Promise.resolve();
+    expect(first.prepareCalls).toBe(1);
+    expect(second.prepareCalls).toBe(0);
+    release(); await starting;
+    expect(second.prepareCalls).toBe(1);
+    expect(first.startCalls).toBe(1);
+    expect(second.startCalls).toBe(1);
+    await manager.stop();
+  });
+
   it('does not wait for a stalled radio after another physical radio succeeds', async () => {
     const stalled = new FakeTransport('bluetooth');
     stalled.broadcastOperation = () => new Promise(() => {});

@@ -27,46 +27,54 @@ export class LocationEngine {
   private stepVelocity = 0;
   private lastStepCount = 0;
   private lastStepAt = 0;
+  private prepared = false;
+  private motionEnabled = false;
+  private pedometerEnabled = false;
+  private lifecycle = 0;
 
   constructor(private readonly graph: VenueGraph) {}
 
   current(): VenuePosition | undefined { return this.latest; }
 
-  async start(): Promise<void> {
+  /** Request foreground-only location and optional motion permissions before radios start. */
+  async prepare(): Promise<void> {
+    if (this.prepared) return;
     const permission = await Location.requestForegroundPermissionsAsync();
     if (!permission.granted) throw new Error('Location permission is required for venue guidance');
-    await this.startSensors();
-    this.locationSubscription = await Location.watchPositionAsync({
-      accuracy: Location.Accuracy.High,
-      timeInterval: 1_000,
-      distanceInterval: .25,
-    }, (location) => {
-      const raw = geographicToVenueMetres(location.coords.latitude, location.coords.longitude, this.graph.coordinateTransform);
-      const gnssHeading = location.coords.heading !== null && location.coords.heading >= 0 ? location.coords.heading : undefined;
-      const direction = this.heading ?? gnssHeading ?? this.latest?.direction ?? 0;
-      const match = this.graph.mapMatch(raw, direction);
-      const accuracy = location.coords.accuracy ?? 20;
-      const gnssVelocity = location.coords.speed ?? 0;
-      // GNSS velocity is weak at walking speed; recent steps provide a less noisy lower bound.
-      const velocity = Date.now() - this.lastStepAt < 4_000
-        ? Math.max(gnssVelocity, this.stepVelocity)
-        : gnssVelocity;
-      this.latest = {
-        point: match.point,
-        accuracy,
-        velocity: Math.min(5.1, Math.max(0, velocity)),
-        direction: ((direction % 360) + 360) % 360,
-        zoneId: match.zone.id,
-        confidence: Math.max(.1, 1 - accuracy / 30) * Math.max(.35, 1 - match.distanceMetres / 40),
-        timestamp: location.timestamp,
-      };
-      this.changed.emit(this.latest);
-    });
+
+    if (await DeviceMotion.isAvailableAsync().catch(() => false)) {
+      const motionPermission = await DeviceMotion.requestPermissionsAsync().catch(() => undefined);
+      this.motionEnabled = motionPermission?.granted === true;
+    }
+    if (await Pedometer.isAvailableAsync().catch(() => false)) {
+      const stepPermission = await Pedometer.requestPermissionsAsync().catch(() => undefined);
+      this.pedometerEnabled = stepPermission?.granted === true;
+    }
+    this.prepared = true;
+  }
+
+  async start(): Promise<void> {
+    const lifecycle = ++this.lifecycle;
+    if (!this.prepared) await this.prepare();
+    if (lifecycle !== this.lifecycle) return;
+    this.startSensors();
+    try {
+      const subscription = await Location.watchPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 1_000,
+        distanceInterval: .25,
+      }, (location) => this.recordLocation(location));
+      if (lifecycle === this.lifecycle) this.locationSubscription = subscription;
+      else subscription.remove();
+    } catch (error) {
+      if (lifecycle === this.lifecycle) this.removeSubscriptions();
+      throw error;
+    }
   }
 
   stop(): void {
-    this.locationSubscription?.remove(); this.motionSubscription?.remove(); this.stepSubscription?.remove();
-    this.locationSubscription = undefined; this.motionSubscription = undefined; this.stepSubscription = undefined;
+    this.lifecycle += 1;
+    this.removeSubscriptions();
   }
 
   inject(point: VenuePoint, accuracy = 3, velocity = 1.2, direction = 0): void {
@@ -79,30 +87,52 @@ export class LocationEngine {
     this.changed.emit(this.latest);
   }
 
-  private async startSensors(): Promise<void> {
-    if (await DeviceMotion.isAvailableAsync().catch(() => false)) {
-      const permission = await DeviceMotion.requestPermissionsAsync().catch(() => undefined);
-      if (!permission || permission.granted) {
-        DeviceMotion.setUpdateInterval(250);
-        this.motionSubscription = DeviceMotion.addListener((motion) => {
-          // alpha is rotation around Z in radians. Expo may report [-π, π].
-          this.heading = ((motion.rotation.alpha * 180 / Math.PI) % 360 + 360) % 360;
-        });
-      }
+  private recordLocation(location: Location.LocationObject): void {
+    const raw = geographicToVenueMetres(location.coords.latitude, location.coords.longitude, this.graph.coordinateTransform);
+    const gnssHeading = location.coords.heading !== null && location.coords.heading >= 0 ? location.coords.heading : undefined;
+    const direction = this.heading ?? gnssHeading ?? this.latest?.direction ?? 0;
+    const match = this.graph.mapMatch(raw, direction);
+    const accuracy = location.coords.accuracy ?? 20;
+    const gnssVelocity = location.coords.speed ?? 0;
+    // GNSS velocity is weak at walking speed; recent steps provide a less noisy lower bound.
+    const velocity = Date.now() - this.lastStepAt < 4_000
+      ? Math.max(gnssVelocity, this.stepVelocity)
+      : gnssVelocity;
+    this.latest = {
+      point: match.point,
+      accuracy,
+      velocity: Math.min(5.1, Math.max(0, velocity)),
+      direction: ((direction % 360) + 360) % 360,
+      zoneId: match.zone.id,
+      confidence: Math.max(.1, 1 - accuracy / 30) * Math.max(.35, 1 - match.distanceMetres / 40),
+      timestamp: location.timestamp,
+    };
+    this.changed.emit(this.latest);
+  }
+
+  private startSensors(): void {
+    if (this.motionEnabled) {
+      DeviceMotion.setUpdateInterval(250);
+      this.motionSubscription = DeviceMotion.addListener((motion) => {
+        // alpha is rotation around Z in radians. Expo may report [-π, π].
+        this.heading = ((motion.rotation.alpha * 180 / Math.PI) % 360 + 360) % 360;
+      });
     }
-    if (await Pedometer.isAvailableAsync().catch(() => false)) {
-      const permission = await Pedometer.requestPermissionsAsync().catch(() => undefined);
-      if (!permission || permission.granted) {
-        this.stepSubscription = Pedometer.watchStepCount(({ steps }) => {
-          const now = Date.now();
-          if (this.lastStepAt > 0 && steps > this.lastStepCount) {
-            const cadence = (steps - this.lastStepCount) / ((now - this.lastStepAt) / 1_000);
-            // Approximate 0.75 m stride, bounded to plausible pedestrian speed.
-            this.stepVelocity = Math.min(2.4, Math.max(.2, cadence * .75));
-          }
-          this.lastStepCount = steps; this.lastStepAt = now;
-        });
-      }
+    if (this.pedometerEnabled) {
+      this.stepSubscription = Pedometer.watchStepCount(({ steps }) => {
+        const now = Date.now();
+        if (this.lastStepAt > 0 && steps > this.lastStepCount) {
+          const cadence = (steps - this.lastStepCount) / ((now - this.lastStepAt) / 1_000);
+          // Approximate 0.75 m stride, bounded to plausible pedestrian speed.
+          this.stepVelocity = Math.min(2.4, Math.max(.2, cadence * .75));
+        }
+        this.lastStepCount = steps; this.lastStepAt = now;
+      });
     }
+  }
+
+  private removeSubscriptions(): void {
+    this.locationSubscription?.remove(); this.motionSubscription?.remove(); this.stepSubscription?.remove();
+    this.locationSubscription = undefined; this.motionSubscription = undefined; this.stepSubscription = undefined;
   }
 }

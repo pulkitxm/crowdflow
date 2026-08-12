@@ -55,8 +55,9 @@ export class BleTransport extends BaseTransport {
     return available;
   }
 
+  override async prepare(): Promise<void> { await this.requestPermissions(); }
+
   async start(nodeId: string): Promise<void> {
-    await this.requestPermissions();
     if (!(await this.isAvailable())) throw new Error('Bluetooth is unavailable');
     this.nodeId = nodeId;
     // iOS ignores manufacturer data in this module, so expose only the rotating ID as local name.

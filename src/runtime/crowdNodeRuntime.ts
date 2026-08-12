@@ -25,6 +25,9 @@ export class CrowdNodeRuntime {
   private readonly subscriptions: Unsubscribe[] = [];
   private tick?: ReturnType<typeof setInterval>;
   private expiry?: ReturnType<typeof setInterval>;
+  private starting?: Promise<void>;
+  private lifecycle = 0;
+  private tickInProgress = false;
   private lastStateAt = 0;
   private lastHeartbeatAt = 0;
   private destinationBeforeReroute?: string;
@@ -49,27 +52,55 @@ export class CrowdNodeRuntime {
 
   snapshot(): RuntimeState { return { ...this.state, peers: [...this.state.peers], route: [...this.state.route] }; }
 
-  async start(): Promise<void> {
-    if (this.state.running) return;
+  start(): Promise<void> {
+    if (this.starting) return this.starting;
+    if (this.state.running) return Promise.resolve();
+    const lifecycle = ++this.lifecycle;
     this.update({ running: true, connectivity: 'starting', lastError: undefined });
-    this.bindEvents();
-    this.router.start(); this.uploader.start();
-    if (this.settings.gatewayEnabled) this.broadcastServer.start();
-    const results = await Promise.allSettled([this.transports.start(this.identity.current()), this.location.start()]);
-    results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-      .forEach((result) => this.update({ lastError: String(result.reason) }));
-    this.tick = setInterval(() => void this.onTick(), 1_000);
-    this.expiry = setInterval(() => this.expireGuidance(), 1_000);
-    this.setDestination(this.state.destination);
+    const operation = this.startInternal(lifecycle).finally(() => {
+      if (this.starting === operation) this.starting = undefined;
+    });
+    this.starting = operation;
+    return operation;
   }
 
   async stop(): Promise<void> {
+    this.lifecycle += 1;
+    this.update({ running: false });
     if (this.tick) clearInterval(this.tick); if (this.expiry) clearInterval(this.expiry);
     this.tick = undefined; this.expiry = undefined;
     this.broadcastServer.stop(); this.uploader.stop(); this.router.stop(); this.location.stop();
     await this.transports.stop();
     this.subscriptions.splice(0).forEach((unsubscribe) => unsubscribe());
-    this.update({ running: false, connectivity: 'stopped', activeTransport: 'Stopped', peers: [], transportStatuses: [] });
+    this.update({ connectivity: 'stopped', activeTransport: 'Stopped', peers: [], transportStatuses: [] });
+  }
+
+  private async startInternal(lifecycle: number): Promise<void> {
+    this.bindEvents();
+    this.router.start(); this.uploader.start();
+    if (this.settings.gatewayEnabled) {
+      try { this.broadcastServer.start(); }
+      catch (error) { this.update({ lastError: String(error) }); }
+    }
+
+    let locationReady = true;
+    try { await this.location.prepare(); }
+    catch (error) {
+      locationReady = false;
+      if (lifecycle === this.lifecycle) this.update({ lastError: String(error) });
+    }
+    if (lifecycle !== this.lifecycle || !this.state.running) return;
+
+    const results = await Promise.allSettled([
+      this.transports.start(this.identity.current()),
+      locationReady ? this.location.start() : Promise.resolve(),
+    ]);
+    if (lifecycle !== this.lifecycle || !this.state.running) return;
+    results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .forEach((result) => this.update({ lastError: String(result.reason) }));
+    this.tick = setInterval(() => void this.onTick(), 1_000);
+    this.expiry = setInterval(() => this.expireGuidance(), 1_000);
+    this.setDestination(this.state.destination);
   }
 
   setDestination(destination: string): void {
@@ -86,7 +117,8 @@ export class CrowdNodeRuntime {
   async setGatewayEnabled(enabled: boolean): Promise<void> {
     await this.settings.setGatewayEnabled(enabled);
     if (this.state.running) {
-      if (enabled) this.broadcastServer.start(); else this.broadcastServer.stop();
+      try { if (enabled) this.broadcastServer.start(); else this.broadcastServer.stop(); }
+      catch (error) { this.update({ lastError: String(error) }); }
     }
     this.update({ gatewayEnabled: enabled });
   }
@@ -112,29 +144,38 @@ export class CrowdNodeRuntime {
   }
 
   private async onTick(): Promise<void> {
-    const now = epochSeconds(); const nodeId = this.identity.current(now);
-    if (nodeId !== this.state.nodeId) { this.update({ nodeId }); await this.transports.updateNodeId(nodeId); }
-    const position = this.location.current();
-    if (position) {
-      const localDensity = this.density.estimate(this.transports.peers());
-      const telemetry: NodeTelemetry = {
-        node_id: nodeId, timestamp: now, position: position.point, position_accuracy: position.accuracy,
-        velocity: position.velocity, direction: position.direction, zone: position.zoneId,
-        local_density: localDensity, confidence: position.confidence, source: 'phone',
-      };
-      this.uploader.offer(telemetry); this.update({ localDensity });
-      if (now - this.lastStateAt >= 2) {
-        await this.safeOriginate({
-          type: 'STATE_UPDATE', source: nodeId, sequence: this.sequence.next(), ttl: 4, timestamp: now,
-          payload: encodeStateUpdate({ zoneIndex: this.graph.indexOf(position.zoneId), density: localDensity,
-            velocity: position.velocity, direction: position.direction, confidence: position.confidence }),
-        });
-        this.lastStateAt = now;
+    if (this.tickInProgress || !this.state.running) return;
+    this.tickInProgress = true;
+    const lifecycle = this.lifecycle;
+    try {
+      const now = epochSeconds(); const nodeId = this.identity.current(now);
+      if (nodeId !== this.state.nodeId) { this.update({ nodeId }); await this.transports.updateNodeId(nodeId); }
+      if (lifecycle !== this.lifecycle || !this.state.running) return;
+      const position = this.location.current();
+      if (position) {
+        const localDensity = this.density.estimate(this.transports.peers());
+        const telemetry: NodeTelemetry = {
+          node_id: nodeId, timestamp: now, position: position.point, position_accuracy: position.accuracy,
+          velocity: position.velocity, direction: position.direction, zone: position.zoneId,
+          local_density: localDensity, confidence: position.confidence, source: 'phone',
+        };
+        this.uploader.offer(telemetry); this.update({ localDensity });
+        if (now - this.lastStateAt >= 2) {
+          this.lastStateAt = now;
+          await this.safeOriginate({
+            type: 'STATE_UPDATE', source: nodeId, sequence: this.sequence.next(), ttl: 4, timestamp: now,
+            payload: encodeStateUpdate({ zoneIndex: this.graph.indexOf(position.zoneId), density: localDensity,
+              velocity: position.velocity, direction: position.direction, confidence: position.confidence }),
+          });
+        }
       }
-    }
-    if (now - this.lastHeartbeatAt >= 10) {
-      await this.safeOriginate({ type: 'HEARTBEAT', source: nodeId, sequence: this.sequence.next(), ttl: 4, timestamp: now, payload: new Uint8Array() });
-      this.lastHeartbeatAt = now;
+      if (lifecycle !== this.lifecycle || !this.state.running) return;
+      if (now - this.lastHeartbeatAt >= 10) {
+        this.lastHeartbeatAt = now;
+        await this.safeOriginate({ type: 'HEARTBEAT', source: nodeId, sequence: this.sequence.next(), ttl: 4, timestamp: now, payload: new Uint8Array() });
+      }
+    } finally {
+      this.tickInProgress = false;
     }
   }
 
@@ -220,7 +261,7 @@ export class CrowdNodeRuntime {
 
   private async safeOriginate(message: MeshMessage): Promise<void> {
     try { await this.router.originate(message); }
-    catch (error) { this.update({ lastError: String(error) }); }
+    catch (error) { if (this.state.running) this.update({ lastError: String(error) }); }
   }
 
   private update(update: Partial<RuntimeState>): void {

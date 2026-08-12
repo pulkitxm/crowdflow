@@ -37,8 +37,9 @@ export class WifiDirectTransport extends BaseTransport {
     return available;
   }
 
+  override async prepare(): Promise<void> { await this.requestPermission(); }
+
   async start(_nodeId: string): Promise<void> {
-    await this.requestPermission();
     if (!(await this.isAvailable())) throw new Error('Wi-Fi Direct is unavailable');
     await WifiP2p.initialize();
     this.peersSubscription = WifiP2p.subscribeOnPeersUpdates(({ devices }) => {
