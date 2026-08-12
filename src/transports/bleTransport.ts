@@ -29,7 +29,7 @@ export class BleTransport extends BaseTransport {
   private readonly peerPhysicalIds = new Map<string, string>();
   private peripheral?: Peripheral;
   private peripheralReady?: Promise<void>;
-  private writeListener?: (event: WriteEvent) => void;
+  private writeListener?: (event: NativeWriteEvent) => void;
   private stateSubscription?: Subscription;
   private nodeId = '';
 
@@ -56,6 +56,9 @@ export class BleTransport extends BaseTransport {
     await this.requestPermissions();
     if (!(await this.isAvailable())) throw new Error('Bluetooth is unavailable');
     this.nodeId = nodeId;
+    // iOS ignores manufacturer data in this module, so expose only the rotating ID as local name.
+    // Do not do this on Android: setDeviceName there changes the user's global Bluetooth name.
+    if (Platform.OS === 'ios') await Peripheral.setDeviceName(`cf-${nodeId}`);
     this.peripheral = new Peripheral();
     this.peripheralReady = new Promise((resolve, reject) => {
       this.peripheral!.once('ready', resolve);
@@ -69,11 +72,14 @@ export class BleTransport extends BaseTransport {
       Property.WRITE | Property.WRITE_NO_RESPONSE | Property.NOTIFY,
       Permission.WRITEABLE,
     );
-    this.writeListener = (event: WriteEvent) => {
-      if (event.serviceUuid.toLowerCase() !== MAILBOX_SERVICE || event.characteristicUuid.toLowerCase() !== MAILBOX_CHARACTERISTIC) return;
+    this.writeListener = (event: NativeWriteEvent) => {
+      const service = event.serviceUuid ?? event.serviceUUID ?? event.service;
+      const characteristic = event.characteristicUuid ?? event.characteristicUUID ?? event.characteristic;
+      if (service?.toLowerCase() !== MAILBOX_SERVICE || characteristic?.toLowerCase() !== MAILBOX_CHARACTERISTIC) return;
+      const peerId = event.device ? this.handles.get(event.device, 'ble-central') : 'ble:connected-central';
       this.packets.emit({
         transport: this.kind,
-        peerId: 'ble:connected-central',
+        peerId,
         bytes: new Uint8Array(Buffer.from(event.value, 'base64')),
         receivedAt: Date.now(),
       });
@@ -95,7 +101,10 @@ export class BleTransport extends BaseTransport {
 
   async updateNodeId(nodeId: string): Promise<void> {
     if (!this.currentStatus.running || nodeId === this.nodeId || !this.peripheral) return;
-    await this.peripheral.stopAdvertising(); this.nodeId = nodeId; await this.startAdvertising(nodeId);
+    await this.peripheral.stopAdvertising();
+    this.nodeId = nodeId;
+    if (Platform.OS === 'ios') await Peripheral.setDeviceName(`cf-${nodeId}`);
+    await this.startAdvertising(nodeId);
   }
 
   async stop(): Promise<void> {
@@ -160,20 +169,18 @@ export class BleTransport extends BaseTransport {
   }
 
   private recordDevice(device: Device): void {
-    if (device.manufacturerData) {
-      const manufacturer = Buffer.from(device.manufacturerData, 'base64');
-      const peerNodeId = manufacturer.length >= 2 ? manufacturer.subarray(-2).toString('hex') : undefined;
-      if (peerNodeId === this.nodeId) return;
-      const id = this.handles.get(device.id, 'ble');
-      this.devices.set(device.id, device); this.peerPhysicalIds.set(id, device.id);
-      this.knownPeers.set(id, { id, nodeId: peerNodeId, transport: this.kind, rssi: device.rssi ?? undefined, lastSeen: Date.now() });
-      this.publishPeers(this.peers());
-      return;
-    }
+    const manufacturer = device.manufacturerData ? Buffer.from(device.manufacturerData, 'base64') : undefined;
+    const advertisedId = manufacturer && manufacturer.length >= 2 ? manufacturer.subarray(-2).toString('hex') : undefined;
+    const localNameId = (device.localName ?? device.name)?.match(/^cf-([0-9a-f]{4})$/i)?.[1]?.toLowerCase();
+    const peerNodeId = advertisedId ?? localNameId;
+    if (peerNodeId === this.nodeId) return;
     const id = this.handles.get(device.id, 'ble');
     this.devices.set(device.id, device); this.peerPhysicalIds.set(id, device.id);
     const existing = this.knownPeers.get(id);
-    this.knownPeers.set(id, { id, nodeId: existing?.nodeId, transport: this.kind, rssi: device.rssi ?? existing?.rssi, lastSeen: Date.now() });
+    this.knownPeers.set(id, {
+      id, nodeId: peerNodeId ?? existing?.nodeId, transport: this.kind,
+      rssi: device.rssi ?? existing?.rssi, lastSeen: Date.now(),
+    });
     this.publishPeers(this.peers());
   }
 
@@ -185,6 +192,14 @@ export class BleTransport extends BaseTransport {
     await PermissionsAndroid.requestMultiple(permissions);
   }
 }
+
+type NativeWriteEvent = WriteEvent & {
+  service?: string;
+  characteristic?: string;
+  serviceUUID?: string;
+  characteristicUUID?: string;
+  device?: string;
+};
 
 function nodeIdBytes(nodeId: string): number[] {
   if (!/^[0-9a-f]{4}$/i.test(nodeId)) throw new Error('node ID must be four hex characters');
