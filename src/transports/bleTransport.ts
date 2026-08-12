@@ -13,7 +13,8 @@ import { BaseTransport } from './meshTransport';
 import { SessionHandles } from './sessionHandles';
 
 const COMPANY_ID = 0xc0f1;
-const BEACON_SERVICE = 'c0f10000-7a6b-4a40-9c73-97d98db48a01';
+// 16-bit Bluetooth-base UUID keeps the Android advertisement below the 31-byte legacy limit.
+const BEACON_SERVICE = '0000c0f1-0000-1000-8000-00805f9b34fb';
 const MAILBOX_SERVICE = 'c0f10001-7a6b-4a40-9c73-97d98db48a01';
 const MAILBOX_CHARACTERISTIC = 'c0f10002-7a6b-4a40-9c73-97d98db48a01';
 
