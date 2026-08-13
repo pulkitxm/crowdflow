@@ -2,6 +2,8 @@ import type { CircuitPack, CrowdNode, VenueState, ZoneState } from '@crowdflow/c
 import {
   ASSUMED_CONFIDENCE_COUNT_SATURATION,
   ASSUMED_CONFIDENCE_COUNT_WEIGHT,
+  ASSUMED_ORPHAN_ZONE_LENGTH_M,
+  ASSUMED_ORPHAN_ZONE_WIDTH_M,
   ASSUMED_POSITION_ACCURACY_BEST_M,
   ASSUMED_POSITION_ACCURACY_WORST_M,
   completeZoneState,
@@ -124,7 +126,7 @@ export class StateEngine {
       weightedWidth += edge.width_m.value * edge.length_m;
       totalLength += edge.length_m;
     }
-    if (totalLength <= 0 || area <= 0) return [2, 25];
+    if (totalLength <= 0 || area <= 0) return [ASSUMED_ORPHAN_ZONE_WIDTH_M, ASSUMED_ORPHAN_ZONE_LENGTH_M];
     const width = weightedWidth / totalLength;
     return [width, area / width];
   }

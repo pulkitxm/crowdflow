@@ -1,4 +1,4 @@
-/** Python-compatible MT19937, used so migration parity keeps seed 42 meaningful. */
+/** Stable MT19937 stream. Kept as a project implementation so seed 42 remains reproducible across Node releases. */
 export class Random {
   private mt = new Uint32Array(624);
   private index = 624;
@@ -7,7 +7,7 @@ export class Random {
   constructor(seed: number) { this.seed(seed); }
 
   seed(seed: number): void {
-    // CPython seeds its MT from the full integer through init_by_array.
+    // Seed from the full integer through MT's reference init_by_array routine.
     const words: number[] = [];
     let value = BigInt.asUintN(64, BigInt(Math.trunc(seed)));
     do { words.push(Number(value & 0xffffffffn)); value >>= 32n; } while (value > 0n);

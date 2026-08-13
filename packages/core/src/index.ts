@@ -9,6 +9,7 @@ export * from './simulation/scenario.js';
 export * from './mesh/privacy.js';
 export * from './mesh/policy.js';
 export * from './mesh/uplink.js';
+export * from './mesh/fanin.js';
 export * from './venue.js';
 export * from './intervention/whatif.js';
 export * from './loop.js';

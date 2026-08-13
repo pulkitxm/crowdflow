@@ -1,5 +1,5 @@
 import type { MeshClass, MeshMessage } from '@crowdflow/contracts';
-import { ASSUMED_MESH_BUFFER_MESSAGES, dedupeRetentionS, sprayCopiesFor } from '@crowdflow/contracts';
+import { ASSUMED_MESH_BUFFER_MESSAGES, ASSUMED_URGENT_BURST_RELAYS, ASSUMED_URGENT_RELAYS_PER_MIN, dedupeRetentionS, sprayCopiesFor } from '@crowdflow/contracts';
 
 export type MessageKey = `${string}:${number}`;
 export const messageKey = (message: MeshMessage): MessageKey => `${message.source}:${message.sequence}`;
@@ -31,5 +31,17 @@ export class SprayAndWait {
   }
   commit(carried: Carried, copies: number): void { carried.copies = Math.max(1, carried.copies - copies); }
 }
-export class RateLimitedEpidemic { readonly name = 'rate-limited-epidemic'; }
+export class TokenBucket {
+  private tokens: number; private last: number;
+  constructor(readonly ratePerS = ASSUMED_URGENT_RELAYS_PER_MIN / 60, readonly capacity = ASSUMED_URGENT_BURST_RELAYS, now = 0) { this.tokens = capacity; this.last = now; }
+  available(now: number): boolean { this.refill(now); return this.tokens >= 1; }
+  take(now: number): boolean { if (!this.available(now)) return false; this.tokens -= 1; return true; }
+  private refill(now: number): void { if (now <= this.last) return; this.tokens = Math.min(this.capacity, this.tokens + (now - this.last) * this.ratePerS); this.last = now; }
+}
+export class RateLimitedEpidemic {
+  readonly name = 'rate-limited-epidemic';
+  constructor(readonly budget = new TokenBucket()) {}
+  consider(carried: Carried, peerId: string, peerSeen: boolean, now: number): boolean { return !carried.forwarded_to.has(peerId) && !peerSeen && this.budget.available(now); }
+  commit(now: number): boolean { return this.budget.take(now); }
+}
 export function initialCopies(traffic: MeshClass, population: number): number { return traffic === 'urgent' ? 1 : sprayCopiesFor(population); }

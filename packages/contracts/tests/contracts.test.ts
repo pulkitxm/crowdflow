@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
 import { documents, render } from '../scripts/generate.js';
 import {
   bandForDensity,
@@ -10,16 +11,30 @@ import {
   isActionable,
   isDispatchable,
   isReportable,
+  validateCrowdNode,
+  validateTraceFragment,
   LOS_C_MAX,
   LOS_E_MAX,
+  ASSUMED_ORPHAN_ZONE_LENGTH_M,
+  ASSUMED_ORPHAN_ZONE_WIDTH_M,
+  ASSUMED_SKEW_WINDOW_S,
 } from '../src/index.js';
 
 describe('load-bearing contract conclusions', () => {
+  it('registers every non-standard fallback used by core', () => {
+    expect(ASSUMED_ORPHAN_ZONE_LENGTH_M).toBe(25); expect(ASSUMED_ORPHAN_ZONE_WIDTH_M).toBe(2); expect(ASSUMED_SKEW_WINDOW_S).toBe(300);
+  });
+
   it('classifies zones on density and exposes the unreachable flow boundary', () => {
     expect(densityForFlow(LOS_C_MAX)).toBeCloseTo(0.7501, 3);
     expect(densityForFlow(LOS_E_MAX)).toBeNull();
     expect(bandForDensity(0)).toBe('nominal');
     expect(bandForDensity(3)).toBe('critical');
+  });
+
+  it('rejects impossible telemetry at the adapter boundary', () => {
+    expect(() => validateCrowdNode({ node_id: 'x', epoch: 0, timestamp: 0, position: { x: 0, y: 0 }, speed_ms: -1, heading_deg: 0, accuracy_m: 5 })).toThrow('speed_ms');
+    expect(() => validateTraceFragment({ fragment_id: 'f', points: [{ x: 0, y: 0 }], t_start: 0, t_end: 1, epsilon: 1, noise_radius_m: 1 })).toThrow('at least two');
   });
 
   it('does not let three clean phones clear the actionable confidence floor', () => {
@@ -59,6 +74,7 @@ describe('load-bearing contract conclusions', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..'); const expected = documents();
     expect(readdirSync(join(root, 'schema')).filter((name) => name.endsWith('.json')).sort()).toEqual(Object.keys(expected).sort());
     for (const [name, document] of Object.entries(expected)) expect(readFileSync(join(root, 'schema', name), 'utf8'), name).toBe(render(document));
+    expect(() => new Ajv2020({ strict: false }).compile(expected['crowdflow.json'] as object)).not.toThrow();
   });
 
   it('only dispatches the exact approved command', () => {

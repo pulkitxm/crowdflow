@@ -17,6 +17,10 @@ export class Scenario {
   }
 }
 
+export function arrival(_graph: VenueGraph, gate: string, stand: string, count = 1500, seed = 42, spreadS = 300): Scenario {
+  return new Scenario('arrival', `${count} spectators arrive through ${gate} for ${stand}`, [{ count, origin: gate, destination: stand, start_s: 0, spread_s: spreadS }], 1800, seed);
+}
+
 export function egress(_graph: VenueGraph, origins: string[] | string, exit: string, count = 2000, seed = 42, spreadS = 240): Scenario {
   const list = typeof origins === 'string' ? [origins] : origins;
   const per = Math.max(1, Math.trunc(count / list.length));

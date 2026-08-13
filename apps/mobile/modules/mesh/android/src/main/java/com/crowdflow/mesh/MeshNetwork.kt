@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.Flow
  *  - decide whether a peer is a good custodian
  *  - decide what to keep when the buffer is full
  *
- * All four are routing decisions, all four live in `crowdflow_core.mesh`, and
+ * All four are routing decisions, all four live in `@crowdflow/core`, and
  * all four are measured there against a simulated crowd. Reimplementing any of
  * them here would put the logic in the one place it cannot be tested.
  *

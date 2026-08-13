@@ -17,7 +17,7 @@ then open <http://127.0.0.1:5199>. Or run the halves separately, which is the
 first thing to do when something misbehaves:
 
 ```
-make api          # http://127.0.0.1:8099/docs
+make api          # http://127.0.0.1:8099/api/health
 make dashboard    # proxies /api and /ws to the API
 ```
 
@@ -27,7 +27,7 @@ Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED API_PORT UI_PORT`.
 make console POPULATION=6000 SEED=7 SPEED=1
 ```
 
-`make test` runs pytest, `tsc --noEmit` and vitest.
+`make test` runs every workspace's `tsc --noEmit` and Vitest suite.
 
 ## What is on the screen
 
@@ -53,12 +53,11 @@ they are drawn as crosses, counted in the legend, listed behind a toggle, and
 never shown as a zero. `src/model.test.ts` is mostly about this.
 
 **No thresholds live here.** Band boundaries arrive from `/api/standards`, which
-reads `crowdflow_contracts.standards` at runtime. Bands arrive already classified
+reads `@crowdflow/contracts/standards` at runtime. Bands arrive already classified
 on `ZoneState.band`. Whether a forecast is actionable arrives as
-`TickEnvelope.actionable`, computed from `Forecast.is_actionable`. The console
+`TickEnvelope.actionable`, computed by the contract runtime. The console
 displays numbers; it does not compare them.
 
-**Payload types are generated.** `@contracts` is
-`packages/contracts/ts/index.ts` and `@wire` is `packages/api/ts/index.ts`, both
-generated from the Pydantic models and committed. Nothing here hand-writes a
-payload shape. Regenerate with `make codegen`.
+**Payload types are authored once.** The console imports `@crowdflow/contracts`
+and `@crowdflow/api/wire` directly from npm workspaces. JSON Schema is generated
+from those TypeScript definitions and byte-for-byte checked by `make codegen`.

@@ -29,6 +29,11 @@ describe('TypeScript API adapter', () => {
     expect(view.route.steps.some((step: any) => step.way_ahead === 'unknown')).toBe(true);
   });
 
+  it('offers and runs the arrival control scenario without code changes', async () => {
+    server = new CrowdFlowServer(root); await server.listen(0); const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;
+    const options = await get(port, '/api/circuits/silverstone/scenarios') as any[]; expect(options.map((option) => option.id)).toEqual(['egress', 'arrival']); const session = server.startSession({ scenario: 'arrival', population: 20, intervene: false }); expect(session.option.id).toBe('arrival'); expect(session.tickOnce().population.total).toBe(20);
+  });
+
   it('streams a hello and a real tick over WebSocket', async () => {
     server = new CrowdFlowServer(root); const session = server.startSession({ population: 100, intervene: false }); await server.listen(0);
     const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;

@@ -8,6 +8,8 @@ export class Frame {
   toXY(lat: number, lon: number): [number, number] { return [(lon - this.originLon) * this.lonScale, (lat - this.originLat) * M_PER_DEG_LAT]; }
   toLatLon(x: number, y: number): [number, number] { return [this.originLat + y / M_PER_DEG_LAT, this.originLon + x / this.lonScale]; }
 }
+export function polylineLength(points: Position[]): number { let total = 0; for (let index = 1; index < points.length; index += 1) total += Math.hypot(points[index]!.x - points[index - 1]!.x, points[index]!.y - points[index - 1]!.y); return total; }
+export function segmentsIntersect(a: Position, b: Position, c: Position, d: Position): boolean { const orient = (p: Position, q: Position, r: Position) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); const first = orient(c, d, a); const second = orient(c, d, b); const third = orient(a, b, c); const fourth = orient(a, b, d); return (first > 0) !== (second > 0) && (third > 0) !== (fourth > 0); }
 export function pointToSegmentDistance(point: Position, source: Position, destination: Position): number {
   const dx = destination.x - source.x; const dy = destination.y - source.y;
   if (dx === 0 && dy === 0) return Math.hypot(point.x - source.x, point.y - source.y);
@@ -20,11 +22,16 @@ export const WALKABLE_HIGHWAY = new Set(['footway', 'path', 'pedestrian', 'steps
 export const BARRIER_VALUES = new Set(['fence', 'wall', 'hedge', 'retaining_wall', 'guard_rail', 'kerb']);
 export const PERMEABLE_BARRIER = new Set(['gate', 'entrance', 'stile', 'cycle_barrier', 'kissing_gate']);
 export const DEFAULT_WIDTH_M: Record<string, number> = { footway: 2, path: 1.5, pedestrian: 6, steps: 1.8, cycleway: 2.5, service: 4.5, track: 3.5, living_street: 5, residential: 5.5, unclassified: 5 };
+export function classifyNode(tags: Record<string, string>): ElementKind { if (tags.barrier && PERMEABLE_BARRIER.has(tags.barrier)) return 'gate'; return tags.highway === 'crossing' ? 'crossing' : 'ignored'; }
 export function classifyWay(tags: Record<string, string>): ElementKind {
   if (tags.building === 'grandstand') return 'grandstand'; if (tags.amenity === 'parking') return 'parking';
   if (tags.barrier && BARRIER_VALUES.has(tags.barrier)) return 'barrier'; if (tags.barrier && PERMEABLE_BARRIER.has(tags.barrier)) return 'gate';
   return tags.highway && WALKABLE_HIGHWAY.has(tags.highway) ? 'walkable' : 'ignored';
 }
+export interface OsmWay { osm_id: number; kind: ElementKind; coords: Array<[number, number]>; tags: Record<string, string>; name?: string }
+export interface OsmNode { osm_id: number; kind: ElementKind; coord: [number, number]; tags: Record<string, string>; name?: string }
+export function parseOsm(elements: Array<Record<string, any>>): { ways: OsmWay[]; nodes: OsmNode[] } { const ways: OsmWay[] = []; const nodes: OsmNode[] = []; for (const element of elements) { const tags = (element.tags ?? {}) as Record<string, string>; if (element.type === 'way') { const geometry = (element.geometry ?? []) as Array<{ lat: number; lon: number }>; const kind = classifyWay(tags); if (kind !== 'ignored' && geometry.length >= 2) ways.push({ osm_id: Number(element.id), kind, coords: geometry.map((point) => [point.lat, point.lon]), tags, ...(tags.name ? { name: tags.name } : {}) }); } else if (element.type === 'node' && typeof element.lat === 'number' && typeof element.lon === 'number') { const kind = classifyNode(tags); if (kind !== 'ignored') nodes.push({ osm_id: Number(element.id), kind, coord: [element.lat, element.lon], tags, ...(tags.name ? { name: tags.name } : {}) }); } } return { ways, nodes }; }
+export function summariseOsm(ways: OsmWay[], nodes: OsmNode[]): Record<string, number> { const counts: Record<string, number> = {}; for (const way of ways) counts[way.kind] = (counts[way.kind] ?? 0) + 1; for (const node of nodes) counts[`node:${node.kind}`] = (counts[`node:${node.kind}`] ?? 0) + 1; return counts; }
 export function widthFor(tags: Record<string, string>): Sourced {
   const raw = tags.width ?? tags.est_width; const parsed = raw ? Number.parseFloat(raw) : NaN;
   return Number.isFinite(parsed) ? { value: parsed, provenance: 'osm', note: 'OSM width tag' } : { value: DEFAULT_WIDTH_M[tags.highway ?? ''] ?? 3, provenance: 'assumed', note: `default for highway=${tags.highway ?? 'unknown'}; supersede by observation` };

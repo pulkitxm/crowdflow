@@ -12,8 +12,8 @@
  * race almost every phone is in a pocket with the screen off. `start()` asks the
  * service to run; it does not become the thing that runs.
  *
- * Types mirror `packages/contracts` — the Pydantic models there are the source
- * of truth and this file follows them.
+ * Types mirror the authored `@crowdflow/contracts` workspace; Kotlin contains
+ * only the native wire representation required by the screen-off service.
  */
 
 export type MeshTrafficClass = "state" | "uplink" | "urgent";

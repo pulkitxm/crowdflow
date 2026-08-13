@@ -161,6 +161,8 @@ belong in the registry because they bound runtime behaviour:
 | Constant | Value | Reasoning / falsifier |
 |---|---:|---|
 | Static route-cache entries | 4,096 | Keeps one graph's cache in the low-megabyte range and exceeds the seeded Silverstone gate's measured 702-entry working set. Replace from live-event eviction measurements if hit rate suffers. |
+| Orphan-zone fallback geometry | 2 m × 25 m | Used only when imported geometry has no incident edge, so the state engine can fail visibly rather than divide by zero. Such a zone remains assumption-backed; replace as soon as geometry is sourced. |
+| Uplink clock-skew filter window | 300 s | Long enough to observe a low-latency sample while handset drift remains negligible relative to mesh seconds. Replace from measured drift and one-way latency traces. |
 | Private Bottom-k retained hashes | 32 | Approx. 18% relative standard error; increase only if measured participation error dominates attendance/channel uncertainty. |
 | Private sketch epsilon | 1.0 per release epoch | ASSUMED pending a published app privacy budget; repeated releases require new accounting and cannot silently reuse the budget. |
 

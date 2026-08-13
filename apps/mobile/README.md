@@ -36,15 +36,16 @@ src/screens/  one file per state of the day
 src/demo/     phone frame and state switcher — scaffolding, never shipped
 ```
 
-`packages/contracts/src/crowdflow_contracts/spectator.py` is the source of truth
-for the feed. The phone receives conclusions — a place name, a number of
-seconds, a band — not `VenueState`. `src/feed/types.ts` only re-exports the
-generated models; it owns no shadow interface and no threshold. Classification
-happens in `packages/contracts/standards.py` and arrives as a word, so a producer
-shape change breaks the build rather than drifting from the app.
+`packages/contracts/src/types.ts` is the source of truth for the feed. The phone
+receives conclusions — a place name, a number of seconds, a band — not
+`VenueState`. `src/feed/types.ts` only re-exports workspace types; it owns no
+shadow interface and no threshold. Classification happens in
+`packages/contracts/src/standards.ts` and arrives as a word.
 
 ## Attaching a real feed
 
-Replace `buildDay` in `src/feed/mock.ts` with a subscription that decodes
-`MeshMessage` payloads (`route_update`, `alert`, `reroute`) into `SpectatorView`.
-Nothing else changes: every screen is a pure function of a view.
+Set `EXPO_PUBLIC_CROWDFLOW_API`, `EXPO_PUBLIC_CROWDFLOW_ORIGIN` and
+`EXPO_PUBLIC_CROWDFLOW_DESTINATION` to use `LiveShell`; without them the app uses
+`DemoShell` explicitly. HTTP and mesh-decoded `SpectatorView` values both enter
+through `LiveSpectatorFeed.accept`, so every screen remains a pure function of a
+view.

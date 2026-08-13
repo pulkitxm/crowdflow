@@ -4,7 +4,7 @@ This module owns exactly one thing: getting bytes from one handset to another
 handset that is standing nearby. It does not decide what to send, when to send
 it, how many copies to make, or which peer is a good custodian. All of that is
 routing, routing is algorithmic, and algorithms belong in
-`packages/core/src/crowdflow_core/mesh/` where they can be simulated with a
+`packages/core/src/mesh/` where they can be simulated with a
 hundred and fifty imaginary phones instead of a hundred and fifty real ones.
 
 ## Why this is native and not JavaScript
@@ -71,5 +71,5 @@ package.json                               local-module metadata
 foreground-service lifecycle are executable and autolinked, but no source file
 claims to be Wi-Fi Aware, Direct or BLE: choosing one without the required demo-
 handset capability/walk test would be fabricating hardware support. The measured
-routing policies in `crowdflow_core.mesh` are ready behind the seam; replacing
+routing policies in `@crowdflow/core` are ready behind the seam; replacing
 the in-memory transport is explicitly the hardware-dependent remainder.

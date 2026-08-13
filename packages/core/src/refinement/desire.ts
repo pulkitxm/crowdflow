@@ -3,6 +3,7 @@ import { VenueGraph } from '../routing/graph.js';
 
 export interface DesireLine { id: string; start: Position; end: Position; observed_length_m: number; graph_walk_m: number; detour_ratio: number; fragments: string[]; evidence: number }
 export interface DesireLineReview { desire: DesireLine; status: 'proposed' | 'accepted' | 'rejected'; note: string }
+/** ASSUMED: triage thresholds only; proposals never create venue geometry without operator review. */
 export const ASSUMED_DESIRE_LINE_DETOUR_MIN = 1.25;
 export const ASSUMED_DESIRE_LINE_MIN_FRAGMENTS = 3;
 

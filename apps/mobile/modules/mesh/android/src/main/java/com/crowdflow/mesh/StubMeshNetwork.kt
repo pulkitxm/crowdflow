@@ -14,7 +14,7 @@ import kotlinx.coroutines.sync.withLock
  * This transport is intentionally in-memory: writing a
  * real Wi-Fi Aware implementation before the routing logic has been measured
  * would be building the expensive half first. The protocol comparison in
- * `crowdflow_core.mesh` — delivery ratio, hop count and copies-per-message for
+ * `@crowdflow/core` — delivery ratio, hop count and copies-per-message for
  * each of the three traffic classes — runs today with no devices at all, and it
  * is what decides whether any of this deserves a radio. When it does, a real
  * implementation slots in behind the same interface and nothing above it changes.

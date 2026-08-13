@@ -224,7 +224,7 @@ export interface ConsoleEvent {
 /**
  * One tick of the loop, as the console receives it.
  *
- * Mirrors `crowdflow_core.loop.TickResult` field for field, plus the transport
+ * Mirrors `@crowdflow/core`'s TickResult field for field, plus the transport
  * facts a live screen needs: which tick, what it cost, and what the system
  * could not see while producing it.
  */

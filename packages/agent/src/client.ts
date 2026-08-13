@@ -16,8 +16,9 @@ export class FakeModelClient implements ModelClient {
   }
 }
 
+export const DEFAULT_ANTHROPIC_MODEL = process.env.CROWDFLOW_ANTHROPIC_MODEL ?? 'claude-opus-4-6';
 export class AnthropicClient implements ModelClient {
-  constructor(readonly client = new Anthropic(), readonly model = 'claude-opus-4-6', readonly maxTokens = 16000) {}
+  constructor(readonly client = new Anthropic(), readonly model = DEFAULT_ANTHROPIC_MODEL, readonly maxTokens = 16000) {}
   async complete(system: string, messages: Message[], tools: ToolSchema[]): Promise<ModelResponse> {
     const response = await this.client.messages.create({
       model: this.model, max_tokens: this.maxTokens, system,

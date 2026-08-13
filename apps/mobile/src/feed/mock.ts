@@ -23,7 +23,7 @@
  * the point of putting absolute times on the wire rather than "closes in 8 min".
  */
 
-import type { RerouteCommand, SafetyVerdict } from '@contracts';
+import type { RerouteCommand, SafetyVerdict } from '@crowdflow/contracts';
 
 import type { LinkStatus, Route, SpectatorView, ViewKind } from './types';
 

@@ -1,19 +1,19 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { CircuitPack, Position, TraceFragment } from '@crowdflow/contracts';
+import { validateCircuitPack, validateTraceFragment, type CircuitPack, type Position, type TraceFragment } from '@crowdflow/contracts';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export function readPack(root: string, circuitId: string): CircuitPack {
   const directory = join(root, 'circuits', circuitId, 'pack');
   const metadata = JSON.parse(readFileSync(join(directory, 'circuit.json'), 'utf8'));
   const graph = JSON.parse(readFileSync(join(directory, 'graph.json'), 'utf8'));
-  return {
+  return validateCircuitPack({
     ...metadata,
     zones: graph.zones,
     edges: graph.edges,
     crossings: JSON.parse(readFileSync(join(directory, 'crossings.json'), 'utf8')),
     constraints: JSON.parse(readFileSync(join(directory, 'constraints.json'), 'utf8')),
-  } as CircuitPack;
+  } as CircuitPack);
 }
 
 export function readTrack(root: string, circuitId: string): Position[] {
@@ -23,8 +23,8 @@ export function readTrack(root: string, circuitId: string): Position[] {
 
 export function readTraceFragments(path: string): TraceFragment[] {
   const text = readFileSync(path, 'utf8');
-  if (path.endsWith('.jsonl')) return text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line) as TraceFragment);
-  const value = JSON.parse(text) as TraceFragment[] | { fragments?: TraceFragment[] }; return Array.isArray(value) ? value : value.fragments ?? [];
+  if (path.endsWith('.jsonl')) return text.split(/\r?\n/).filter(Boolean).map((line) => validateTraceFragment(JSON.parse(line) as TraceFragment));
+  const value = JSON.parse(text) as TraceFragment[] | { fragments?: TraceFragment[] }; return (Array.isArray(value) ? value : value.fragments ?? []).map(validateTraceFragment);
 }
 export function writeTraceFragments(path: string, fragments: TraceFragment[]): void { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, fragments.map((fragment) => JSON.stringify(fragment)).join('\n') + (fragments.length ? '\n' : '')); }
 

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CircuitPack, Position } from '@crowdflow/contracts';
-import { isTrustworthy } from '@crowdflow/contracts';
+import { circuitIntegrityProblems, isTrustworthy } from '@crowdflow/contracts';
 import { VenueGraph } from '@crowdflow/core';
 import { readPack } from '@crowdflow/cli/ingest';
 import type { CircuitSummary, VenueGeometry } from './wire.js';
@@ -23,9 +23,4 @@ export function geometry(circuit: LoadedCircuit): VenueGeometry {
 export function summary(circuit: LoadedCircuit): CircuitSummary {
   return { id: circuit.pack.id, name: circuit.pack.name, zones: Object.keys(circuit.pack.zones ?? {}).length, edges: Object.keys(circuit.pack.edges ?? {}).length, crossings: Object.keys(circuit.pack.crossings ?? {}).length, track_length_m: circuit.pack.track_length_m, untrustworthy_widths: Object.values(circuit.pack.edges ?? {}).filter((edge) => !isTrustworthy(edge.width_m)).length };
 }
-export function integrityProblems(pack: CircuitPack): string[] {
-  const problems: string[] = []; const zones = pack.zones ?? {}; const edges = pack.edges ?? {};
-  for (const edge of Object.values(edges)) { if (!(edge.source in zones)) problems.push(`edge ${edge.id}: unknown source`); if (!(edge.destination in zones)) problems.push(`edge ${edge.id}: unknown destination`); }
-  for (const crossing of Object.values(pack.crossings ?? {})) if (!(crossing.edge_id in edges)) problems.push(`crossing ${crossing.id}: unknown edge`);
-  return problems;
-}
+export const integrityProblems = circuitIntegrityProblems;
