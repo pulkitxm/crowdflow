@@ -14,13 +14,16 @@ involved at all.
 from __future__ import annotations
 
 import pytest
-from crowdflow_contracts import LOSBand, ZoneState
+from conftest import edge, make_pack, zone
+from crowdflow_contracts import (
+    ASSUMED_ROUTE_CACHE_ENTRIES,
+    FREE_FLOW_SPEED_MS,
+    LOSBand,
+    ZoneState,
+)
 from crowdflow_contracts.state import Confidence
-
 from crowdflow_core.routing import VenueGraph
 from crowdflow_core.routing.graph import AVOID_PENALTY, PREFER_DISCOUNT
-
-from conftest import edge, make_pack, zone
 
 
 def _zone_state(zone_id: str, density: float, speed: float = 0.5) -> ZoneState:
@@ -149,9 +152,8 @@ def test_an_unknown_session_closes_every_time_limited_edge(diamond_pack):
 
 
 def _at_grade(cid: str, edge_id: str):
-    from crowdflow_contracts import Availability, Crossing, CrossingKind
-
     from conftest import measured
+    from crowdflow_contracts import Availability, Crossing, CrossingKind
 
     return Crossing(
         id=cid, kind=CrossingKind.AT_GRADE, edge_id=edge_id,
@@ -216,13 +218,18 @@ def test_prefer_discount_cannot_make_the_search_return_a_suboptimal_path():
     graph = VenueGraph(pack)
     result = graph.route("s", "x", prefer={"far"})
     assert result.path == ["s", "far", "x"]
-    expected = (100 / 1.34 * PREFER_DISCOUNT) + (100 / 1.34)
+    expected = (
+        100 / FREE_FLOW_SPEED_MS * PREFER_DISCOUNT
+        + 100 / FREE_FLOW_SPEED_MS
+    )
     assert result.cost_s == pytest.approx(expected)
 
 
 def test_a_critical_zone_costs_more_than_a_nominal_one(diamond: VenueGraph):
     """Cost is time under current conditions, not distance."""
-    clear = diamond.edge_cost("e_direct", {"exit": _zone_state("exit", 0.1, 1.34)})[0]
+    clear = diamond.edge_cost(
+        "e_direct", {"exit": _zone_state("exit", 0.1, FREE_FLOW_SPEED_MS)}
+    )[0]
     jammed = diamond.edge_cost("e_direct", {"exit": _zone_state("exit", 3.9, 0.1)})[0]
     assert _zone_state("exit", 3.9, 0.1).band is LOSBand.CRITICAL
     assert jammed > clear * 10
@@ -323,3 +330,23 @@ def test_the_cache_hits_where_a_crowd_would_hit_it(diamond: VenueGraph):
     assert diamond.route_cache_size == 2
     assert diamond.cache_misses == 2
     assert diamond.cache_hits == 998
+
+
+def test_static_route_cache_is_bounded_and_lru(diamond: VenueGraph, monkeypatch):
+    monkeypatch.setattr(
+        "crowdflow_core.routing.graph.ASSUMED_ROUTE_CACHE_ENTRIES", 2
+    )
+    first = ("gate", "exit", frozenset(), frozenset())
+    second = ("north", "exit", frozenset(), frozenset())
+    third = ("south", "exit", frozenset(), frozenset())
+
+    diamond.route(first[0], first[1])
+    diamond.route(second[0], second[1])
+    diamond.route(first[0], first[1])  # first is most recently used
+    diamond.route(third[0], third[1])
+
+    assert diamond.route_cache_size == 2
+    assert first in diamond._route_cache
+    assert second not in diamond._route_cache
+    assert third in diamond._route_cache
+    assert ASSUMED_ROUTE_CACHE_ENTRIES > 702, "the seeded gate measured 702 entries"

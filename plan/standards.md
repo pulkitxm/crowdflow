@@ -153,6 +153,17 @@ Anything new goes in this file with, in order of preference:
 
 Option 3 is allowed but must be visible in the UI wherever it affects a displayed number.
 
+### Registered engineering assumptions
+
+These do not classify a crowd and do not create a displayed fact, but they still
+belong in the registry because they bound runtime behaviour:
+
+| Constant | Value | Reasoning / falsifier |
+|---|---:|---|
+| Static route-cache entries | 4,096 | Keeps one graph's cache in the low-megabyte range and exceeds the seeded Silverstone gate's measured 702-entry working set. Replace from live-event eviction measurements if hit rate suffers. |
+| Private Bottom-k retained hashes | 32 | Approx. 18% relative standard error; increase only if measured participation error dominates attendance/channel uncertainty. |
+| Private sketch epsilon | 1.0 per release epoch | ASSUMED pending a published app privacy budget; repeated releases require new accounting and cannot silently reuse the budget. |
+
 ---
 
 ## Sources

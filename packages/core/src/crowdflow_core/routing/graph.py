@@ -18,9 +18,16 @@ from __future__ import annotations
 
 import heapq
 import math
+from collections import OrderedDict
 from dataclasses import dataclass, field, replace
 
-from crowdflow_contracts import CircuitPack, FREE_FLOW_SPEED_MS, LOSBand, ZoneState
+from crowdflow_contracts import (
+    ASSUMED_ROUTE_CACHE_ENTRIES,
+    FREE_FLOW_SPEED_MS,
+    CircuitPack,
+    LOSBand,
+    ZoneState,
+)
 
 from ..state.flow import MIN_SPEED_MS
 
@@ -76,9 +83,9 @@ class VenueGraph:
         self._adj: dict[str, list[tuple[str, str]]] = {}
         self._closed: set[str] = set()
         self._forbidden: set[str] = set()
-        self._route_cache: dict[
+        self._route_cache: OrderedDict[
             tuple[str, str, frozenset[str], frozenset[str]], RouteResult
-        ] = {}
+        ] = OrderedDict()
         self.cache_hits = 0
         self.cache_misses = 0
         self.rebuild(session_state)
@@ -225,8 +232,11 @@ class VenueGraph:
             self.cache_misses += 1
             cached = self._search(origin, destination, None, avoid, prefer, None)
             self._route_cache[key] = cached
+            if len(self._route_cache) > ASSUMED_ROUTE_CACHE_ENTRIES:
+                self._route_cache.popitem(last=False)
         else:
             self.cache_hits += 1
+            self._route_cache.move_to_end(key)
         # Hand back a copy: callers own their path list, and one that mutated it
         # would corrupt every later hit rather than fail visibly.
         return replace(cached, path=list(cached.path))

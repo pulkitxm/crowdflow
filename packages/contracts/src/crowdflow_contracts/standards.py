@@ -227,6 +227,16 @@ to distinguish neighbouring venue corridors. Circuit sensing measurements must
 replace these global endpoints where available. Values between them interpolate
 linearly and values outside clamp rather than fabricating extra certainty."""
 
+ASSUMED_ROUTE_CACHE_ENTRIES = 4096
+"""Maximum static routes retained by one venue graph.
+
+ASSUMED: one entry is a short path plus four small key fields. 4,096 keeps the
+cache in the low-megabyte range while retaining several complete origin sweeps
+of Silverstone's 1,875-zone graph. The seeded gate needs only 702 entries, so the
+bound preserves the measured speedup while preventing multi-hour advisory churn
+from growing process memory forever. Replace with a measured working-set bound
+from a live event if its eviction rate is material."""
+
 
 # --------------------------------------------------------------------------
 # Density thresholds, DERIVED from the flow thresholds above.
