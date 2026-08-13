@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "CrossingClosed": {
+      "properties": {
+        "open": {
+          "const": false,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "opens_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no reopening time is known",
+          "title": "Opens At"
+        }
+      },
+      "required": [
+        "open",
+        "opens_at"
+      ],
+      "title": "CrossingClosed",
+      "type": "object"
+    },
+    "CrossingOpen": {
+      "properties": {
+        "open": {
+          "const": true,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "closes_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no closing time is known",
+          "title": "Closes At"
+        }
+      },
+      "required": [
+        "open",
+        "closes_at"
+      ],
+      "title": "CrossingOpen",
+      "type": "object"
+    }
+  },
+  "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "state": {
+      "discriminator": {
+        "mapping": {
+          "False": "#/$defs/CrossingClosed",
+          "True": "#/$defs/CrossingOpen"
+        },
+        "propertyName": "open"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CrossingOpen"
+        },
+        {
+          "$ref": "#/$defs/CrossingClosed"
+        }
+      ],
+      "title": "State"
+    }
+  },
+  "required": [
+    "name",
+    "state"
+  ],
+  "title": "CrossingNotice",
+  "type": "object"
+}

@@ -104,6 +104,10 @@ class Edge(BaseModel):
     free_speed_ms: Sourced | None = Field(
         default=None, description="observed where available, else the standards prior"
     )
+    capacity_flow_ped_m_min: Sourced | None = Field(
+        default=None,
+        description="observed peak sustained flow per metre of width; never invented",
+    )
 
 
 class Availability(BaseModel):

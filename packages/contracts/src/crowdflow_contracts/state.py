@@ -17,7 +17,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from .standards import LOSBand, band_for_density, los_grade_for_flow
+from .standards import (
+    ASSUMED_REPORTABLE_CONFIDENCE_FLOOR,
+    ASSUMED_REPORTABLE_NODE_FLOOR,
+    LOSBand,
+    band_for_density,
+    los_grade_for_flow,
+)
 
 
 class Confidence(BaseModel):
@@ -39,10 +45,19 @@ class Confidence(BaseModel):
         ge=0, le=1, description="agreement with recent estimates for this zone"
     )
 
+    @computed_field
+    @property
+    def reportable(self) -> bool:
+        """The contract's served judgement; clients never restate its thresholds."""
+        return (
+            self.value >= ASSUMED_REPORTABLE_CONFIDENCE_FLOOR
+            and self.observed_nodes >= ASSUMED_REPORTABLE_NODE_FLOOR
+        )
+
     @property
     def is_reportable(self) -> bool:
-        """Below this, render as unknown rather than as a number."""
-        return self.value >= 0.25 and self.observed_nodes >= 3
+        """Python convenience alias for the serialised ``reportable`` field."""
+        return self.reportable
 
 
 class ZoneState(BaseModel):

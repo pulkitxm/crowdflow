@@ -112,10 +112,10 @@ export const light: Palette = {
   line: '#D6DCDD',
   actionFill: '#0E1213',
   actionText: '#FFFFFF',
-  clear: { fill: '#E2F2E8', text: '#0A5733', edge: '#8FC5A9' },
-  slowing: { fill: '#FBEED5', text: '#6E4300', edge: '#D8B268' },
-  backingUp: { fill: '#FBE4E1', text: '#9A150D', edge: '#E19E96' },
-  unknown: { fill: '#EAEDEE', text: '#3E484A', edge: '#B9C1C3' },
+  clear: { fill: '#E2F2E8', text: '#0A5733', edge: '#4B8769' },
+  slowing: { fill: '#FBEED5', text: '#6E4300', edge: '#8B641A' },
+  backingUp: { fill: '#FBE4E1', text: '#9A150D', edge: '#A64439' },
+  unknown: { fill: '#EAEDEE', text: '#3E484A', edge: '#687477' },
 };
 
 export const dark: Palette = {
@@ -126,10 +126,10 @@ export const dark: Palette = {
   line: '#2B3234',
   actionFill: '#F3F6F6',
   actionText: '#0B0E0F',
-  clear: { fill: '#0F2A1D', text: '#7FDCA9', edge: '#2F6448' },
-  slowing: { fill: '#2E2309', text: '#F2C77A', edge: '#6B5320' },
-  backingUp: { fill: '#33140F', text: '#F5A096', edge: '#73372F' },
-  unknown: { fill: '#1E2426', text: '#B4BEC0', edge: '#3C4547' },
+  clear: { fill: '#0F2A1D', text: '#7FDCA9', edge: '#62B88B' },
+  slowing: { fill: '#2E2309', text: '#F2C77A', edge: '#C79B4E' },
+  backingUp: { fill: '#33140F', text: '#F5A096', edge: '#D7776D' },
+  unknown: { fill: '#1E2426', text: '#B4BEC0', edge: '#8E9A9D' },
 };
 
 export type ThemeName = 'light' | 'dark';

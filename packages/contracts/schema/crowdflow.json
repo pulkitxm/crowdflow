@@ -3,6 +3,681 @@
   "title": "CrowdFlow contracts",
   "description": "Generated from packages/contracts. Do not edit.",
   "$defs": {
+    "AheadView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "RerouteCommand": {
+          "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "issued_at": {
+              "title": "Issued At",
+              "type": "number"
+            },
+            "expires_at": {
+              "description": "commands must expire; stale routing is harmful",
+              "title": "Expires At",
+              "type": "number"
+            },
+            "source_zone": {
+              "title": "Source Zone",
+              "type": "string"
+            },
+            "destination_zone": {
+              "title": "Destination Zone",
+              "type": "string"
+            },
+            "avoid": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Avoid",
+              "type": "array"
+            },
+            "prefer": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Prefer",
+              "type": "array"
+            },
+            "target_fraction": {
+              "description": "share of affected walkers this should reach",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Target Fraction",
+              "type": "number"
+            },
+            "reason": {
+              "description": "plain language, surfaced in the app",
+              "title": "Reason",
+              "type": "string"
+            },
+            "expected_cost_s": {
+              "description": "honest added walking time, stated before the user accepts",
+              "title": "Expected Cost S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "command_id",
+            "issued_at",
+            "expires_at",
+            "source_zone",
+            "destination_zone",
+            "target_fraction",
+            "reason",
+            "expected_cost_s"
+          ],
+          "title": "RerouteCommand",
+          "type": "object"
+        },
+        "RerouteOffer": {
+          "description": "A proposed alternative and the safety verdict that gates its display.",
+          "properties": {
+            "command": {
+              "$ref": "#/$defs/RerouteCommand"
+            },
+            "verdict": {
+              "$ref": "#/$defs/SafetyVerdict"
+            },
+            "instead": {
+              "$ref": "#/$defs/Route"
+            }
+          },
+          "required": [
+            "command",
+            "verdict",
+            "instead"
+          ],
+          "title": "RerouteOffer",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "SafetyOutcome": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "SafetyOutcome",
+          "type": "string"
+        },
+        "SafetyVerdict": {
+          "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "outcome": {
+              "$ref": "#/$defs/SafetyOutcome"
+            },
+            "reason": {
+              "description": "stated even on approval; rejections are explained",
+              "title": "Reason",
+              "type": "string"
+            },
+            "violated_constraints": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Violated Constraints",
+              "type": "array"
+            },
+            "emergency_mode": {
+              "default": false,
+              "title": "Emergency Mode",
+              "type": "boolean"
+            },
+            "dispatchable": {
+              "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
+              "readOnly": true,
+              "title": "Dispatchable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "command_id",
+            "outcome",
+            "reason",
+            "dispatchable"
+          ],
+          "title": "SafetyVerdict",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "ahead",
+          "title": "Kind",
+          "type": "string"
+        },
+        "step_id": {
+          "title": "Step Id",
+          "type": "string"
+        },
+        "offer": {
+          "$ref": "#/$defs/RerouteOffer"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind",
+        "step_id",
+        "offer"
+      ],
+      "title": "AheadView",
+      "type": "object"
+    },
+    "ArrivalView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "GateChoice": {
+          "properties": {
+            "zone_id": {
+              "title": "Zone Id",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "walk_s": {
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            },
+            "selected": {
+              "default": false,
+              "title": "Selected",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "zone_id",
+            "name",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "GateChoice",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "arrival",
+          "title": "Kind",
+          "type": "string"
+        },
+        "gates": {
+          "items": {
+            "$ref": "#/$defs/GateChoice"
+          },
+          "title": "Gates",
+          "type": "array"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind",
+        "gates",
+        "note"
+      ],
+      "title": "ArrivalView",
+      "type": "object"
+    },
     "Availability": {
       "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
       "properties": {
@@ -228,6 +903,18 @@
               ],
               "default": null,
               "description": "observed where available, else the standards prior"
+            },
+            "capacity_flow_ped_m_min": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Sourced"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observed peak sustained flow per metre of width; never invented"
             }
           },
           "required": [
@@ -515,6 +1202,12 @@
           "minimum": 0,
           "title": "Stability",
           "type": "number"
+        },
+        "reportable": {
+          "description": "The contract's served judgement; clients never restate its thresholds.",
+          "readOnly": true,
+          "title": "Reportable",
+          "type": "boolean"
         }
       },
       "required": [
@@ -522,7 +1215,8 @@
         "observed_nodes",
         "freshness_s",
         "mean_accuracy_m",
-        "stability"
+        "stability",
+        "reportable"
       ],
       "title": "Confidence",
       "type": "object"
@@ -724,6 +1418,149 @@
       "title": "Crossing",
       "type": "object"
     },
+    "CrossingClosed": {
+      "properties": {
+        "open": {
+          "const": false,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "opens_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no reopening time is known",
+          "title": "Opens At"
+        }
+      },
+      "required": [
+        "open",
+        "opens_at"
+      ],
+      "title": "CrossingClosed",
+      "type": "object"
+    },
+    "CrossingNotice": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        }
+      },
+      "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "state": {
+          "discriminator": {
+            "mapping": {
+              "False": "#/$defs/CrossingClosed",
+              "True": "#/$defs/CrossingOpen"
+            },
+            "propertyName": "open"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CrossingOpen"
+            },
+            {
+              "$ref": "#/$defs/CrossingClosed"
+            }
+          ],
+          "title": "State"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "title": "CrossingNotice",
+      "type": "object"
+    },
+    "CrossingOpen": {
+      "properties": {
+        "open": {
+          "const": true,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "closes_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no closing time is known",
+          "title": "Closes At"
+        }
+      },
+      "required": [
+        "open",
+        "closes_at"
+      ],
+      "title": "CrossingOpen",
+      "type": "object"
+    },
     "CrowdNode": {
       "$defs": {
         "Position": {
@@ -917,6 +1754,18 @@
           ],
           "default": null,
           "description": "observed where available, else the standards prior"
+        },
+        "capacity_flow_ped_m_min": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observed peak sustained flow per metre of width; never invented"
         }
       },
       "required": [
@@ -1051,10 +1900,10 @@
           "description": "None when the threshold is not projected to be crossed",
           "title": "Time To Threshold S"
         },
-        "projected_peak_flow": {
-          "description": "ped/m/min at the projected peak",
+        "projected_peak_density_persons_m2": {
+          "description": "persons/m2 at the projected peak; bands are classified on density",
           "minimum": 0,
-          "title": "Projected Peak Flow",
+          "title": "Projected Peak Density Persons M2",
           "type": "number"
         },
         "confidence": {
@@ -1075,6 +1924,12 @@
           },
           "title": "Causes",
           "type": "array"
+        },
+        "actionable": {
+          "description": "Served judgement: clients must not duplicate these thresholds.",
+          "readOnly": true,
+          "title": "Actionable",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1083,11 +1938,372 @@
         "horizon_s",
         "target_band",
         "probability",
-        "projected_peak_flow",
+        "projected_peak_density_persons_m2",
         "confidence",
-        "model_id"
+        "model_id",
+        "actionable"
       ],
       "title": "Forecast",
+      "type": "object"
+    },
+    "GateChoice": {
+      "$defs": {
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "walk_s": {
+          "minimum": 0,
+          "title": "Walk S",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "selected": {
+          "default": false,
+          "title": "Selected",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "zone_id",
+        "name",
+        "walk_s",
+        "way_ahead"
+      ],
+      "title": "GateChoice",
+      "type": "object"
+    },
+    "HoldView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "LeaveOption": {
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "label": {
+              "title": "Label",
+              "type": "string"
+            },
+            "total_s": {
+              "description": "door-to-car seconds, including any wait",
+              "minimum": 0,
+              "title": "Total S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "spent": {
+              "title": "Spent",
+              "type": "string"
+            },
+            "recommendation_note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "engine-authored reason this option is recommended; absent otherwise",
+              "title": "Recommendation Note"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "total_s",
+            "way_ahead",
+            "spent"
+          ],
+          "title": "LeaveOption",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "hold",
+          "title": "Kind",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/LeaveOption"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "recommended_id": {
+          "title": "Recommended Id",
+          "type": "string"
+        },
+        "headline": {
+          "title": "Headline",
+          "type": "string"
+        },
+        "because": {
+          "title": "Because",
+          "type": "string"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind",
+        "options",
+        "recommended_id",
+        "headline",
+        "because"
+      ],
+      "title": "HoldView",
       "type": "object"
     },
     "InterventionCandidate": {
@@ -1166,10 +2382,10 @@
           "title": "Via",
           "type": "array"
         },
-        "projected_peak_flow": {
-          "description": "ped/m/min",
+        "projected_peak_density_persons_m2": {
+          "description": "persons/m2 at the projected peak",
           "minimum": 0,
-          "title": "Projected Peak Flow",
+          "title": "Projected Peak Density Persons M2",
           "type": "number"
         },
         "projected_walk_time_delta_s": {
@@ -1197,12 +2413,97 @@
         "divert_fraction",
         "from_zone",
         "to_zone",
-        "projected_peak_flow",
+        "projected_peak_density_persons_m2",
         "projected_walk_time_delta_s",
         "projected_bottleneck_duration_s",
         "score"
       ],
       "title": "InterventionCandidate",
+      "type": "object"
+    },
+    "LeaveOption": {
+      "$defs": {
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "total_s": {
+          "description": "door-to-car seconds, including any wait",
+          "minimum": 0,
+          "title": "Total S",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        },
+        "spent": {
+          "title": "Spent",
+          "type": "string"
+        },
+        "recommendation_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "engine-authored reason this option is recommended; absent otherwise",
+          "title": "Recommendation Note"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "total_s",
+        "way_ahead",
+        "spent"
+      ],
+      "title": "LeaveOption",
+      "type": "object"
+    },
+    "LinkStatus": {
+      "description": "Freshness and reachability, stated rather than hidden.",
+      "properties": {
+        "online": {
+          "title": "Online",
+          "type": "boolean"
+        },
+        "mesh_peers": {
+          "minimum": 0,
+          "title": "Mesh Peers",
+          "type": "integer"
+        },
+        "updated_at": {
+          "description": "unix seconds of the newest observation behind the route",
+          "title": "Updated At",
+          "type": "number"
+        }
+      },
+      "required": [
+        "online",
+        "mesh_peers",
+        "updated_at"
+      ],
+      "title": "LinkStatus",
       "type": "object"
     },
     "MeshMessage": {
@@ -1280,6 +2581,239 @@
         "timestamp"
       ],
       "title": "MeshMessage",
+      "type": "object"
+    },
+    "OfflineView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "offline",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind"
+      ],
+      "title": "OfflineView",
       "type": "object"
     },
     "Position": {
@@ -1372,6 +2906,755 @@
       "title": "RerouteCommand",
       "type": "object"
     },
+    "RerouteOffer": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "RerouteCommand": {
+          "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "issued_at": {
+              "title": "Issued At",
+              "type": "number"
+            },
+            "expires_at": {
+              "description": "commands must expire; stale routing is harmful",
+              "title": "Expires At",
+              "type": "number"
+            },
+            "source_zone": {
+              "title": "Source Zone",
+              "type": "string"
+            },
+            "destination_zone": {
+              "title": "Destination Zone",
+              "type": "string"
+            },
+            "avoid": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Avoid",
+              "type": "array"
+            },
+            "prefer": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Prefer",
+              "type": "array"
+            },
+            "target_fraction": {
+              "description": "share of affected walkers this should reach",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Target Fraction",
+              "type": "number"
+            },
+            "reason": {
+              "description": "plain language, surfaced in the app",
+              "title": "Reason",
+              "type": "string"
+            },
+            "expected_cost_s": {
+              "description": "honest added walking time, stated before the user accepts",
+              "title": "Expected Cost S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "command_id",
+            "issued_at",
+            "expires_at",
+            "source_zone",
+            "destination_zone",
+            "target_fraction",
+            "reason",
+            "expected_cost_s"
+          ],
+          "title": "RerouteCommand",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "SafetyOutcome": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "SafetyOutcome",
+          "type": "string"
+        },
+        "SafetyVerdict": {
+          "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "outcome": {
+              "$ref": "#/$defs/SafetyOutcome"
+            },
+            "reason": {
+              "description": "stated even on approval; rejections are explained",
+              "title": "Reason",
+              "type": "string"
+            },
+            "violated_constraints": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Violated Constraints",
+              "type": "array"
+            },
+            "emergency_mode": {
+              "default": false,
+              "title": "Emergency Mode",
+              "type": "boolean"
+            },
+            "dispatchable": {
+              "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
+              "readOnly": true,
+              "title": "Dispatchable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "command_id",
+            "outcome",
+            "reason",
+            "dispatchable"
+          ],
+          "title": "SafetyVerdict",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "description": "A proposed alternative and the safety verdict that gates its display.",
+      "properties": {
+        "command": {
+          "$ref": "#/$defs/RerouteCommand"
+        },
+        "verdict": {
+          "$ref": "#/$defs/SafetyVerdict"
+        },
+        "instead": {
+          "$ref": "#/$defs/Route"
+        }
+      },
+      "required": [
+        "command",
+        "verdict",
+        "instead"
+      ],
+      "title": "RerouteOffer",
+      "type": "object"
+    },
+    "ReroutedView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "rerouted",
+          "title": "Kind",
+          "type": "string"
+        },
+        "instead_of": {
+          "$ref": "#/$defs/Route"
+        },
+        "added_s": {
+          "title": "Added S",
+          "type": "number"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind",
+        "instead_of",
+        "added_s",
+        "reason"
+      ],
+      "title": "ReroutedView",
+      "type": "object"
+    },
+    "Route": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "description": "Where the spectator is, where they are going and the walk between them.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "total_walk_s": {
+          "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+          "minimum": 0,
+          "title": "Total Walk S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "steps",
+        "total_walk_s"
+      ],
+      "title": "Route",
+      "type": "object"
+    },
     "SafetyConstraints": {
       "description": "Hard rules the agent cannot override.",
       "properties": {
@@ -1440,12 +3723,19 @@
           "default": false,
           "title": "Emergency Mode",
           "type": "boolean"
+        },
+        "dispatchable": {
+          "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
+          "readOnly": true,
+          "title": "Dispatchable",
+          "type": "boolean"
         }
       },
       "required": [
         "command_id",
         "outcome",
-        "reason"
+        "reason",
+        "dispatchable"
       ],
       "title": "SafetyVerdict",
       "type": "object"
@@ -1578,6 +3868,843 @@
       "title": "Sourced",
       "type": "object"
     },
+    "SpectatorView": {
+      "$defs": {
+        "AheadView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "ahead",
+              "title": "Kind",
+              "type": "string"
+            },
+            "step_id": {
+              "title": "Step Id",
+              "type": "string"
+            },
+            "offer": {
+              "$ref": "#/$defs/RerouteOffer"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind",
+            "step_id",
+            "offer"
+          ],
+          "title": "AheadView",
+          "type": "object"
+        },
+        "ArrivalView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "arrival",
+              "title": "Kind",
+              "type": "string"
+            },
+            "gates": {
+              "items": {
+                "$ref": "#/$defs/GateChoice"
+              },
+              "title": "Gates",
+              "type": "array"
+            },
+            "note": {
+              "title": "Note",
+              "type": "string"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind",
+            "gates",
+            "note"
+          ],
+          "title": "ArrivalView",
+          "type": "object"
+        },
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "GateChoice": {
+          "properties": {
+            "zone_id": {
+              "title": "Zone Id",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "walk_s": {
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            },
+            "selected": {
+              "default": false,
+              "title": "Selected",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "zone_id",
+            "name",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "GateChoice",
+          "type": "object"
+        },
+        "HoldView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "hold",
+              "title": "Kind",
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "$ref": "#/$defs/LeaveOption"
+              },
+              "title": "Options",
+              "type": "array"
+            },
+            "recommended_id": {
+              "title": "Recommended Id",
+              "type": "string"
+            },
+            "headline": {
+              "title": "Headline",
+              "type": "string"
+            },
+            "because": {
+              "title": "Because",
+              "type": "string"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind",
+            "options",
+            "recommended_id",
+            "headline",
+            "because"
+          ],
+          "title": "HoldView",
+          "type": "object"
+        },
+        "LeaveOption": {
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "label": {
+              "title": "Label",
+              "type": "string"
+            },
+            "total_s": {
+              "description": "door-to-car seconds, including any wait",
+              "minimum": 0,
+              "title": "Total S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "spent": {
+              "title": "Spent",
+              "type": "string"
+            },
+            "recommendation_note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "engine-authored reason this option is recommended; absent otherwise",
+              "title": "Recommendation Note"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "total_s",
+            "way_ahead",
+            "spent"
+          ],
+          "title": "LeaveOption",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "OfflineView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "offline",
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind"
+          ],
+          "title": "OfflineView",
+          "type": "object"
+        },
+        "RerouteCommand": {
+          "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "issued_at": {
+              "title": "Issued At",
+              "type": "number"
+            },
+            "expires_at": {
+              "description": "commands must expire; stale routing is harmful",
+              "title": "Expires At",
+              "type": "number"
+            },
+            "source_zone": {
+              "title": "Source Zone",
+              "type": "string"
+            },
+            "destination_zone": {
+              "title": "Destination Zone",
+              "type": "string"
+            },
+            "avoid": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Avoid",
+              "type": "array"
+            },
+            "prefer": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Prefer",
+              "type": "array"
+            },
+            "target_fraction": {
+              "description": "share of affected walkers this should reach",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Target Fraction",
+              "type": "number"
+            },
+            "reason": {
+              "description": "plain language, surfaced in the app",
+              "title": "Reason",
+              "type": "string"
+            },
+            "expected_cost_s": {
+              "description": "honest added walking time, stated before the user accepts",
+              "title": "Expected Cost S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "command_id",
+            "issued_at",
+            "expires_at",
+            "source_zone",
+            "destination_zone",
+            "target_fraction",
+            "reason",
+            "expected_cost_s"
+          ],
+          "title": "RerouteCommand",
+          "type": "object"
+        },
+        "RerouteOffer": {
+          "description": "A proposed alternative and the safety verdict that gates its display.",
+          "properties": {
+            "command": {
+              "$ref": "#/$defs/RerouteCommand"
+            },
+            "verdict": {
+              "$ref": "#/$defs/SafetyVerdict"
+            },
+            "instead": {
+              "$ref": "#/$defs/Route"
+            }
+          },
+          "required": [
+            "command",
+            "verdict",
+            "instead"
+          ],
+          "title": "RerouteOffer",
+          "type": "object"
+        },
+        "ReroutedView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "rerouted",
+              "title": "Kind",
+              "type": "string"
+            },
+            "instead_of": {
+              "$ref": "#/$defs/Route"
+            },
+            "added_s": {
+              "title": "Added S",
+              "type": "number"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind",
+            "instead_of",
+            "added_s",
+            "reason"
+          ],
+          "title": "ReroutedView",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "SafetyOutcome": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "SafetyOutcome",
+          "type": "string"
+        },
+        "SafetyVerdict": {
+          "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+          "properties": {
+            "command_id": {
+              "title": "Command Id",
+              "type": "string"
+            },
+            "outcome": {
+              "$ref": "#/$defs/SafetyOutcome"
+            },
+            "reason": {
+              "description": "stated even on approval; rejections are explained",
+              "title": "Reason",
+              "type": "string"
+            },
+            "violated_constraints": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Violated Constraints",
+              "type": "array"
+            },
+            "emergency_mode": {
+              "default": false,
+              "title": "Emergency Mode",
+              "type": "boolean"
+            },
+            "dispatchable": {
+              "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
+              "readOnly": true,
+              "title": "Dispatchable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "command_id",
+            "outcome",
+            "reason",
+            "dispatchable"
+          ],
+          "title": "SafetyVerdict",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WalkView": {
+          "properties": {
+            "now": {
+              "title": "Now",
+              "type": "number"
+            },
+            "link": {
+              "$ref": "#/$defs/LinkStatus"
+            },
+            "route": {
+              "$ref": "#/$defs/Route"
+            },
+            "kind": {
+              "const": "walk",
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          "required": [
+            "now",
+            "link",
+            "route",
+            "kind"
+          ],
+          "title": "WalkView",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "description": "One of the six screen states for a race day.",
+      "discriminator": {
+        "mapping": {
+          "ahead": "#/$defs/AheadView",
+          "arrival": "#/$defs/ArrivalView",
+          "hold": "#/$defs/HoldView",
+          "offline": "#/$defs/OfflineView",
+          "rerouted": "#/$defs/ReroutedView",
+          "walk": "#/$defs/WalkView"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ArrivalView"
+        },
+        {
+          "$ref": "#/$defs/WalkView"
+        },
+        {
+          "$ref": "#/$defs/AheadView"
+        },
+        {
+          "$ref": "#/$defs/ReroutedView"
+        },
+        {
+          "$ref": "#/$defs/OfflineView"
+        },
+        {
+          "$ref": "#/$defs/HoldView"
+        }
+      ],
+      "title": "SpectatorView"
+    },
+    "Step": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "description": "One already-priced leg of a route.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "to": {
+          "description": "human-readable landmark from the circuit pack",
+          "title": "To",
+          "type": "string"
+        },
+        "walk_s": {
+          "description": "walking seconds computed by the routing engine",
+          "minimum": 0,
+          "title": "Walk S",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        },
+        "crossing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CrossingNotice"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "to",
+        "walk_s",
+        "way_ahead"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
     "TraceFragment": {
       "$defs": {
         "Position": {
@@ -1687,6 +4814,12 @@
               "minimum": 0,
               "title": "Stability",
               "type": "number"
+            },
+            "reportable": {
+              "description": "The contract's served judgement; clients never restate its thresholds.",
+              "readOnly": true,
+              "title": "Reportable",
+              "type": "boolean"
             }
           },
           "required": [
@@ -1694,7 +4827,8 @@
             "observed_nodes",
             "freshness_s",
             "mean_accuracy_m",
-            "stability"
+            "stability",
+            "reportable"
           ],
           "title": "Confidence",
           "type": "object"
@@ -1879,6 +5013,239 @@
         "timestamp"
       ],
       "title": "VenueState",
+      "type": "object"
+    },
+    "WalkView": {
+      "$defs": {
+        "CrossingClosed": {
+          "properties": {
+            "open": {
+              "const": false,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "opens_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no reopening time is known",
+              "title": "Opens At"
+            }
+          },
+          "required": [
+            "open",
+            "opens_at"
+          ],
+          "title": "CrossingClosed",
+          "type": "object"
+        },
+        "CrossingNotice": {
+          "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "state": {
+              "discriminator": {
+                "mapping": {
+                  "False": "#/$defs/CrossingClosed",
+                  "True": "#/$defs/CrossingOpen"
+                },
+                "propertyName": "open"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CrossingOpen"
+                },
+                {
+                  "$ref": "#/$defs/CrossingClosed"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          "required": [
+            "name",
+            "state"
+          ],
+          "title": "CrossingNotice",
+          "type": "object"
+        },
+        "CrossingOpen": {
+          "properties": {
+            "open": {
+              "const": true,
+              "title": "Open",
+              "type": "boolean"
+            },
+            "closes_at": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "absolute unix seconds; None when no closing time is known",
+              "title": "Closes At"
+            }
+          },
+          "required": [
+            "open",
+            "closes_at"
+          ],
+          "title": "CrossingOpen",
+          "type": "object"
+        },
+        "LinkStatus": {
+          "description": "Freshness and reachability, stated rather than hidden.",
+          "properties": {
+            "online": {
+              "title": "Online",
+              "type": "boolean"
+            },
+            "mesh_peers": {
+              "minimum": 0,
+              "title": "Mesh Peers",
+              "type": "integer"
+            },
+            "updated_at": {
+              "description": "unix seconds of the newest observation behind the route",
+              "title": "Updated At",
+              "type": "number"
+            }
+          },
+          "required": [
+            "online",
+            "mesh_peers",
+            "updated_at"
+          ],
+          "title": "LinkStatus",
+          "type": "object"
+        },
+        "Route": {
+          "description": "Where the spectator is, where they are going and the walk between them.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "total_walk_s": {
+              "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+              "minimum": 0,
+              "title": "Total Walk S",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "from",
+            "to",
+            "steps",
+            "total_walk_s"
+          ],
+          "title": "Route",
+          "type": "object"
+        },
+        "Step": {
+          "description": "One already-priced leg of a route.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "to": {
+              "description": "human-readable landmark from the circuit pack",
+              "title": "To",
+              "type": "string"
+            },
+            "walk_s": {
+              "description": "walking seconds computed by the routing engine",
+              "minimum": 0,
+              "title": "Walk S",
+              "type": "number"
+            },
+            "way_ahead": {
+              "$ref": "#/$defs/WayAhead"
+            },
+            "crossing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CrossingNotice"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "id",
+            "to",
+            "walk_s",
+            "way_ahead"
+          ],
+          "title": "Step",
+          "type": "object"
+        },
+        "WayAhead": {
+          "enum": [
+            "nominal",
+            "building",
+            "critical",
+            "unknown"
+          ],
+          "title": "WayAhead",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "now": {
+          "title": "Now",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "kind": {
+          "const": "walk",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "now",
+        "link",
+        "route",
+        "kind"
+      ],
+      "title": "WalkView",
       "type": "object"
     },
     "Zone": {
@@ -2066,6 +5433,12 @@
               "minimum": 0,
               "title": "Stability",
               "type": "number"
+            },
+            "reportable": {
+              "description": "The contract's served judgement; clients never restate its thresholds.",
+              "readOnly": true,
+              "title": "Reportable",
+              "type": "boolean"
             }
           },
           "required": [
@@ -2073,7 +5446,8 @@
             "observed_nodes",
             "freshness_s",
             "mean_accuracy_m",
-            "stability"
+            "stability",
+            "reportable"
           ],
           "title": "Confidence",
           "type": "object"

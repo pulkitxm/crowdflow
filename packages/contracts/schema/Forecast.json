@@ -50,10 +50,10 @@
       "description": "None when the threshold is not projected to be crossed",
       "title": "Time To Threshold S"
     },
-    "projected_peak_flow": {
-      "description": "ped/m/min at the projected peak",
+    "projected_peak_density_persons_m2": {
+      "description": "persons/m2 at the projected peak; bands are classified on density",
       "minimum": 0,
-      "title": "Projected Peak Flow",
+      "title": "Projected Peak Density Persons M2",
       "type": "number"
     },
     "confidence": {
@@ -74,6 +74,12 @@
       },
       "title": "Causes",
       "type": "array"
+    },
+    "actionable": {
+      "description": "Served judgement: clients must not duplicate these thresholds.",
+      "readOnly": true,
+      "title": "Actionable",
+      "type": "boolean"
     }
   },
   "required": [
@@ -82,9 +88,10 @@
     "horizon_s",
     "target_band",
     "probability",
-    "projected_peak_flow",
+    "projected_peak_density_persons_m2",
     "confidence",
-    "model_id"
+    "model_id",
+    "actionable"
   ],
   "title": "Forecast",
   "type": "object"

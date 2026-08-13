@@ -26,15 +26,19 @@ export function SpectatorApp({
   onAccept,
   onDecline,
   onUndo,
+  onSelectGate,
+  onSelectOption,
 }: {
   view: SpectatorView;
   onAccept?: () => void;
   onDecline?: () => void;
   onUndo?: () => void;
+  onSelectGate?: (zoneId: string) => void;
+  onSelectOption?: (optionId: string) => void;
 }) {
   switch (view.kind) {
     case 'arrival':
-      return <ArrivalScreen view={view} />;
+      return <ArrivalScreen view={view} onSelectGate={onSelectGate} />;
     case 'walk':
       return <WalkScreen view={view} />;
     case 'ahead':
@@ -44,10 +48,11 @@ export function SpectatorApp({
     case 'offline':
       return <OfflineScreen view={view} />;
     case 'hold':
-      return <HoldScreen view={view} />;
-    default: {
-      const unreachable: never = view;
-      return unreachable;
-    }
+      return <HoldScreen view={view} onSelectOption={onSelectOption} />;
+    default:
+      // The union makes this unreachable for trusted TypeScript callers, but a
+      // view decoded from an untrusted peer can still be malformed at runtime.
+      // Fail blank rather than returning the raw object and crashing React.
+      return null;
   }
 }

@@ -105,7 +105,7 @@ class BaselinePredictor:
             target_band=band,
             probability=round(probability, 3),
             time_to_threshold_s=None if time_to is None else round(time_to, 1),
-            projected_peak_flow=round(projected, 2),
+            projected_peak_density_persons_m2=round(projected, 2),
             confidence=zone.confidence.value,
             model_id=MODEL_ID,
             causes=causes,

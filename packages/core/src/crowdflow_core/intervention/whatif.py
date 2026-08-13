@@ -134,7 +134,7 @@ class InterventionEngine:
                     from_zone=from_zone,
                     to_zone=to_zone,
                     via=sorted(prefer),
-                    projected_peak_flow=round(peak, 2),
+                    projected_peak_density_persons_m2=round(peak, 2),
                     projected_walk_time_delta_s=round(walk_delta, 1),
                     projected_bottleneck_duration_s=round(over, 1),
                     score=score,

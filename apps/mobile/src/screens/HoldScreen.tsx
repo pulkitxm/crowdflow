@@ -29,7 +29,13 @@ import { CrossingLine } from '../ui/route';
 import { Screen } from '../ui/screen';
 import { usePalette } from '../ui/theme';
 
-export function HoldScreen({ view }: { view: Extract<SpectatorView, { kind: 'hold' }> }) {
+export function HoldScreen({
+  view,
+  onSelectOption,
+}: {
+  view: Extract<SpectatorView, { kind: 'hold' }>;
+  onSelectOption?: (optionId: string) => void;
+}) {
   // The crossing is the checkable fact behind the advice: the user can be told
   // to wait, and told what they are waiting for.
   const crossing = view.route.steps.find((s) => s.crossing)?.crossing ?? null;
@@ -55,6 +61,7 @@ export function HoldScreen({ view }: { view: Extract<SpectatorView, { kind: 'hol
             key={option.id}
             option={option}
             recommended={option.id === view.recommended_id}
+            onPress={onSelectOption ? () => onSelectOption(option.id) : undefined}
           />
         ))}
       </View>
@@ -62,19 +69,28 @@ export function HoldScreen({ view }: { view: Extract<SpectatorView, { kind: 'hol
   );
 }
 
-function OptionRow({ option, recommended }: { option: LeaveOption; recommended: boolean }) {
+function OptionRow({
+  option,
+  recommended,
+  onPress,
+}: {
+  option: LeaveOption;
+  recommended: boolean;
+  onPress?: () => void;
+}) {
   const palette = usePalette();
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${option.label}, ${journeyText(option.total_s)} door to car. ${option.spent}`}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.option,
         {
           backgroundColor: recommended ? palette.surface : 'transparent',
           borderColor: recommended ? palette.ink : palette.line,
           borderWidth: recommended ? 2 : 1,
-          opacity: pressed ? 0.8 : 1,
+          opacity: pressed && onPress ? 0.8 : 1,
         },
       ]}
     >
@@ -87,9 +103,9 @@ function OptionRow({ option, recommended }: { option: LeaveOption; recommended: 
       </Body>
       <View style={styles.meta}>
         <StatusPill state={option.way_ahead} />
-        {recommended ? (
+        {recommended && option.recommendation_note ? (
           <Label tone="soft" style={{ fontWeight: '600' }}>
-            Quickest, and you get to sit down
+            {option.recommendation_note}
           </Label>
         ) : null}
       </View>

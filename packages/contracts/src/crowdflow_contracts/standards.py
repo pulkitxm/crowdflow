@@ -170,6 +170,63 @@ carried in the NIST/SEMATECH e-Handbook section 1.3.5.17. Chosen over a mean and
 standard deviation because a crowd series contains the very spikes being looked
 for, and they drag a mean-based threshold up behind them."""
 
+ASSUMED_REPORTABLE_CONFIDENCE_FLOOR = 0.25
+"""Lowest confidence at which an estimate may be printed as a number.
+
+ASSUMED: this is a presentation guard, not a statistical confidence interval.
+It must be calibrated against operator decisions once real labelled sessions
+exist. Until then it errs separately from the actionable floor below: a weak
+reading can be shown to an operator without being allowed to trigger action."""
+
+ASSUMED_REPORTABLE_NODE_FLOOR = 3
+"""Fewest independent devices behind a reportable aggregate.
+
+ASSUMED: one device is an anecdote and two cannot expose a single bad sensor;
+three is the smallest sample with an internal cross-check. It is deliberately
+only a display floor. ``MEASURED_SAMPLE_FLOOR`` remains the bar for treating a
+measurement as settled."""
+
+ASSUMED_ACTIONABLE_PROBABILITY_FLOOR = 0.60
+"""Forecast probability required before an intervention may be considered.
+
+ASSUMED: no labelled deployment set exists yet. This value and the confidence
+floor below must be calibrated together against false interventions; every
+forecast carries both values so that calibration is reproducible."""
+
+ASSUMED_ACTIONABLE_CONFIDENCE_FLOOR = 0.50
+"""State confidence required before an intervention may be considered.
+
+ASSUMED: chosen as a fail-closed majority-of-evidence floor pending calibration.
+The confidence construction makes sample evidence multiplicative, so three clean
+phones cannot clear it merely by being fresh and accurate."""
+
+ASSUMED_CONFIDENCE_COUNT_SATURATION = 200
+"""Device count at which confidence's sample-size term saturates.
+
+ASSUMED: hundreds of independently reporting phones are dense coverage at one
+zone; this must be calibrated from prediction error versus node count after a
+live event. Log scaling makes the precise endpoint progressively less important.
+"""
+
+ASSUMED_CONFIDENCE_COUNT_WEIGHT = 0.55
+"""Share of confidence assigned to independent sample evidence.
+
+ASSUMED: sample count carries a slight majority and the remainder is split
+across freshness, accuracy and stability. With count saturation at 200, 0.55 is
+the smallest tested weight that keeps three clean phones below the actionable
+floor while preserving the seeded A/B gate. Refit all four terms from labelled
+prediction error when deployment data exists.
+"""
+
+ASSUMED_POSITION_ACCURACY_BEST_M = 5.0
+ASSUMED_POSITION_ACCURACY_WORST_M = 50.0
+"""Endpoints used to turn measured positional accuracy into a quality term.
+
+ASSUMED: five metres is a clean outdoor handset fix; fifty metres is too broad
+to distinguish neighbouring venue corridors. Circuit sensing measurements must
+replace these global endpoints where available. Values between them interpolate
+linearly and values outside clamp rather than fabricating extra certainty."""
+
 
 # --------------------------------------------------------------------------
 # Density thresholds, DERIVED from the flow thresholds above.

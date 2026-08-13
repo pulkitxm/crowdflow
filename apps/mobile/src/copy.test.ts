@@ -70,16 +70,55 @@ function sourceFiles(): string[] {
  * length why the banned words are banned, and a naive grep would flag the
  * reasoning along with the offence.
  */
+function stripComments(source: string): string {
+  /** Small lexer, not regex: `//` inside a visible string is not a comment. */
+  let out = '';
+  let quote: "'" | '"' | '`' | null = null;
+  let escaped = false;
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i]!;
+    const next = source[i + 1];
+    if (quote) {
+      out += char;
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+      out += char;
+      continue;
+    }
+    if (char === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i += 1;
+      out += '\n';
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      i += 2;
+      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) i += 1;
+      i += 1;
+      out += ' ';
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
 function visibleText(source: string): string[] {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const code = stripComments(source);
   const found: string[] = [];
   for (const match of code.matchAll(/'([^'\\]*)'|"([^"\\]*)"|`([^`\\]*)`/g)) {
     found.push(match[1] ?? match[2] ?? match[3] ?? '');
   }
-  // JSX text: between a closing angle bracket and the next opening one, with no
-  // braces in between (those are expressions, and their strings are caught above).
-  for (const match of code.matchAll(/>([^<>{}]+)</g)) {
-    found.push(match[1] ?? '');
+  // Scan every raw JSX segment, including nodes interrupted by an interpolation
+  // (`The way adds {minutes} minutes`). The old regex skipped the entire node as
+  // soon as it saw a brace, leaving roughly half the live prose unguarded.
+  for (const match of code.matchAll(/>([\s\S]*?)</g)) {
+    const raw = match[1] ?? '';
+    for (const segment of raw.split(/[{}]/)) found.push(segment);
   }
   return found.filter((text) => /[a-z]{3}/i.test(text));
 }

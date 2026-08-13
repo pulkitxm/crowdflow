@@ -49,12 +49,12 @@ describe.each(themes)('%s palette', (_name, palette) => {
     ['unknown', palette.unknown],
   ])('states %s in text that meets contrast on its own fill', (_status, colors) => {
     expect(ratio(colors.text, colors.fill)).toBeGreaterThanOrEqual(CONTRAST_BODY);
-    expect(ratio(colors.edge, colors.fill)).toBeGreaterThanOrEqual(1.4);
+    expect(ratio(colors.edge, colors.fill)).toBeGreaterThanOrEqual(CONTRAST_LARGE);
   });
 
   it('separates the status fills from the page so a pill reads as an object', () => {
     for (const colors of [palette.clear, palette.slowing, palette.backingUp, palette.unknown]) {
-      expect(ratio(colors.edge, palette.paper)).toBeGreaterThanOrEqual(CONTRAST_LARGE - 1.5);
+      expect(ratio(colors.edge, palette.paper)).toBeGreaterThanOrEqual(CONTRAST_LARGE);
     }
   });
 

@@ -185,6 +185,18 @@
           ],
           "default": null,
           "description": "observed where available, else the standards prior"
+        },
+        "capacity_flow_ped_m_min": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observed peak sustained flow per metre of width; never invented"
         }
       },
       "required": [

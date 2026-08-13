@@ -28,6 +28,9 @@ const SEVERITY: Record<WayAhead, number> = {
 };
 
 export function worstOf(steps: readonly Step[]): WayAhead {
+  // No legs means there is no observed way to classify. Returning nominal here
+  // produced "Clear" for an empty route — invariant 5 in its smallest form.
+  if (steps.length === 0) return 'unknown';
   return steps.reduce<WayAhead>(
     (worst, step) => (SEVERITY[step.way_ahead] > SEVERITY[worst] ? step.way_ahead : worst),
     'nominal',

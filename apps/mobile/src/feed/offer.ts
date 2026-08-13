@@ -8,10 +8,10 @@
  * only place that can decide what a *person* is shown, so it checks the verdict
  * that travelled with the command and refuses anything else.
  *
- * `modified` is refused too. A modified command means the safety engine changed
- * the routing; the corrected command is issued separately with its own approval.
- * Rendering the pre-modification version would show the user the route safety
- * just rejected, which is the exact failure the gate exists to prevent.
+ * `modified` is refused too. A verdict does not carry a replacement command, so
+ * there is nothing safe to dispatch in that outcome; the contract's served
+ * `dispatchable` field is false. A correction must become a new command and pass
+ * a fresh review before it can be shown.
  */
 
 import type { RerouteOffer } from './types';
@@ -26,7 +26,7 @@ export interface ShowableOffer {
 }
 
 export function showableOffer(offer: RerouteOffer): ShowableOffer | null {
-  if (offer.verdict.outcome !== 'approved') return null;
+  if (!offer.verdict.dispatchable || offer.verdict.outcome !== 'approved') return null;
   if (offer.verdict.command_id !== offer.command.command_id) return null;
   return {
     reason: offer.command.reason,

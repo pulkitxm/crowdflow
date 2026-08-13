@@ -1,0 +1,180 @@
+{
+  "$defs": {
+    "CrossingClosed": {
+      "properties": {
+        "open": {
+          "const": false,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "opens_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no reopening time is known",
+          "title": "Opens At"
+        }
+      },
+      "required": [
+        "open",
+        "opens_at"
+      ],
+      "title": "CrossingClosed",
+      "type": "object"
+    },
+    "CrossingNotice": {
+      "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "state": {
+          "discriminator": {
+            "mapping": {
+              "False": "#/$defs/CrossingClosed",
+              "True": "#/$defs/CrossingOpen"
+            },
+            "propertyName": "open"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CrossingOpen"
+            },
+            {
+              "$ref": "#/$defs/CrossingClosed"
+            }
+          ],
+          "title": "State"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "title": "CrossingNotice",
+      "type": "object"
+    },
+    "CrossingOpen": {
+      "properties": {
+        "open": {
+          "const": true,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "closes_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "absolute unix seconds; None when no closing time is known",
+          "title": "Closes At"
+        }
+      },
+      "required": [
+        "open",
+        "closes_at"
+      ],
+      "title": "CrossingOpen",
+      "type": "object"
+    },
+    "Step": {
+      "description": "One already-priced leg of a route.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "to": {
+          "description": "human-readable landmark from the circuit pack",
+          "title": "To",
+          "type": "string"
+        },
+        "walk_s": {
+          "description": "walking seconds computed by the routing engine",
+          "minimum": 0,
+          "title": "Walk S",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        },
+        "crossing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CrossingNotice"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "to",
+        "walk_s",
+        "way_ahead"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
+    "WayAhead": {
+      "enum": [
+        "nominal",
+        "building",
+        "critical",
+        "unknown"
+      ],
+      "title": "WayAhead",
+      "type": "string"
+    }
+  },
+  "description": "Where the spectator is, where they are going and the walk between them.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "from": {
+      "title": "From",
+      "type": "string"
+    },
+    "to": {
+      "title": "To",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/Step"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "total_walk_s": {
+      "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+      "minimum": 0,
+      "title": "Total Walk S",
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "from",
+    "to",
+    "steps",
+    "total_walk_s"
+  ],
+  "title": "Route",
+  "type": "object"
+}

@@ -221,28 +221,23 @@ def test_a_handful_of_devices_cannot_produce_a_confident_claim(corridor_pack):
     assert thick.is_reportable
 
 
-def test_three_devices_clear_the_actionable_floor_KNOWN_DEFECT(corridor_pack):
-    """Recorded, not endorsed. The sample-size term does not dominate.
+def test_three_devices_cannot_clear_the_actionable_floor(corridor_pack):
+    """Fresh, accurate reports cannot compensate for almost no sample evidence.
 
-    StateEngine._confidence says it is "deliberately conservative on sample size:
-    ... a handful of devices cannot produce a confident claim". The arithmetic
-    disagrees. Sample size carries 0.4 of the score and its log term is only 0.26
-    at three nodes, while freshness (0.2) and accuracy (0.2) are both near full
-    marks for any live report. Three phones therefore score ~0.57 — above the 0.5
-    floor Forecast.is_actionable uses, so three devices in a 500 m^2 hall can
-    put an intervention in front of an operator.
-
-    Left as-is here because changing it changes the A/B numbers this branch is
-    required to hold fixed. Pinned so the fix shows up as a deliberate diff.
+    This was the pinned known defect: three phones scored about 0.57 and could
+    put an intervention in front of an operator. Sample evidence is now a
+    multiplicative gate, so every other quality term may be perfect without
+    turning three devices into a crowd measurement.
     """
+    from crowdflow_contracts import ASSUMED_ACTIONABLE_CONFIDENCE_FLOOR
+
     e = engine(corridor_pack)
     e.ingest([node(f"d{i}", "hall", 10.0) for i in range(3)], now=10.0)
     confidence = e.snapshot(now=10.0).zones["hall"].confidence
 
     assert confidence.observed_nodes == 3
-    assert confidence.value == pytest.approx(0.571, abs=0.01)
-    assert confidence.value >= 0.5, "the floor Forecast.is_actionable applies"
-    assert confidence.is_reportable
+    assert confidence.value < ASSUMED_ACTIONABLE_CONFIDENCE_FLOOR
+    assert confidence.is_reportable, "reportable is weaker than actionable"
 
 
 def test_confidence_degrades_with_stale_and_inaccurate_observations(corridor_pack):

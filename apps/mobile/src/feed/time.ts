@@ -38,10 +38,11 @@ export function journeyText(seconds: number): string {
   return m < 1 ? 'under a minute' : `${m} min`;
 }
 
-/** A cost as words, always signed so it reads as an addition: "+4 min". */
+/** A cost as words. Zero is stated plainly; non-zero values keep their sign. */
 export function costText(seconds: number): string {
-  const m = costMinutes(seconds);
-  return `${seconds >= 0 ? '+' : '−'}${Math.abs(m)} min`;
+  if (seconds === 0) return 'no extra time';
+  const magnitude = Math.ceil(Math.abs(seconds) / SECONDS_PER_MINUTE);
+  return `${seconds > 0 ? '+' : '−'}${magnitude} min`;
 }
 
 /**

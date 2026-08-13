@@ -14,7 +14,11 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from .standards import LOSBand
+from .standards import (
+    ASSUMED_ACTIONABLE_CONFIDENCE_FLOOR,
+    ASSUMED_ACTIONABLE_PROBABILITY_FLOOR,
+    LOSBand,
+)
 
 
 class Forecast(BaseModel):
@@ -35,7 +39,10 @@ class Forecast(BaseModel):
     time_to_threshold_s: float | None = Field(
         default=None, description="None when the threshold is not projected to be crossed"
     )
-    projected_peak_flow: float = Field(ge=0, description="ped/m/min at the projected peak")
+    projected_peak_density_persons_m2: float = Field(
+        ge=0,
+        description="persons/m2 at the projected peak; bands are classified on density",
+    )
 
     confidence: float = Field(ge=0, le=1)
     model_id: str = Field(description="which model produced this; baseline is a valid answer")
@@ -45,15 +52,21 @@ class Forecast(BaseModel):
         description="human-readable drivers, ordered by contribution",
     )
 
+    @computed_field
     @property
-    def is_actionable(self) -> bool:
-        """Worth surfacing: crossing predicted, soon enough to act, confidently enough."""
+    def actionable(self) -> bool:
+        """Served judgement: clients must not duplicate these thresholds."""
         return (
             self.time_to_threshold_s is not None
             and self.time_to_threshold_s > 0
-            and self.probability >= 0.6
-            and self.confidence >= 0.5
+            and self.probability >= ASSUMED_ACTIONABLE_PROBABILITY_FLOOR
+            and self.confidence >= ASSUMED_ACTIONABLE_CONFIDENCE_FLOOR
         )
+
+    @property
+    def is_actionable(self) -> bool:
+        """Python convenience alias for the serialised ``actionable`` field."""
+        return self.actionable
 
 
 class ScoreBreakdown(BaseModel):
@@ -96,7 +109,9 @@ class InterventionCandidate(BaseModel):
     to_zone: str
     via: list[str] = Field(default_factory=list)
 
-    projected_peak_flow: float = Field(ge=0, description="ped/m/min")
+    projected_peak_density_persons_m2: float = Field(
+        ge=0, description="persons/m2 at the projected peak"
+    )
     projected_walk_time_delta_s: float = Field(
         description="positive means longer. Always shown beside the benefit, never hidden."
     )
@@ -159,6 +174,19 @@ class SafetyVerdict(BaseModel):
     violated_constraints: list[str] = Field(default_factory=list)
     emergency_mode: bool = False
 
+    @computed_field
+    @property
+    def dispatchable(self) -> bool:
+        """Only the exact command reviewed as APPROVED may leave the gate.
+
+        ``MODIFIED`` describes a rejected proposal for which safety can suggest a
+        correction; it does not contain that corrected command. Dispatching the
+        original in that state would act on the version safety changed. A
+        corrected command must be issued separately and reviewed in full.
+        """
+        return self.outcome is SafetyOutcome.APPROVED
+
     @property
     def may_dispatch(self) -> bool:
-        return self.outcome in (SafetyOutcome.APPROVED, SafetyOutcome.MODIFIED)
+        """Python convenience alias for the serialised ``dispatchable`` field."""
+        return self.dispatchable
