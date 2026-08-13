@@ -160,12 +160,14 @@ def test_a_command_that_would_strand_an_exit_is_rejected():
     assert "exit" in verdict.reason
 
 
-def test_the_gate_works_without_a_graph_or_a_state(safety):
-    """Both are optional arguments; the hard constraints do not depend on them,
-    and a gate that fails open when a caller omits one would be worthless."""
+def test_the_gate_builds_a_graph_instead_of_skipping_route_checks(safety):
+    """Omitting a graph must not silently omit route-dependent constraints."""
     assert safety.review(command(prefer=["marshal"]), None, None).outcome is (
         SafetyOutcome.REJECTED
     )
+    approved = safety.review(command(), None, None)
+    assert approved.may_dispatch
+    assert "egress unchecked" not in approved.reason
 
 
 # ------------------------------------------ the route, not the command text --

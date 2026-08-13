@@ -165,6 +165,24 @@ def test_the_intervention_arm_beats_the_control_arm():
 
 # ------------------------------------------------------- invariant 6 ---------
 
+def test_session_change_rebuilds_the_graph_before_movement(diamond_pack):
+    """ControlLoop must apply D5, not merely label VenueState with the session."""
+    from crowdflow_core.loop import ControlLoop
+    from crowdflow_core.simulation import SimConfig, Simulation
+
+    graph = VenueGraph(diamond_pack, "practice")
+    sim = Simulation(graph, SimConfig(seed=3, participation=1.0))
+    sim.add_agents(1, "gate", "exit")
+    loop = ControlLoop(sim, graph, participation=1.0, intervene=False)
+
+    assert graph.route("gate", "exit").path == ["gate", "exit"]
+    loop.tick(session_state="race")
+    assert graph.session_state == "race"
+    assert "e_direct" in graph.closed_edges
+    assert sim.agents[0].next_zone == "north"
+    assert sim.agents[0].path == ["exit"]
+
+
 def test_the_same_seed_produces_the_same_run():
     a = run_scenario(pinch_scenario(), VenueGraph(pinch_pack(), "race"),
                      intervene=True, participation=PARTICIPATION, ticks=TICKS)
@@ -177,7 +195,7 @@ def test_the_same_seed_produces_the_same_run():
 # ----------------------------------------------------- the cache changes nothing
 
 def _uncached_route(self, origin, destination, states=None, avoid=None, prefer=None,
-                    depart_at=0.0, crossing_deadlines=None):
+                    crossing_deadlines=None):
     """Straight through to the search, bypassing the memo entirely."""
     return self._search(origin, destination, states, avoid, prefer, crossing_deadlines)
 

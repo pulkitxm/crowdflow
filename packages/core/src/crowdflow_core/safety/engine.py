@@ -34,6 +34,15 @@ class SafetyEngine:
         violations: list[str] = []
         reasons: list[str] = []
 
+        # Route-dependent constraints cannot be reviewed without the route
+        # graph. Failing open here makes an omitted optional argument equivalent
+        # to an approval. Build the deterministic graph from the pack instead;
+        # callers with live session state still pass their rebuilt graph.
+        if graph is None:
+            from ..routing.graph import VenueGraph
+
+            graph = VenueGraph(self.pack)
+
         forbidden = set(self.pack.constraints.never_route_through)
 
         # Names first — cheap, and catches a command that says the quiet part.
@@ -47,7 +56,7 @@ class SafetyEngine:
         # whose only path runs through a live-circuit working position. The
         # command is what an operator reads; the route is what the crowd walks,
         # and they are not the same object.
-        if graph is not None and forbidden:
+        if forbidden:
             taken = graph.route(
                 command.source_zone,
                 command.destination_zone,
@@ -91,7 +100,7 @@ class SafetyEngine:
             violations.append("unknown_zone")
             reasons.append(f"references zones not in the pack: {sorted(set(unknown))}")
 
-        if graph is not None and exits:
+        if exits:
             still = graph.reachable(command.source_zone)
             lost = [e for e in exits if e not in still]
             if lost:
