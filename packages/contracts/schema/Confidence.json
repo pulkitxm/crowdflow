@@ -1,0 +1,45 @@
+{
+  "description": "How much to trust the state beside it.\n\nNever presented without the claim it qualifies. With thirty nodes reporting,\nthe system says so; it does not quietly present the same number it would give\nfor four hundred.",
+  "properties": {
+    "value": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Value",
+      "type": "number"
+    },
+    "observed_nodes": {
+      "description": "devices contributing to this estimate",
+      "minimum": 0,
+      "title": "Observed Nodes",
+      "type": "integer"
+    },
+    "freshness_s": {
+      "description": "age of the newest observation",
+      "minimum": 0,
+      "title": "Freshness S",
+      "type": "number"
+    },
+    "mean_accuracy_m": {
+      "description": "mean positional 1-sigma",
+      "exclusiveMinimum": 0,
+      "title": "Mean Accuracy M",
+      "type": "number"
+    },
+    "stability": {
+      "description": "agreement with recent estimates for this zone",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Stability",
+      "type": "number"
+    }
+  },
+  "required": [
+    "value",
+    "observed_nodes",
+    "freshness_s",
+    "mean_accuracy_m",
+    "stability"
+  ],
+  "title": "Confidence",
+  "type": "object"
+}

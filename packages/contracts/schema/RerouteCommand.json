@@ -1,0 +1,69 @@
+{
+  "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+  "properties": {
+    "command_id": {
+      "title": "Command Id",
+      "type": "string"
+    },
+    "issued_at": {
+      "title": "Issued At",
+      "type": "number"
+    },
+    "expires_at": {
+      "description": "commands must expire; stale routing is harmful",
+      "title": "Expires At",
+      "type": "number"
+    },
+    "source_zone": {
+      "title": "Source Zone",
+      "type": "string"
+    },
+    "destination_zone": {
+      "title": "Destination Zone",
+      "type": "string"
+    },
+    "avoid": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Avoid",
+      "type": "array"
+    },
+    "prefer": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Prefer",
+      "type": "array"
+    },
+    "target_fraction": {
+      "description": "share of affected walkers this should reach",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Target Fraction",
+      "type": "number"
+    },
+    "reason": {
+      "description": "plain language, surfaced in the app",
+      "title": "Reason",
+      "type": "string"
+    },
+    "expected_cost_s": {
+      "description": "honest added walking time, stated before the user accepts",
+      "title": "Expected Cost S",
+      "type": "number"
+    }
+  },
+  "required": [
+    "command_id",
+    "issued_at",
+    "expires_at",
+    "source_zone",
+    "destination_zone",
+    "target_fraction",
+    "reason",
+    "expected_cost_s"
+  ],
+  "title": "RerouteCommand",
+  "type": "object"
+}

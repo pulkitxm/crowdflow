@@ -1,0 +1,21 @@
+{
+  "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+  "properties": {
+    "x": {
+      "description": "metres east of venue origin",
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "description": "metres north of venue origin",
+      "title": "Y",
+      "type": "number"
+    }
+  },
+  "required": [
+    "x",
+    "y"
+  ],
+  "title": "Position",
+  "type": "object"
+}

@@ -1,0 +1,70 @@
+{
+  "$defs": {
+    "Session": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "description": "practice | qualifying | sprint | race | support | ceremony",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "description": "ISO 8601",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "Session",
+      "type": "object"
+    }
+  },
+  "description": "This weekend's timetable. Changes every event; the circuit does not.\n\nThe chequered flag is the largest crowd-movement trigger of the day, so this\nfeeds the predictor directly, not just the display.",
+  "properties": {
+    "circuit_id": {
+      "title": "Circuit Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "sessions": {
+      "items": {
+        "$ref": "#/$defs/Session"
+      },
+      "title": "Sessions",
+      "type": "array"
+    },
+    "gates_open": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gates Open"
+    }
+  },
+  "required": [
+    "circuit_id",
+    "name"
+  ],
+  "title": "EventProfile",
+  "type": "object"
+}

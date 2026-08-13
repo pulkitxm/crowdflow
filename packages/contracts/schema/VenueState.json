@@ -1,0 +1,208 @@
+{
+  "$defs": {
+    "Confidence": {
+      "description": "How much to trust the state beside it.\n\nNever presented without the claim it qualifies. With thirty nodes reporting,\nthe system says so; it does not quietly present the same number it would give\nfor four hundred.",
+      "properties": {
+        "value": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        },
+        "observed_nodes": {
+          "description": "devices contributing to this estimate",
+          "minimum": 0,
+          "title": "Observed Nodes",
+          "type": "integer"
+        },
+        "freshness_s": {
+          "description": "age of the newest observation",
+          "minimum": 0,
+          "title": "Freshness S",
+          "type": "number"
+        },
+        "mean_accuracy_m": {
+          "description": "mean positional 1-sigma",
+          "exclusiveMinimum": 0,
+          "title": "Mean Accuracy M",
+          "type": "number"
+        },
+        "stability": {
+          "description": "agreement with recent estimates for this zone",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Stability",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "observed_nodes",
+        "freshness_s",
+        "mean_accuracy_m",
+        "stability"
+      ],
+      "title": "Confidence",
+      "type": "object"
+    },
+    "LOSBand": {
+      "description": "Operational density band. Always rendered with its word and its number.",
+      "enum": [
+        "nominal",
+        "building",
+        "critical"
+      ],
+      "title": "LOSBand",
+      "type": "string"
+    },
+    "ZoneState": {
+      "description": "One zone at one instant.",
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "number"
+        },
+        "observed_nodes": {
+          "description": "devices seen; NOT people",
+          "minimum": 0,
+          "title": "Observed Nodes",
+          "type": "integer"
+        },
+        "participation_rate": {
+          "description": "measured, never assumed \u2014 see standards.MEASURED_NOT_ASSUMED",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Participation Rate",
+          "type": "number"
+        },
+        "flow_ped_m_min": {
+          "description": "pedestrians per metre width per minute \u2014 the primary measure",
+          "minimum": 0,
+          "title": "Flow Ped M Min",
+          "type": "number"
+        },
+        "mean_speed_ms": {
+          "minimum": 0,
+          "title": "Mean Speed Ms",
+          "type": "number"
+        },
+        "dominant_heading_deg": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 360,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dominant Heading Deg"
+        },
+        "inflow_per_min": {
+          "minimum": 0,
+          "title": "Inflow Per Min",
+          "type": "number"
+        },
+        "outflow_per_min": {
+          "minimum": 0,
+          "title": "Outflow Per Min",
+          "type": "number"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "estimated_population": {
+          "description": "Observed devices scaled by measured participation.\n\nThe single most load-bearing number in the system, which is why\nparticipation_rate is measured rather than configured.",
+          "readOnly": true,
+          "title": "Estimated Population",
+          "type": "integer"
+        },
+        "band": {
+          "$ref": "#/$defs/LOSBand",
+          "description": "Operational band. The only classifier \u2014 see standards.band_for_flow.",
+          "readOnly": true
+        },
+        "los_grade": {
+          "description": "Full Fruin grade A-F. Console only; the app never shows this.",
+          "readOnly": true,
+          "title": "Los Grade",
+          "type": "string"
+        },
+        "net_flow_per_min": {
+          "description": "Positive means filling. Sustained positive net flow is the early warning.",
+          "readOnly": true,
+          "title": "Net Flow Per Min",
+          "type": "number"
+        }
+      },
+      "required": [
+        "zone_id",
+        "timestamp",
+        "observed_nodes",
+        "participation_rate",
+        "flow_ped_m_min",
+        "mean_speed_ms",
+        "inflow_per_min",
+        "outflow_per_min",
+        "confidence",
+        "estimated_population",
+        "band",
+        "los_grade",
+        "net_flow_per_min"
+      ],
+      "title": "ZoneState",
+      "type": "object"
+    }
+  },
+  "description": "Every zone at one tick, plus what the system knows it cannot see.",
+  "properties": {
+    "circuit_id": {
+      "title": "Circuit Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "title": "Timestamp",
+      "type": "number"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "drives crossing availability",
+      "title": "Session Id"
+    },
+    "zones": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ZoneState"
+      },
+      "title": "Zones",
+      "type": "object"
+    },
+    "unobserved_zones": {
+      "description": "Zones with no reporting device. MUST render as unknown, never as empty. Under D7 uplinks are opportunistic, so coverage genuinely varies.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Unobserved Zones",
+      "type": "array"
+    }
+  },
+  "required": [
+    "circuit_id",
+    "timestamp"
+  ],
+  "title": "VenueState",
+  "type": "object"
+}

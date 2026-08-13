@@ -1,0 +1,30 @@
+[project]
+name = "crowdflow"
+version = "0.1.0"
+description = "Predictive crowd management for Grand Prix circuits"
+requires-python = ">=3.11"
+dependencies = [
+    "crowdflow-contracts",
+    "crowdflow-core",
+    "crowdflow-cli",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/contracts", "packages/core", "packages/cli"]
+
+[tool.uv.sources]
+crowdflow-contracts = { workspace = true }
+crowdflow-core = { workspace = true }
+crowdflow-cli = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]

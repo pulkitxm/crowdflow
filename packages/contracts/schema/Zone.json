@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "Position": {
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "Sourced": {
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observations behind a MEASURED value",
+          "title": "Samples"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "value",
+        "provenance"
+      ],
+      "title": "Sourced",
+      "type": "object"
+    },
+    "ZoneKind": {
+      "enum": [
+        "gate",
+        "concourse",
+        "crossing",
+        "viewing",
+        "amenity",
+        "parking",
+        "exit"
+      ],
+      "title": "ZoneKind",
+      "type": "string"
+    }
+  },
+  "description": "A named place. Imported from OSM tags where possible.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/ZoneKind"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "human-readable; the app uses this",
+      "title": "Name"
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "capacity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Sourced"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "osm_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Osm Id"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "position"
+  ],
+  "title": "Zone",
+  "type": "object"
+}

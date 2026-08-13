@@ -1,0 +1,38 @@
+{
+  "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
+  "properties": {
+    "always_open": {
+      "default": true,
+      "title": "Always Open",
+      "type": "boolean"
+    },
+    "open_when": {
+      "description": "session states",
+      "items": {
+        "type": "string"
+      },
+      "title": "Open When",
+      "type": "array"
+    },
+    "closed_when": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Closed When",
+      "type": "array"
+    },
+    "close_lead_s": {
+      "default": 0,
+      "description": "closes this long before cars run",
+      "title": "Close Lead S",
+      "type": "number"
+    },
+    "reopen_lag_s": {
+      "default": 0,
+      "title": "Reopen Lag S",
+      "type": "number"
+    }
+  },
+  "title": "Availability",
+  "type": "object"
+}

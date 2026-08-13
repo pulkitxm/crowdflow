@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "Provenance": {
+      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "Sourced": {
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observations behind a MEASURED value",
+          "title": "Samples"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "value",
+        "provenance"
+      ],
+      "title": "Sourced",
+      "type": "object"
+    }
+  },
+  "description": "A walkable connection.\n\nwidth_m matters more than it looks: flow rate is per metre of width, so the\nLOS band cannot be computed without it.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "source": {
+      "title": "Source",
+      "type": "string"
+    },
+    "destination": {
+      "title": "Destination",
+      "type": "string"
+    },
+    "length_m": {
+      "exclusiveMinimum": 0,
+      "title": "Length M",
+      "type": "number"
+    },
+    "width_m": {
+      "$ref": "#/$defs/Sourced",
+      "description": "required \u2014 LOS flow is per metre of width"
+    },
+    "gradient": {
+      "default": 0.0,
+      "description": "rise over run; affects walking speed",
+      "title": "Gradient",
+      "type": "number"
+    },
+    "bidirectional": {
+      "default": true,
+      "title": "Bidirectional",
+      "type": "boolean"
+    },
+    "free_speed_ms": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Sourced"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "observed where available, else the standards prior"
+    }
+  },
+  "required": [
+    "id",
+    "source",
+    "destination",
+    "length_m",
+    "width_m"
+  ],
+  "title": "Edge",
+  "type": "object"
+}

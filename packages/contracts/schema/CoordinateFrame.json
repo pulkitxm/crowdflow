@@ -1,0 +1,62 @@
+{
+  "description": "Local metric frame. Derived from the source bbox, never estimated.",
+  "properties": {
+    "origin_lat": {
+      "title": "Origin Lat",
+      "type": "number"
+    },
+    "origin_lon": {
+      "title": "Origin Lon",
+      "type": "number"
+    },
+    "rotation_deg": {
+      "default": 0.0,
+      "title": "Rotation Deg",
+      "type": "number"
+    },
+    "track_bounds_m": {
+      "description": "track extent (x, y)",
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Track Bounds M",
+      "type": "array"
+    },
+    "venue_bounds_m": {
+      "description": "(min_x, min_y, max_x, max_y). Larger than the track: car parks, campsites and park-and-ride sit outside it. Sizing to the track clips arrival routes.",
+      "maxItems": 4,
+      "minItems": 4,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Venue Bounds M",
+      "type": "array"
+    }
+  },
+  "required": [
+    "origin_lat",
+    "origin_lon",
+    "track_bounds_m",
+    "venue_bounds_m"
+  ],
+  "title": "CoordinateFrame",
+  "type": "object"
+}
