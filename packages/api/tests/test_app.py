@@ -165,6 +165,34 @@ def test_ticks_arrive_with_coverage_that_accounts_for_every_zone(client):
     )
 
 
+def test_live_spectator_endpoint_returns_the_generated_contract(client):
+    client.post(
+        "/api/session",
+        json={"population": 100, "intervene": False, "seed": 9},
+    )
+    client.post("/api/session/control", json={"action": "step"})
+    # Let the worker produce the requested tick through the same socket path a
+    # console uses; a feed before the first observation is honestly unavailable.
+    with client.websocket_connect("/ws") as socket:
+        socket.receive_text()
+        for _ in range(20):
+            frame = SocketFrame.model_validate_json(socket.receive_text())
+            if frame.type is FrameType.TICK:
+                break
+
+    info = client.get("/api/session").json()
+    response = client.get(
+        "/api/spectator/view",
+        params={"origin": info["origins"][0], "destination": info["destination"]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] in {"walk", "ahead"}
+    assert body["route"]["steps"]
+    assert all(step["way_ahead"] in {"nominal", "building", "critical", "unknown"}
+               for step in body["route"]["steps"])
+
+
 def test_status_frames_keep_arriving_while_the_run_is_paused(client):
     """The difference between a thinking server and a dead link."""
     client.post("/api/session", json={"population": 100, "intervene": False})

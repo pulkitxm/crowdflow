@@ -39,6 +39,7 @@ from crowdflow_contracts import (
     LOS_E_MAX,
     MEASURED_NOT_ASSUMED,
     LOSBand,
+    SpectatorView,
 )
 from crowdflow_core.simulation.model import SimConfig
 from crowdflow_core.state.flow import capacity_flow
@@ -47,6 +48,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import packs, scenarios
 from .session import DEFAULT_SPEED, STATUS_HEARTBEAT_S, ScenarioSession
+from .spectator import SpectatorFeedUnavailable, build_spectator_view
 from .wire import (
     BandBoundary,
     CircuitSummary,
@@ -263,6 +265,29 @@ def create_app(
         )
         await console.replace(session)
         return session.info()
+
+    @app.get("/api/spectator/view", response_model=SpectatorView)
+    def spectator_view(
+        origin: str,
+        destination: str,
+        online: bool = True,
+        mesh_peers: int = 0,
+    ) -> SpectatorView:
+        """One phone-sized conclusion, never the operator envelope."""
+        if console.session is None:
+            raise HTTPException(status_code=404, detail="no session started")
+        try:
+            return build_spectator_view(
+                console.session,
+                origin=origin,
+                destination=destination,
+                online=online,
+                mesh_peers=mesh_peers,
+            )
+        except SpectatorFeedUnavailable as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/api/session/control", response_model=SessionInfo)
     def control(request: ControlRequest) -> SessionInfo:
