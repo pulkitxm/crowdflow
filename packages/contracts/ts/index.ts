@@ -85,8 +85,12 @@ export interface ZoneState {
   observed_nodes: number;
   /** measured, never assumed — see standards.MEASURED_NOT_ASSUMED */
   participation_rate: number;
-  /** pedestrians per metre width per minute — the primary measure */
+  /** persons per square metre — the AUTHORITATIVE measure. Flow is not monotonic in density (it peaks then collapses), so a band cannot be read off flow alone: a jammed corridor and an empty one look alike. */
+  density_persons_m2: number;
+  /** pedestrians per metre width per minute — reported, not classified on */
   flow_ped_m_min: number;
+  /** people who do not fit at jam density, i.e. backed up behind */
+  queue_excess?: number;
   mean_speed_ms: number;
   dominant_heading_deg?: number | null;
   inflow_per_min: number;
@@ -94,8 +98,10 @@ export interface ZoneState {
   confidence: Confidence;
   /** Observed devices scaled by measured participation. */
   estimated_population: number;
-  /** Operational band. The only classifier — see standards.band_for_flow. */
+  /** Operational band, classified on density (see standards.band_for_density). */
   band: LOSBand;
+  /** Past the peak of the fundamental diagram: more arrivals now reduce */
+  over_capacity: boolean;
   /** Full Fruin grade A-F. Console only; the app never shows this. */
   los_grade: string;
   /** Positive means filling. Sustained positive net flow is the early warning. */
