@@ -1,0 +1,46 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!--
+    Peer-to-peer radio. NEARBY_WIFI_DEVICES (API 33+) carries
+    usesPermissionFlags="neverForLocation" deliberately: this app does not want
+    the user's location from the Wi-Fi stack, and declaring so is the difference
+    between asking for proximity and asking for a location history. The legacy
+    ACCESS_FINE_LOCATION grant below exists only because Android 12 and earlier
+    gate Wi-Fi and BLE scanning behind it, and it is scoped out at API 33.
+  -->
+  <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+                   android:usesPermissionFlags="neverForLocation" />
+  <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+                   android:usesPermissionFlags="neverForLocation" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+                   android:maxSdkVersion="32" />
+
+  <!--
+    The relay loop must survive the screen locking. See MeshForegroundService:
+    at a race almost every phone is in a pocket, so a mesh that only runs in the
+    foreground is a mesh that covers a small and self-selecting fraction of the
+    crowd — while reporting itself as covering all of it.
+  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- Wi-Fi Aware is preferred where present and is not universal. Not required,
+       because a handset without it falls back to Wi-Fi Direct or BLE and the
+       layers above never find out which. -->
+  <uses-feature android:name="android.hardware.wifi.aware" android:required="false" />
+  <uses-feature android:name="android.hardware.wifi.direct" android:required="false" />
+  <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
+  <application>
+    <service
+        android:name=".MeshForegroundService"
+        android:exported="false"
+        android:foregroundServiceType="connectedDevice" />
+  </application>
+
+</manifest>
