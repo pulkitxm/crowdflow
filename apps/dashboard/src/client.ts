@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { ScenarioOption, SessionInfo, SocketFrame, VenueGeometry } from "@wire";
+import type { ScenarioOption, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 

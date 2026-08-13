@@ -55,14 +55,15 @@ export interface MeshStatus {
 }
 
 import { requireNativeModule } from 'expo-modules-core';
-import type { EventSubscription, NativeModule } from 'expo-modules-core';
+import type { EventSubscription } from 'expo-modules-core';
 
-interface MeshEvents {
+interface MeshEvents extends Record<string, (...args: any[]) => void> {
   onPeersChanged: (event: { peers: MeshPeer[] }) => void;
   onMessage: (message: MeshMessage) => void;
 }
 
-export interface MeshModule extends NativeModule<MeshEvents> {
+export interface MeshModule {
+  addListener<EventName extends keyof MeshEvents>(eventName: EventName, listener: MeshEvents[EventName]): EventSubscription;
   start(): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<MeshStatus>;
@@ -94,7 +95,7 @@ export const Mesh = {
   addPeerListener(listener: (peers: MeshPeer[]) => void): () => void {
     const subscription: EventSubscription = nativeMesh().addListener(
       'onPeersChanged',
-      ({ peers }) => listener(peers),
+      ({ peers }: { peers: MeshPeer[] }) => listener(peers),
     );
     return () => subscription.remove();
   },

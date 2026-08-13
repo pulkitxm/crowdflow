@@ -21,8 +21,8 @@
  *   * **Static geometry is cached.** Track and edges are re-rasterised only when
  *     the view changes, so a tick costs one blit plus the live marks.
  */
-import type { LOSBand } from "@contracts";
-import type { NodeMark, StandardsReport, TickEnvelope, VenueGeometry } from "@wire";
+import type { LOSBand } from "@crowdflow/contracts";
+import type { NodeMark, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
 import type { ZoneRow } from "../model";

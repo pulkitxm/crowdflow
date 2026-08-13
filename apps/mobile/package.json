@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@crowdflow/contracts": "0.2.0",
     "@expo/metro-runtime": "~57.0.9",
     "expo": "~57.0.12",
     "expo-modules-core": "~57.0.6",

@@ -11,7 +11,7 @@
  * the one that gets read. Deduped on the sequence number the server assigns, so
  * a reconnection replays history without doubling it.
  */
-import type { ConsoleEvent } from "@wire";
+import type { ConsoleEvent } from "@crowdflow/api/wire";
 import { clear, el } from "../dom";
 import { clock } from "../format";
 

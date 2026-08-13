@@ -17,8 +17,8 @@
  * reaches the mesh without a verdict — so a command with no verdict beside it
  * is drawn as pending, never as sent.
  */
-import type { InterventionCandidate } from "@contracts";
-import type { TickEnvelope } from "@wire";
+import type { InterventionCandidate } from "@crowdflow/contracts";
+import type { TickEnvelope } from "@crowdflow/api/wire";
 import { clear, el } from "../dom";
 import { fixed, integer, percent, signed } from "../format";
 

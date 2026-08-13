@@ -7,8 +7,8 @@
  * silently passing test.
  */
 import { describe, expect, it } from "vitest";
-import type { LOSBand, ZoneState } from "@contracts";
-import type { TickEnvelope, VenueGeometry } from "@wire";
+import type { LOSBand, ZoneState } from "@crowdflow/contracts";
+import type { TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { ZoneMemory, buildRows, coverageLines, sortRows } from "./model";
 
 function zoneState(

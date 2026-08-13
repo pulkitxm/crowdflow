@@ -15,7 +15,7 @@
  * number derived from an 18% participation rate means something different from
  * the same number at 60%.
  */
-import type { SessionInfo } from "@wire";
+import type { SessionInfo } from "@crowdflow/api/wire";
 import type { LinkState } from "../client";
 import { clear, el } from "../dom";
 import { age, clock, integer, percent } from "../format";

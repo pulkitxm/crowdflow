@@ -10,7 +10,7 @@
  * gate requires to move together. Shaving the peak while extending the jam is
  * not an improvement, and the strip is arranged so that trade is visible.
  */
-import type { SessionInfo, TickEnvelope } from "@wire";
+import type { SessionInfo, TickEnvelope } from "@crowdflow/api/wire";
 import { clear, el } from "../dom";
 import { fixed, integer, milliseconds, percent } from "../format";
 

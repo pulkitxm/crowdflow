@@ -9,7 +9,7 @@
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
 import "./style.css";
-import type { SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@wire";
+import type { SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { ConsoleLink, control, fetchGeometry } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
