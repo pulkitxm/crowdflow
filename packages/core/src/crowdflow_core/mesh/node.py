@@ -440,7 +440,7 @@ def _offer_all(sender: MeshNode, receiver: MeshNode, now: float) -> int:
             sender.failed_handoffs += 1
             continue
 
-        policy.commit(carried, decision, sender)
+        policy.commit(carried, decision, sender, now)
 
         if receiver.online:
             # Handed to the destination over a bidirectional link, so the sender
