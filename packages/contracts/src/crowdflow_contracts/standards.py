@@ -482,3 +482,40 @@ Geo-indistinguishability bounds what one *point* reveals; it does not bound what
 a long sequence of correlated points reveals, and a full-day trace is
 re-identifiable however noisy each point is. Two minutes is ASSUMED as short
 enough to be a corridor observation and too short to be an itinerary."""
+
+
+# --------------------------------------------------------------------------
+# Participation estimation and private unique counting.
+#
+# Capture–recapture constants are estimator requirements, not tunable product
+# thresholds. The sketch parameters are explicit ASSUMED deployment choices and
+# carry the conditions from Dickens, Thaler & Ting (NeurIPS 2022): hash-based,
+# order/duplicate invariant Bottom-k with independent downsampling and phantom
+# initialization for a pure epsilon-DP release.
+# --------------------------------------------------------------------------
+
+CAPTURE_RECAPTURE_MIN_SAMPLE = 2
+"""Each capture needs at least two devices for Chapman estimation.
+
+The Chapman correction is defined below this too, but a one-device sample has no
+credible recapture experiment behind it. This is an estimator validity floor,
+not a crowd threshold."""
+
+CAPTURE_RECAPTURE_MIN_OVERLAP = 1
+"""At least one recaptured device is required to estimate a finite population."""
+
+ASSUMED_PRIVATE_SKETCH_K = 32
+"""Bottom-k retained hash count.
+
+ASSUMED: relative standard error is approximately 1/sqrt(k-2), about 18% at 32.
+That is adequate for a participation estimate whose attendance anchor and
+sampling independence dominate the uncertainty, while keeping a region summary
+small enough for the mesh. Increase only with measured error/battery evidence."""
+
+ASSUMED_PRIVATE_SKETCH_EPSILON = 1.0
+"""Pure-DP budget for one released unique-count sketch.
+
+ASSUMED pending the published app privacy budget. Used exactly by the
+order-invariant construction's downsampling rate ``1 - exp(-epsilon)`` and
+phantom count. Repeated releases consume privacy budget and therefore require a
+new epoch/secret rather than silently reusing this value."""
