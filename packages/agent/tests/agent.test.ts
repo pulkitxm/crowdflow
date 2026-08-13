@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CircuitPack, VenueState } from '@crowdflow/contracts';
 import { SafetyEngine, VenueGraph } from '@crowdflow/core';
-import { CrowdOpsAgent, DEFAULT_ANTHROPIC_MODEL, DEFAULT_THINKING_BUDGET_TOKENS, FakeModelClient, Toolbox, toAnthropic } from '../src/index.js';
+import { CrowdOpsAgent, DEFAULT_ANTHROPIC_MODEL, DEFAULT_THINKING_BUDGET_TOKENS, FakeModelClient, InsightEngine, Toolbox, toAnthropic } from '../src/index.js';
 
 const sourced = { value: 2, provenance: 'measured' as const, samples: 64 };
 const pack: CircuitPack = {
@@ -37,8 +37,13 @@ describe('TypeScript Crowd Ops Agent', () => {
     expect(DEFAULT_ANTHROPIC_MODEL).toMatch(/^claude-/); expect(DEFAULT_THINKING_BUDGET_TOKENS).toBeGreaterThanOrEqual(1024);
   });
 
-  it('offers no dispatch tool', () => {
+  it('detects a gate departing from its own baseline without model arithmetic', () => {
+    const engine = new InsightEngine(pack); const zone = (density: number) => ({ zone_id: 'a', timestamp: 0, observed_nodes: 20, participation_rate: 0.2, density_persons_m2: density, flow_ped_m_min: 10, queue_excess: 0, mean_speed_ms: 1, dominant_heading_deg: null, inflow_per_min: 1, outflow_per_min: 1, confidence: { value: 0.8, observed_nodes: 20, freshness_s: 0, mean_accuracy_m: 5, stability: 1, reportable: true }, estimated_population: 100, band: 'nominal' as const, over_capacity: false, los_grade: 'A', net_flow_per_min: 0 });
+    for (const density of [1, 1.1, 0.9, 1.05, 0.95, 1.02, 0.98, 1.08, 2]) engine.observe({ ...state, session_id: 'practice', zones: { a: zone(density) } }); expect(engine.insights()[0]?.kind).toBe('self_baseline');
+  });
+
+  it('offers the complete read/propose surface and no dispatch tool', () => {
     const toolbox = new Toolbox({ pack, graph: new VenueGraph(pack), safety: new SafetyEngine(pack), state, now: 0 });
-    expect(toolbox.schemas().map((tool) => tool.name)).not.toContain('dispatch');
+    const names = toolbox.schemas().map((tool) => tool.name); expect(names).toContain('get_event_schedule'); expect(names).toContain('generate_insight'); expect(names).not.toContain('dispatch');
   });
 });

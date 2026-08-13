@@ -17,6 +17,6 @@
     "ts-json-schema-generator": "^2.9.0",
     "tsx": "^4.23.0",
     "typescript": "^6.0.0",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.10"
   }
 }

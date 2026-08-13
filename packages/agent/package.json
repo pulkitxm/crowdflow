@@ -3,12 +3,20 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@crowdflow/contracts": "0.2.0",
     "@crowdflow/core": "0.2.0"
   },
-  "devDependencies": { "typescript": "^6.0.0", "vitest": "^3.2.7" }
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.10"
+  }
 }

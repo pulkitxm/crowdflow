@@ -12,6 +12,10 @@ describe('TypeScript headless CLI', () => {
     const standards = run('standards'); expect(standards).toContain('Operational density bands (authoritative)'); expect(standards).toContain('Measured, never assumed');
   });
 
+  it('runs the measured mesh comparison from the TypeScript core', () => {
+    const output = run('mesh', 'compare', '--nodes', '20', '--ticks', '10', '--seed', '7'); expect(output).toContain('spray-and-wait'); expect(output).toContain('mean coverage');
+  });
+
   it('runs deterministically for the same seed', () => {
     const first = run('sim', 'run', 'silverstone', '--count', '100', '--ticks', '10', '--seed', '7');
     const second = run('sim', 'run', 'silverstone', '--count', '100', '--ticks', '10', '--seed', '7');

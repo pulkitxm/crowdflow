@@ -1,9 +1,10 @@
-import type { CircuitPack, Forecast, VenueState } from '@crowdflow/contracts';
+import type { CircuitPack, EventProfile, Forecast, VenueState } from '@crowdflow/contracts';
 import { InterventionEngine, SafetyEngine, Simulation, VenueGraph } from '@crowdflow/core';
 import type { ToolSchema } from './client.js';
+import { InsightEngine } from './insights.js';
 import { ProposalLedger, proposalSummary, type Proposal } from './proposals.js';
 
-export interface OpsContext { pack: CircuitPack; graph: VenueGraph; safety: SafetyEngine; state: VenueState; now: number; forecasts?: Forecast[]; simulation?: Simulation; intervention?: InterventionEngine }
+export interface OpsContext { pack: CircuitPack; graph: VenueGraph; safety: SafetyEngine; state: VenueState; now: number; forecasts?: Forecast[]; event?: EventProfile; simulation?: Simulation; intervention?: InterventionEngine; insights?: InsightEngine }
 interface ToolSpec { schema: ToolSchema; invoke(arguments_: Record<string, unknown>): Record<string, unknown> }
 export class Toolbox {
   readonly ledger: ProposalLedger; private specs = new Map<string, ToolSpec>();
@@ -26,6 +27,8 @@ export class Toolbox {
       const state = this.context.state.zones?.[id]; return state ? { observed: true, ...state } : { zone_id: id, observed: false, note: 'unknown, not empty' };
     });
     this.add('get_predictions', 'Forecasts already computed by the predictor.', {}, [], () => ({ forecasts: this.context.forecasts ?? [] }));
+    this.add('get_event_schedule', 'Session timetable; session state controls crossing availability.', {}, [], () => this.context.event ? { circuit_id: this.context.event.circuit_id, name: this.context.event.name, current_session_id: this.context.state.session_id ?? null, gates_open: this.context.event.gates_open ?? null, sessions: this.context.event.sessions ?? [] } : { error: 'no event profile loaded' });
+    this.add('generate_insight', 'Statistically detected findings; the model may phrase but never recompute them.', { limit: { type: 'integer', minimum: 1, maximum: 50 } }, [], (args) => this.context.insights ? { insights: this.context.insights.insights(typeof args.limit === 'number' ? args.limit : 8) } : { error: 'no insight engine attached' });
     this.add('find_alternative_route', 'Route computed by VenueGraph.', { origin: { type: 'string' }, destination: { type: 'string' }, avoid: { type: 'array', items: { type: 'string' } } }, ['origin', 'destination'], (args) => {
       const route = this.context.graph.route(requiredString(args, 'origin'), requiredString(args, 'destination'), this.context.state.zones, new Set(array(args.avoid))); return route.path.length ? { found: true, path: route.path, distance_m: route.distance_m, walk_time_s: route.eta_s } : { found: false, reason: route.rejected_reason };
     });

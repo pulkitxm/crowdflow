@@ -3,7 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["node", "react"]
   },
   "include": ["index.js", "App.tsx", "src/**/*.ts", "src/**/*.tsx", "modules/**/*.ts"]
 }
