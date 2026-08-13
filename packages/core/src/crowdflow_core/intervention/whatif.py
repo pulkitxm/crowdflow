@@ -48,7 +48,12 @@ class InterventionEngine:
 
     def __init__(self, horizon_s: float = 300.0, fractions=DEFAULT_FRACTIONS) -> None:
         self.horizon_s = horizon_s
-        self.fractions = tuple(fractions)
+        # The do-nothing baseline is not a candidate the caller may omit. Without
+        # it, `reduction` is measured against nothing, every diversion scores as
+        # an improvement, and the engine recommends acting whatever the world is
+        # doing. Injected here rather than trusted to the caller, and sorted so a
+        # caller's ordering cannot decide a tie.
+        self.fractions = tuple(sorted({0.0, *fractions}))
 
     def _evaluate(
         self, sim: Simulation, fraction: float, avoid: set[str], prefer: set[str]
