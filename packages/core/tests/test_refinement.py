@@ -99,7 +99,9 @@ def _fragment(
         points=[Position(x=x, y=y) for x, y in points],
         t_start=t_start,
         t_end=t_end,
-        epsilon=0.4,
+        # Keep the synthetic radius/epsilon internally consistent with the
+        # contract's privacy level; real fragments always carry both.
+        epsilon=1.3862943611198906 / noise,
         noise_radius_m=noise,
     )
 
@@ -320,12 +322,14 @@ def _corridor_traffic(
     return out
 
 
-def test_the_width_estimator_removes_the_privacy_noise_it_was_handed():
-    """The estimator alone, on offsets whose spread is known exactly.
+def test_the_width_estimator_converts_privacy_radius_to_axis_sigma():
+    """Radius is not sigma.
 
-    Uniform over +/-3 m has standard deviation 6/sqrt(12) = 1.732. Removing a
-    1 m noise term in quadrature leaves 1.414, and sqrt(12) * 1.414 = 4.9 m —
-    narrower than the 6 m the raw spread would have claimed.
+    Uniform offsets over +/-3 m have sigma 1.732. A one-metre
+    geo-indistinguishability radius at privacy level ln(4) implies planar-Laplace
+    axis sigma sqrt(3)/ln(4) = 1.249 m, leaving a corrected corridor width near
+    4.14 m. Subtracting the radius directly produced a different, unjustified
+    4.9 m answer.
     """
     offsets = [-3.0 + 6.0 * i / 199 for i in range(200)]
     traversals = [
@@ -338,8 +342,28 @@ def test_the_width_estimator_removes_the_privacy_noise_it_was_handed():
     ]
     width, note = measure_width(traversals, imported=None)
     assert note is None
-    assert width.value == pytest.approx(4.9, abs=0.2)
+    assert width.value == pytest.approx(4.14, abs=0.2)
     assert width.value < 6.0, "the raw spread must not be reported as the width"
+
+
+def test_planar_laplace_epsilon_is_used_when_available():
+    offsets = [-3.0 + 6.0 * i / 199 for i in range(200)]
+    traversals = [
+        Traversal(
+            edge_id="e",
+            fragment_id=f"f{i}",
+            t_start=0.0,
+            t_end=0.0,
+            distance_m=10.0,
+            noise_radius_m=50.0,
+            epsilon=1.0,
+            signed_offsets_m=offsets[i * 4 : i * 4 + 4],
+        )
+        for i in range(50)
+    ]
+    width, note = measure_width(traversals, imported=None)
+    assert note is None
+    assert width.value > 0
 
 
 def test_measurement_replaces_an_assumed_width_with_a_measured_one():
@@ -394,6 +418,15 @@ def test_capacity_is_sustained_flow_not_one_busy_minute():
     assert m.capacity_flow_ped_m_min.value <= m.peak_bin_flow_ped_m_min
 
 
+def test_trusted_capacity_is_written_back_to_the_edge():
+    pack = _corridor_pack()
+    report = refine(pack, _corridor_traffic(60), PARTICIPATION)
+    measurement = report.measurements["e-ab"].capacity_flow_ped_m_min
+    assert measurement is not None and measurement.is_trustworthy
+    applied = report.apply(pack)
+    assert applied.edges["e-ab"].capacity_flow_ped_m_min == measurement
+
+
 def test_too_short_an_observation_yields_no_capacity_at_all():
     """A minute of data cannot establish what a corridor sustains. Saying so
     beats publishing a number that will be exceeded quietly."""
@@ -430,7 +463,7 @@ def test_width_inside_the_privacy_noise_is_not_measurable():
     traversals = [t for m in matched for t in m.traversals]
     width, note = measure_width(traversals, pack.edges["e-ab"].width_m)
     assert width is pack.edges["e-ab"].width_m
-    assert note is not None and "privacy noise" in note
+    assert note is not None and "privacy radius" in note
 
 
 # --------------------------------------------------------------- staleness --

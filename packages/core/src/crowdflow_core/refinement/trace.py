@@ -138,6 +138,9 @@ class Traversal:
     t_end: float
     distance_m: float
     noise_radius_m: float
+    epsilon: float | None = None
+    """Geo-indistinguishability epsilon. Present for real fragments; None only
+    for synthetic/manual traversals that must fall back to the declared radius."""
     signed_offsets_m: list[float] = field(default_factory=list)
 
     @property
@@ -264,6 +267,7 @@ class TraceMatcher:
                     t_end=time_at(m.index),
                     distance_m=0.0,
                     noise_radius_m=fragment.noise_radius_m,
+                    epsilon=fragment.epsilon,
                     signed_offsets_m=[m.signed_offset_m],
                 )
                 out.append(current)

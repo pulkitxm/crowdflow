@@ -207,20 +207,43 @@ def _modules() -> list[Path]:
     return sorted(AGENT_SRC.rglob("*.py"))
 
 
+def _call_name(call: ast.Call) -> str | None:
+    """Constructor name for direct and module-qualified calls."""
+    if isinstance(call.func, ast.Name):
+        return call.func.id
+    if isinstance(call.func, ast.Attribute):
+        return call.func.attr
+    return None
+
+
+def _construction_sites(tree: ast.AST, class_name: str) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and _call_name(node) == class_name
+    ]
+
+
 def _functions_constructing(tree: ast.AST, class_name: str) -> list[ast.AST]:
-    """Every function body that contains `ClassName(...)`."""
-    out = []
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        for inner in ast.walk(node):
-            if (
-                isinstance(inner, ast.Call)
-                and isinstance(inner.func, ast.Name)
-                and inner.func.id == class_name
-            ):
-                out.append(node)
-                break
+    """Every function body containing a constructor, rejecting module scope."""
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+
+    out: list[ast.AST] = []
+    for call in _construction_sites(tree, class_name):
+        owner = parents.get(call)
+        while owner is not None and not isinstance(
+            owner, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
+            owner = parents.get(owner)
+        if owner is None:
+            raise AssertionError(
+                f"{class_name} constructed at module scope on line {call.lineno}"
+            )
+        if owner not in out:
+            out.append(owner)
     return out
 
 
@@ -230,13 +253,13 @@ def test_reroute_commands_are_built_in_exactly_one_module():
     This is the test that stops the invariant from decaying: adding a
     RerouteCommand anywhere else in this package fails the build and says why.
     """
-    sites = [
-        path.name
-        for path in _modules()
-        if _functions_constructing(
-            ast.parse(path.read_text(), filename=str(path)), "RerouteCommand"
-        )
-    ]
+    sites = []
+    for path in _modules():
+        tree = ast.parse(path.read_text(), filename=str(path))
+        if _construction_sites(tree, "RerouteCommand"):
+            # Also proves every construction has a function owner.
+            _functions_constructing(tree, "RerouteCommand")
+            sites.append(path.name)
     assert sites == ["proposals.py"], (
         "RerouteCommand must only be constructed in proposals.py, where it is "
         f"reviewed. Found construction in: {sites}"
