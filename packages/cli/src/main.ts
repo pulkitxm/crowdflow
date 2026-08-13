@@ -1,62 +1,50 @@
 #!/usr/bin/env -S node --import tsx
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { abTest, egress, VenueGraph } from '@crowdflow/core';
-import { readPack } from './ingest.js';
+import {
+  CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_SPEED_MS,
+  JAM_DENSITY_PERSONS_M2, LOS_A_MAX, LOS_B_MAX, LOS_C_MAX, LOS_D_MAX, LOS_E_MAX,
+  MEASURED_NOT_ASSUMED, bandForDensity, losGradeForFlow,
+} from '@crowdflow/contracts';
+import { abTest, egress, refine, renderSvg, runScenario, VenueGraph } from '@crowdflow/core';
+import { readPack, readTraceFragments, readTrack, writePack, writeTraceFragments } from './ingest.js';
 
 interface Options { [key: string]: string | boolean }
-function parse(argv: string[]): { words: string[]; options: Options } {
-  const words: string[] = []; const options: Options = {};
-  for (let i = 0; i < argv.length; i++) {
-    const value = argv[i]!;
-    if (!value.startsWith('--')) { words.push(value); continue; }
-    const key = value.slice(2);
-    const next = argv[i + 1];
-    if (next && !next.startsWith('--')) { options[key] = next; i += 1; } else options[key] = true;
-  }
-  return { words, options };
-}
-function number(options: Options, key: string, fallback: number): number {
-  const value = options[key]; return typeof value === 'string' ? Number(value) : fallback;
-}
-function root(): string {
-  let current = dirname(fileURLToPath(import.meta.url));
-  while (current !== dirname(current)) {
-    if (existsSync(join(current, 'circuits', 'index.yaml'))) return current;
-    current = dirname(current);
-  }
-  return resolve('.');
-}
+function parse(argv: string[]): { words: string[]; options: Options } { const words: string[] = []; const options: Options = {}; for (let i = 0; i < argv.length; i += 1) { const value = argv[i]!; if (!value.startsWith('--')) { words.push(value); continue; } const key = value.slice(2); const next = argv[i + 1]; if (next && !next.startsWith('--')) { options[key] = next; i += 1; } else options[key] = true; } return { words, options }; }
+function number(options: Options, key: string, fallback: number): number { const value = options[key]; return typeof value === 'string' ? Number(value) : fallback; }
+function string(options: Options, key: string): string | undefined { const value = options[key]; return typeof value === 'string' ? value : undefined; }
+function root(): string { let current = dirname(fileURLToPath(import.meta.url)); while (current !== dirname(current)) { if (existsSync(join(current, 'circuits', 'index.yaml'))) return current; current = dirname(current); } return resolve('.'); }
+function world(circuitId: string) { const pack = readPack(root(), circuitId); return { pack, graph: new VenueGraph(pack) }; }
+function scenario(circuitId: string, count: number, seed: number) { const { pack, graph } = world(circuitId); const parks = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'parking'); if (!parks.length) throw new Error('no parking zone in pack'); const exit = parks.sort((a, b) => graph.reachable(b.id).size - graph.reachable(a.id).size)[0]!.id; const component = graph.reachable(exit); const stands = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'viewing' && component.has(zone.id)).map((zone) => zone.id); if (!stands.length) throw new Error(`no grandstands connected to ${exit}`); return { pack, graph, stands, exit, scenario: egress(graph, stands, exit, count, seed) }; }
 
 const { words, options } = parse(process.argv.slice(2));
-if (words[0] === 'sim' && words[1] === 'ab') {
-  const circuitId = words[2] ?? 'silverstone';
-  const count = number(options, 'count', 6000);
-  const ticks = number(options, 'ticks', 400);
-  const participation = number(options, 'participation', 0.18);
-  const seed = number(options, 'seed', 42);
-  const pack = readPack(root(), circuitId);
-  const graph = new VenueGraph(pack);
-  const parks = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'parking');
-  if (!parks.length) throw new Error('no parking zone in pack');
-  const exit = parks.sort((a, b) => graph.reachable(b.id).size - graph.reachable(a.id).size)[0]!.id;
-  const component = graph.reachable(exit);
-  const stands = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'viewing' && component.has(zone.id)).map((zone) => zone.id);
-  if (!stands.length) throw new Error(`no grandstands connected to ${exit}`);
-  const scenario = egress(graph, stands, exit, count, seed);
-  console.log(`A/B — ${pack.name}, ${scenario.name}`);
-  console.log(`  ${count} spectators, seed ${seed}, participation ${(participation * 100).toFixed(0)}%`);
-  console.log('  identical seed both arms; only the intervention differs\n');
-  const result = abTest(scenario, graph, participation, ticks);
-  console.log(`  ${'metric'.padEnd(34)}${'without'.padStart(12)}${'with'.padStart(12)}${'change'.padStart(10)}`);
-  console.log(`  ${'-'.repeat(68)}`);
-  for (const [label, before, after, change] of result.summary()) {
-    const delta = Math.abs(change) < 0.05 ? '' : `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
-    console.log(`  ${label.padEnd(34)}${before.toFixed(1).padStart(12)}${after.toFixed(1).padStart(12)}${delta.padStart(10)}`);
-  }
-  console.log(`\n  GATE ${result.passesGate ? 'PASSED — intervention reduced both peak density and time beyond capacity' : 'FAILED — intervention did not measurably help'}`);
-  if (!result.passesGate) process.exitCode = 1;
-} else {
-  console.log('CrowdFlow TypeScript CLI\n\n  crowdflow sim ab [circuit] --count 6000 --ticks 700 --seed 42');
+try {
+  if (words[0] === 'standards') printStandards();
+  else if (words[0] === 'band') { const density = Number(words[1]); if (!Number.isFinite(density)) throw new Error('usage: crowdflow band <density-persons-m2>'); console.log(`${density.toFixed(2)} persons/m2 -> ${bandForDensity(density).toUpperCase()}`); }
+  else if (words[0] === 'circuit' && words[1] === 'list') listCircuits();
+  else if (words[0] === 'circuit' && words[1] === 'show') showCircuit(words[2] ?? 'silverstone');
+  else if (words[0] === 'circuit' && words[1] === 'validate') validateCircuit(words[2] ?? 'silverstone');
+  else if (words[0] === 'circuit' && words[1] === 'render') renderCircuit(words[2] ?? 'silverstone', string(options, 'out'));
+  else if (words[0] === 'sim' && words[1] === 'run') simRun(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'sim' && words[1] === 'traces') simTraces(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'sim' && words[1] === 'ab') simAb(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'refine' && words[1] === 'run') refineRun(words[2] ?? 'silverstone', options);
+  else help();
+} catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
+
+function printStandards(): void {
+  console.log('Fruin walkway Level of Service — ped/m/min'); for (const [grade, max] of [['A', LOS_A_MAX], ['B', LOS_B_MAX], ['C', LOS_C_MAX], ['D', LOS_D_MAX], ['E', LOS_E_MAX]] as const) console.log(`  ${grade} < ${max}`); console.log(`  F >= ${LOS_E_MAX}`);
+  console.log(`\nOperational density bands (authoritative)\n  NOMINAL  < ${DENSITY_NOMINAL_MAX.toFixed(3)} persons/m2\n  BUILDING < ${DENSITY_BUILDING_MAX.toFixed(3)} persons/m2\n  CRITICAL >= ${CAPACITY_DENSITY.toFixed(3)} persons/m2`);
+  console.log(`\nfree speed ${FREE_FLOW_SPEED_MS} m/s; jam density ${JAM_DENSITY_PERSONS_M2} persons/m2`); console.log(`\nMeasured, never assumed:\n${MEASURED_NOT_ASSUMED.map((value) => `  ${value}`).join('\n')}`); console.log(`\nFlow grade example at ${LOS_C_MAX}: ${losGradeForFlow(LOS_C_MAX)}`);
 }
+function listCircuits(): void { for (const id of available()) { const pack = readPack(root(), id); console.log(`${id.padEnd(18)} ${pack.name.padEnd(35)} ${pack.track_length_m.toFixed(0)} m`); } }
+function showCircuit(id: string): void { const pack = readPack(root(), id); console.log(`${pack.name}\n  geometry ${pack.geometry_source}\n  track ${pack.track_length_m} m; altitude ${pack.altitude_m} m\n  zones ${Object.keys(pack.zones ?? {}).length}; edges ${Object.keys(pack.edges ?? {}).length}; crossings ${Object.keys(pack.crossings ?? {}).length}\n  origin ${pack.frame.origin_lat}, ${pack.frame.origin_lon}`); }
+function available(): string[] { const index = readFileSync(join(root(), 'circuits', 'index.yaml'), 'utf8'); return [...index.matchAll(/^\s+- id:\s*([^\s#]+)/gm)].map((match) => match[1]!).filter((id) => existsSync(join(root(), 'circuits', id, 'pack', 'circuit.json'))); }
+function validateCircuit(id: string): void { const { pack, graph } = world(id); const problems: string[] = []; for (const edge of Object.values(pack.edges ?? {})) { if (!pack.zones?.[edge.source]) problems.push(`edge ${edge.id}: unknown source`); if (!pack.zones?.[edge.destination]) problems.push(`edge ${edge.id}: unknown destination`); } for (const crossing of Object.values(pack.crossings ?? {})) if (!pack.edges?.[crossing.edge_id]) problems.push(`crossing ${crossing.id}: unknown edge`); for (const exit of pack.constraints?.emergency_exits ?? []) if (!graph.reachable(exit).size) problems.push(`emergency exit ${exit}: unreachable`); console.log(`${pack.name}: ${Object.keys(pack.zones ?? {}).length} zones, ${Object.keys(pack.edges ?? {}).length} edges`); if (problems.length) throw new Error(problems.join('\n')); console.log('integrity OK'); }
+function renderCircuit(id: string, out?: string): void { const pack = readPack(root(), id); const svg = renderSvg(pack, readTrack(root(), id)); const target = out ?? join(root(), 'circuits', id, `${id}.svg`); writeFileSync(target, svg); console.log(`wrote ${target}`); }
+function simRun(id: string, opts: Options): void { const count = number(opts, 'count', 6000); const ticks = number(opts, 'ticks', 400); const participation = number(opts, 'participation', 0.18); const value = scenario(id, count, number(opts, 'seed', 42)); const [metrics] = runScenario(value.scenario, value.graph, opts.intervene === true, participation, ticks); console.log(`${value.pack.name} — ${value.scenario.name}`); for (const [label, metric] of metrics.rows()) console.log(`  ${String(metric).padStart(10)}  ${label}`); }
+function simTraces(id: string, opts: Options): void { const out = string(opts, 'out'); if (!out) throw new Error('--out is required'); const count = number(opts, 'count', 6000); const ticks = number(opts, 'ticks', 400); const every = number(opts, 'every', 60); const value = scenario(id, count, number(opts, 'seed', 42)); const sim = value.scenario.build(value.graph, { participation: number(opts, 'participation', 0.18) }); const fragments = []; for (let tick = 0; tick < ticks; tick += 1) { sim.step(); sim.emit(); if ((tick + 1) % every === 0) fragments.push(...sim.emitTraceFragments()); } fragments.push(...sim.emitTraceFragments()); writeTraceFragments(out, fragments); console.log(`${fragments.length} private fragments -> ${out}`); }
+function simAb(id: string, opts: Options): void { const count = number(opts, 'count', 6000); const participation = number(opts, 'participation', 0.18); const seed = number(opts, 'seed', 42); const value = scenario(id, count, seed); console.log(`A/B — ${value.pack.name}, ${value.scenario.name}\n  ${count} spectators, seed ${seed}, participation ${(participation * 100).toFixed(0)}%\n  identical seed both arms; only the intervention differs\n`); const result = abTest(value.scenario, value.graph, participation, number(opts, 'ticks', 400)); console.log(`  ${'metric'.padEnd(34)}${'without'.padStart(12)}${'with'.padStart(12)}${'change'.padStart(10)}`); for (const [label, before, after, change] of result.summary()) console.log(`  ${label.padEnd(34)}${before.toFixed(1).padStart(12)}${after.toFixed(1).padStart(12)}${(`${change >= 0 ? '+' : ''}${change.toFixed(1)}%`).padStart(10)}`); console.log(`\n  GATE ${result.passesGate ? 'PASSED' : 'FAILED'}`); if (!result.passesGate) process.exitCode = 1; }
+function refineRun(id: string, opts: Options): void { const path = string(opts, 'traces'); if (!path) throw new Error('--traces is required'); const participation = number(opts, 'participation', NaN); if (!(participation > 0 && participation <= 1)) throw new Error('--participation must be in (0, 1]'); const pack = readPack(root(), id); const report = refine(pack, readTraceFragments(path), participation); for (const line of report.summary()) console.log(`  ${line}`); if (opts.apply !== true) { console.log('  dry run — pack unchanged (pass --apply after review)'); return; } writePack(root(), report.apply(pack), readTrack(root(), id)); console.log(`  wrote ${Object.keys(report.refined_edges).length} measured edge updates`); }
+function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]`); }
