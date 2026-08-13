@@ -140,7 +140,7 @@ def test_a_zone_past_capacity_still_warns_while_its_flow_falls():
     assert f.target_band is LOSBand.CRITICAL
     assert f.time_to_threshold_s == 0.0, "already past the threshold: act now"
     assert f.probability >= 0.9
-    assert f.projected_peak_flow > densities[-1], "projection is in density units"
+    assert f.projected_peak_density_persons_m2 > densities[-1], "projection is in density units"
 
 
 def test_a_zone_above_the_nominal_band_counts_down_to_critical_not_to_building():

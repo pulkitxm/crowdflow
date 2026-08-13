@@ -23,7 +23,13 @@ import { Body, Card, Eyebrow, Headline, Label, StatusPill, Title } from '../ui/a
 import { Screen } from '../ui/screen';
 import { usePalette } from '../ui/theme';
 
-export function ArrivalScreen({ view }: { view: Extract<SpectatorView, { kind: 'arrival' }> }) {
+export function ArrivalScreen({
+  view,
+  onSelectGate,
+}: {
+  view: Extract<SpectatorView, { kind: 'arrival' }>;
+  onSelectGate?: (zoneId: string) => void;
+}) {
   return (
     <Screen view={view}>
       <View style={{ gap: space.sm }}>
@@ -34,7 +40,11 @@ export function ArrivalScreen({ view }: { view: Extract<SpectatorView, { kind: '
 
       <View style={{ gap: space.md }}>
         {view.gates.map((gate) => (
-          <GateRow key={gate.zone_id} gate={gate} />
+          <GateRow
+            key={gate.zone_id}
+            gate={gate}
+            onPress={onSelectGate ? () => onSelectGate(gate.zone_id) : undefined}
+          />
         ))}
       </View>
 
@@ -47,15 +57,22 @@ export function ArrivalScreen({ view }: { view: Extract<SpectatorView, { kind: '
   );
 }
 
-function GateRow({ gate }: { gate: GateChoice }) {
+function GateRow({ gate, onPress }: { gate: GateChoice; onPress?: () => void }) {
   const palette = usePalette();
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityState={gate.selected ? { selected: true } : undefined}
       accessibilityLabel={`${gate.name}, ${journeyText(gate.walk_s)} walk`}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.gate,
-        { backgroundColor: palette.surface, opacity: pressed ? 0.8 : 1 },
+        {
+          backgroundColor: palette.surface,
+          borderColor: gate.selected ? palette.ink : 'transparent',
+          borderWidth: gate.selected ? 2 : 0,
+          opacity: pressed && onPress ? 0.8 : 1,
+        },
       ]}
     >
       <View style={styles.gateHead}>

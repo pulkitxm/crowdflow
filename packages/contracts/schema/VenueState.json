@@ -33,6 +33,12 @@
           "minimum": 0,
           "title": "Stability",
           "type": "number"
+        },
+        "reportable": {
+          "description": "The contract's served judgement; clients never restate its thresholds.",
+          "readOnly": true,
+          "title": "Reportable",
+          "type": "boolean"
         }
       },
       "required": [
@@ -40,7 +46,8 @@
         "observed_nodes",
         "freshness_s",
         "mean_accuracy_m",
-        "stability"
+        "stability",
+        "reportable"
       ],
       "title": "Confidence",
       "type": "object"

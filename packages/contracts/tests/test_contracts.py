@@ -10,7 +10,8 @@ These exist to protect four things the project will otherwise lose:
 
 from __future__ import annotations
 
-import json
+import importlib.util
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -251,7 +252,7 @@ def test_unobserved_zones_are_tracked_not_dropped():
 
 def test_forecast_is_actionable_only_when_it_can_be_acted_on():
     common = dict(zone_id="club", issued_at=0.0, horizon_s=300,
-                  target_band=c.LOSBand.CRITICAL, projected_peak_flow=118.0,
+                  target_band=c.LOSBand.CRITICAL, projected_peak_density_persons_m2=118.0,
                   model_id="baseline-v1")
     assert c.Forecast(**common, probability=0.91, time_to_threshold_s=167, confidence=0.87).is_actionable
     # already happened
@@ -357,11 +358,36 @@ def test_at_grade_crossing_closes_while_cars_run():
 # Generated artefacts
 # --------------------------------------------------------------------------
 
-def test_generated_schema_is_current(tmp_path):
-    """Generated files are committed; a stale one should fail review, not runtime."""
-    from pathlib import Path
-    bundle = Path(__file__).resolve().parents[1] / "schema" / "crowdflow.json"
-    assert bundle.exists(), "run packages/contracts/scripts/generate.py"
-    data = json.loads(bundle.read_text())
-    assert "CrowdNode" in data["$defs"]
-    assert "TraceFragment" in data["$defs"]
+def test_generated_schema_is_current():
+    """Byte-compare every generated artefact against the Pydantic source.
+
+    Checking that two definitions merely existed let arbitrarily large drift
+    survive.  This test exercises the same pure render functions as codegen and
+    also rejects obsolete schema files left behind by a rename.
+    """
+    root = Path(__file__).resolve().parents[1]
+    script = root / "scripts" / "generate.py"
+    spec = importlib.util.spec_from_file_location("crowdflow_contract_codegen", script)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+
+    models = generator.exported_models()
+    expected_schemas = {
+        name: generator.schema_text(document)
+        for name, document in generator.schema_documents(models).items()
+    }
+    actual_names = {path.name for path in (root / "schema").glob("*.json")}
+    assert actual_names == set(expected_schemas), (
+        "generated schema file set drifted; run "
+        "uv run python packages/contracts/scripts/generate.py"
+    )
+    for name, expected in expected_schemas.items():
+        assert (root / "schema" / name).read_text() == expected, (
+            f"{name} is stale; run packages/contracts/scripts/generate.py"
+        )
+
+    expected_ts = generator.typescript_text(models)
+    assert (root / "ts" / "index.ts").read_text() == expected_ts, (
+        "generated TypeScript is stale; run packages/contracts/scripts/generate.py"
+    )

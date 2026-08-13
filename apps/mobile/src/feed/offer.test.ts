@@ -21,6 +21,7 @@ function offer(patch: Partial<RerouteOffer['verdict']> = {}, expiresIn = 300): R
       command_id: 'cmd-1',
       outcome: 'approved',
       reason: 'Both routes stay below capacity.',
+      dispatchable: true,
       ...patch,
     },
     instead: { id: 'r', from: 'a', to: 'b', steps: [], total_walk_s: 600 },
@@ -35,14 +36,18 @@ describe('the safety gate, enforced on the client', () => {
   });
 
   it('refuses a rejected command', () => {
-    expect(showableOffer(offer({ outcome: 'rejected' }))).toBeNull();
+    expect(showableOffer(offer({ outcome: 'rejected', dispatchable: false }))).toBeNull();
+  });
+
+  it('refuses an outcome whose served dispatch judgement is false', () => {
+    expect(showableOffer(offer({ dispatchable: false }))).toBeNull();
   });
 
   it('refuses a modified command', () => {
     // A `modified` verdict means the safety engine changed the routing. The
     // command in hand is the version safety declined to issue; showing it would
     // put a person on the route the gate exists to prevent.
-    expect(showableOffer(offer({ outcome: 'modified' }))).toBeNull();
+    expect(showableOffer(offer({ outcome: 'modified', dispatchable: false }))).toBeNull();
   });
 
   it('refuses a verdict that belongs to a different command', () => {

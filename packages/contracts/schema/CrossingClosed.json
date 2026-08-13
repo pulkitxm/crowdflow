@@ -1,0 +1,27 @@
+{
+  "properties": {
+    "open": {
+      "const": false,
+      "title": "Open",
+      "type": "boolean"
+    },
+    "opens_at": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "absolute unix seconds; None when no reopening time is known",
+      "title": "Opens At"
+    }
+  },
+  "required": [
+    "open",
+    "opens_at"
+  ],
+  "title": "CrossingClosed",
+  "type": "object"
+}

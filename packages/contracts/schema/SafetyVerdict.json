@@ -35,12 +35,19 @@
       "default": false,
       "title": "Emergency Mode",
       "type": "boolean"
+    },
+    "dispatchable": {
+      "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
+      "readOnly": true,
+      "title": "Dispatchable",
+      "type": "boolean"
     }
   },
   "required": [
     "command_id",
     "outcome",
-    "reason"
+    "reason",
+    "dispatchable"
   ],
   "title": "SafetyVerdict",
   "type": "object"

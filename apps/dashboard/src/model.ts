@@ -149,8 +149,8 @@ export function buildRows(
       queue: state.queue_excess ?? 0,
       net: state.net_flow_per_min,
       confidence: state.confidence.value,
-      // The contract's own judgement, not a threshold invented here.
-      reportable: state.confidence.value >= 0.25 && state.confidence.observed_nodes >= 3,
+      // The contract's served judgement, never a TypeScript threshold copy.
+      reportable: state.confidence.reportable,
       losGrade: state.los_grade,
       overCapacity: state.over_capacity,
       silentFor: 0,

@@ -211,9 +211,9 @@ export class InterventionPanel {
     const isBaseline = candidate.divert_fraction === 0;
     const isSelected = candidate.selected === true;
     const relief =
-      baseline && baseline.projected_peak_flow > 0
-        ? ((baseline.projected_peak_flow - candidate.projected_peak_flow) /
-            baseline.projected_peak_flow) *
+      baseline && baseline.projected_peak_density_persons_m2 > 0
+        ? ((baseline.projected_peak_density_persons_m2 - candidate.projected_peak_density_persons_m2) /
+            baseline.projected_peak_density_persons_m2) *
           100
         : null;
     const margin =
@@ -234,7 +234,7 @@ export class InterventionPanel {
       ),
       el("td", { text: candidate.description }),
       el("td", { class: "num", text: percent(candidate.divert_fraction) }),
-      el("td", { class: "num", text: fixed(candidate.projected_peak_flow, 2) }),
+      el("td", { class: "num", text: fixed(candidate.projected_peak_density_persons_m2, 2) }),
       el("td", { class: "num", text: `${signed(candidate.projected_walk_time_delta_s, 0)}s` }),
       el("td", { class: "num", text: `${integer(candidate.projected_bottleneck_duration_s)}s` }),
       el("td", { class: "num", text: relief === null ? "—" : `${signed(relief, 1)}%` }),

@@ -43,6 +43,15 @@ describe('journey totals are honest', () => {
       }
     }
   });
+
+  it('uses the selected gate price in the arrival route', () => {
+    const arrival = day.arrival;
+    if (arrival.kind !== 'arrival') throw new Error('expected the arrival view');
+    const selected = arrival.gates.find((gate) => gate.selected);
+    expect(selected).toBeDefined();
+    expect(arrival.route.steps[0]?.to).toBe(selected?.name);
+    expect(arrival.route.steps[0]?.walk_s).toBe(selected?.walk_s);
+  });
 });
 
 describe('the price of a redirect matches the walk it buys', () => {
@@ -114,6 +123,7 @@ describe('after the race the app is willing to say wait', () => {
     // were quicker this screen would have to say so.
     expect(hold.recommended_id).toBe(best.id);
     expect(hold.recommended_id).toBe('wait');
+    expect(best.recommendation_note).toContain('Quickest');
   });
 
   it('still offers a way out to someone who will not wait', () => {
@@ -149,5 +159,6 @@ describe('the gate choice is a real choice', () => {
     expect(nearest.way_ahead).not.toBe('nominal');
     // ...and there is somewhere clear to send people, or the screen is just bad news.
     expect(arrival.gates.some((g) => g.way_ahead === 'nominal')).toBe(true);
+    expect(arrival.gates.filter((gate) => gate.selected)).toHaveLength(1);
   });
 });

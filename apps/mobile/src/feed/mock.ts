@@ -119,6 +119,7 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
     reason: 'Alternative keeps both routes below capacity and clears the emergency lane.',
     violated_constraints: [],
     emergency_mode: false,
+    dispatchable: true,
   };
 
   // --- the walk out ------------------------------------------------------
@@ -154,9 +155,9 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
         id: 'route-arrival',
         from: 'North Car Park 22',
         to: 'Copse B',
-        total_walk_s: 14 * MIN,
+        total_walk_s: 16 * MIN,
         steps: [
-          { id: 'a1', to: 'Gate 3', walk_s: 480, way_ahead: 'nominal', crossing: null },
+          { id: 'a1', to: 'Gate 3', walk_s: 11 * MIN, way_ahead: 'nominal', crossing: null },
           { id: 'a2', to: 'Copse B', walk_s: 300, way_ahead: 'nominal', crossing: null },
         ],
       },
@@ -176,6 +177,7 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
           walk_s: 11 * MIN,
           way_ahead: 'nominal',
           note: 'Four minutes further, no queue',
+          selected: true,
         },
         {
           zone_id: 'gate_5747045954',
@@ -252,6 +254,7 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
           total_s: 22 * MIN,
           way_ahead: 'nominal',
           spent: 'Sitting for about 12 minutes, then a 10 minute walk',
+          recommendation_note: 'Quickest, with time to sit down',
         },
         {
           id: 'gate-6',

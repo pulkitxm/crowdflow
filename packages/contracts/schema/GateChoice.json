@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "WayAhead": {
+      "enum": [
+        "nominal",
+        "building",
+        "critical",
+        "unknown"
+      ],
+      "title": "WayAhead",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "zone_id": {
+      "title": "Zone Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "walk_s": {
+      "minimum": 0,
+      "title": "Walk S",
+      "type": "number"
+    },
+    "way_ahead": {
+      "$ref": "#/$defs/WayAhead"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    },
+    "selected": {
+      "default": false,
+      "title": "Selected",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "zone_id",
+    "name",
+    "walk_s",
+    "way_ahead"
+  ],
+  "title": "GateChoice",
+  "type": "object"
+}

@@ -113,7 +113,7 @@ def test_the_baseline_run_actually_congests(pinch_world):
     result = InterventionEngine(horizon_s=HORIZON_S).evaluate(
         sim, from_zone="pinch", to_zone="plaza", avoid={"pinch"}, prefer={"plaza"}
     )
-    assert result.baseline.projected_peak_flow > DENSITY_BUILDING_MAX
+    assert result.baseline.projected_peak_density_persons_m2 > DENSITY_BUILDING_MAX
     assert result.baseline.projected_bottleneck_duration_s > 0
 
 
@@ -136,7 +136,7 @@ def test_a_candidate_that_helps_less_than_doing_nothing_is_not_selected(pinch_wo
     baseline = result.baseline
     for c in result.candidates:
         if c.divert_fraction > 0:
-            assert c.projected_peak_flow == pytest.approx(baseline.projected_peak_flow)
+            assert c.projected_peak_density_persons_m2 == pytest.approx(baseline.projected_peak_density_persons_m2)
             assert c.score.total <= baseline.score.total
 
 
@@ -168,7 +168,7 @@ def test_a_diversion_that_relieves_the_pinch_is_selected_and_is_honest(pinch_wor
 
     assert result.selected is not None
     assert result.selected.divert_fraction > 0
-    assert result.selected.projected_peak_flow < result.baseline.projected_peak_flow
+    assert result.selected.projected_peak_density_persons_m2 < result.baseline.projected_peak_density_persons_m2
     assert result.selected.score.total > result.baseline.score.total
     assert result.selected.selected is True
     assert sum(1 for c in result.candidates if c.selected) == 1

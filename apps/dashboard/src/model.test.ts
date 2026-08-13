@@ -7,12 +7,17 @@
  * silently passing test.
  */
 import { describe, expect, it } from "vitest";
-import type { ZoneState } from "@contracts";
+import type { LOSBand, ZoneState } from "@contracts";
 import type { TickEnvelope, VenueGeometry } from "@wire";
 import { ZoneMemory, buildRows, coverageLines, sortRows } from "./model";
 
-function zoneState(id: string, density: number, nodes = 40): ZoneState {
-  const band = density < 0.75 ? "nominal" : density < 2.0 ? "building" : "critical";
+function zoneState(
+  id: string,
+  density: number,
+  band: LOSBand = "nominal",
+  nodes = 40,
+  reportable = true,
+): ZoneState {
   return {
     zone_id: id,
     timestamp: 100,
@@ -26,11 +31,12 @@ function zoneState(id: string, density: number, nodes = 40): ZoneState {
     inflow_per_min: 12,
     outflow_per_min: 4,
     confidence: {
-      value: nodes >= 3 ? 0.62 : 0.1,
+      value: reportable ? 0.62 : 0.1,
       observed_nodes: nodes,
       freshness_s: 1,
       mean_accuracy_m: 8,
       stability: 0.7,
+      reportable,
     },
     estimated_population: Math.round(nodes / 0.18),
     band,
@@ -73,7 +79,10 @@ function envelope(overrides: Partial<TickEnvelope> = {}): TickEnvelope {
     state: {
       circuit_id: "toy",
       timestamp: 240,
-      zones: { busy: zoneState("busy", 2.3), quiet: zoneState("quiet", 0.2) },
+      zones: {
+        busy: zoneState("busy", 2.3, "critical"),
+        quiet: zoneState("quiet", 0.2),
+      },
       unobserved_zones: ["never"],
     },
     forecasts: [],
@@ -158,7 +167,11 @@ describe("buildRows", () => {
 
   it("reports how long a zone has been silent, once it has seen one", () => {
     const memory = new ZoneMemory();
-    memory.observe(envelope({ state: { ...envelope().state, zones: { gone: zoneState("gone", 1) } } }));
+    memory.observe(
+      envelope({
+        state: { ...envelope().state, zones: { gone: zoneState("gone", 1, "building") } },
+      }),
+    );
     const rows = buildRows(envelope({ time_s: 300 }), geometry, memory);
     const gone = rows.find((r) => r.id === "gone")!;
     expect(gone.silentFor).toBe(60);
@@ -179,7 +192,7 @@ describe("buildRows", () => {
       state: {
         circuit_id: "toy",
         timestamp: 240,
-        zones: { busy: zoneState("busy", 2.3, 2) },
+        zones: { busy: zoneState("busy", 2.3, "critical", 2, false) },
         unobserved_zones: [],
       },
       silent_zones: [],

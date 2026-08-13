@@ -74,10 +74,10 @@
       "title": "Via",
       "type": "array"
     },
-    "projected_peak_flow": {
-      "description": "ped/m/min",
+    "projected_peak_density_persons_m2": {
+      "description": "persons/m2 at the projected peak",
       "minimum": 0,
-      "title": "Projected Peak Flow",
+      "title": "Projected Peak Density Persons M2",
       "type": "number"
     },
     "projected_walk_time_delta_s": {
@@ -105,7 +105,7 @@
     "divert_fraction",
     "from_zone",
     "to_zone",
-    "projected_peak_flow",
+    "projected_peak_density_persons_m2",
     "projected_walk_time_delta_s",
     "projected_bottleneck_duration_s",
     "score"

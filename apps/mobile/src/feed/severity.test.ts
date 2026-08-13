@@ -29,6 +29,6 @@ describe('a route is as good as its worst leg', () => {
   });
 
   it('has an answer for an empty route', () => {
-    expect(worstOf([])).toBe('nominal');
+    expect(worstOf([])).toBe('unknown');
   });
 });

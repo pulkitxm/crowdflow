@@ -30,8 +30,13 @@ describe('costs round up', () => {
     expect(costText(240)).toBe('+4 min');
   });
 
-  it('signs a saving as a saving', () => {
+  it('signs a saving as a saving without producing negative zero', () => {
     expect(costText(-120)).toBe('−2 min');
+    expect(costText(-30)).toBe('−1 min');
+  });
+
+  it('states a zero cost plainly', () => {
+    expect(costText(0)).toBe('no extra time');
   });
 });
 

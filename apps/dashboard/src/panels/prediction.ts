@@ -49,6 +49,7 @@ export class PredictionPanel {
 
     clear(this.host);
     if (!headline) {
+      const servedHorizon = forecasts[0]?.horizon_s;
       this.host.append(
         el(
           "div",
@@ -56,9 +57,10 @@ export class PredictionPanel {
           el("div", { class: "headline__time", text: "NO CROSSING" }),
           el("div", {
             class: "headline__zone",
-            text: `no zone projected to change band within ${
-              forecasts[0] ? Math.round(forecasts[0].horizon_s) : 300
-            }s`,
+            text:
+              servedHorizon === undefined
+                ? "no projected band crossing — forecast horizon unavailable"
+                : `no zone projected to change band within ${Math.round(servedHorizon)}s`,
           }),
           el("div", {
             class: "headline__note",
@@ -117,16 +119,12 @@ export class PredictionPanel {
             "span",
             { class: "claimbit" },
             el("span", { class: "claimbit__label", text: "PROJECTED PEAK" }),
-            // Labelled ped/m² deliberately. `Forecast.projected_peak_flow` is
-            // documented as ped/m/min, but `BaselinePredictor` extrapolates
-            // DENSITY into it (prediction/baseline.py: `current =
-            // zone.density_persons_m2`). The field name is wrong, not the value —
-            // printing the documented unit would be off by a factor of ~40 and
-            // would invite reading a flow number as a band, which is precisely
-            // what classifying on density exists to prevent. Flagged for core.
+            // The contract now names and documents this as density. The producer
+            // extrapolates density because flow collapses past capacity and can
+            // never safely classify a projected crowd state.
             el("span", {
               class: "claimbit__value",
-              text: `${fixed(headline.projected_peak_flow, 2)} ped/m²`,
+              text: `${fixed(headline.projected_peak_density_persons_m2, 2)} ped/m²`,
             }),
           ),
         ),

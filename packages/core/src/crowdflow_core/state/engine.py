@@ -18,9 +18,13 @@ Three things it must get right, because each is a way of quietly lying:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from crowdflow_contracts import (
+    ASSUMED_CONFIDENCE_COUNT_SATURATION,
+    ASSUMED_CONFIDENCE_COUNT_WEIGHT,
+    ASSUMED_POSITION_ACCURACY_BEST_M,
+    ASSUMED_POSITION_ACCURACY_WORST_M,
     CircuitPack,
     Confidence,
     CrowdNode,
@@ -246,11 +250,33 @@ class StateEngine:
         freshness = now - max(n.timestamp for n in nodes)
         accuracy = sum(n.accuracy_m for n in nodes) / count
 
-        count_term = min(1.0, math.log1p(count) / math.log1p(200))
+        count_term = min(
+            1.0,
+            math.log1p(count) / math.log1p(ASSUMED_CONFIDENCE_COUNT_SATURATION),
+        )
         fresh_term = max(0.0, 1.0 - freshness / self.window_s)
-        acc_term = max(0.0, min(1.0, 1.0 - (accuracy - 5.0) / 45.0))
+        accuracy_span = (
+            ASSUMED_POSITION_ACCURACY_WORST_M - ASSUMED_POSITION_ACCURACY_BEST_M
+        )
+        acc_term = max(
+            0.0,
+            min(
+                1.0,
+                1.0
+                - (accuracy - ASSUMED_POSITION_ACCURACY_BEST_M) / accuracy_span,
+            ),
+        )
 
-        value = 0.4 * count_term + 0.2 * fresh_term + 0.2 * acc_term + 0.2 * stability
+        # Count is the majority of the evidence. The former 0.4 share let fresh,
+        # accurate reports from three phones clear the action floor. These
+        # ASSUMED weights are explicit pending calibration against labelled
+        # interventions; freshness, accuracy and stability share the remainder.
+        count_weight = ASSUMED_CONFIDENCE_COUNT_WEIGHT
+        quality_terms = (fresh_term, acc_term, stability)
+        quality_weight = (1.0 - count_weight) / len(quality_terms)
+        value = count_weight * count_term + quality_weight * (
+            fresh_term + acc_term + stability
+        )
         return Confidence(
             value=round(max(0.0, min(1.0, value)), 3),
             observed_nodes=count,

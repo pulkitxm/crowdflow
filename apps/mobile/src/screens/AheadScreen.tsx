@@ -21,6 +21,7 @@ import { space } from '../theme';
 import type { SpectatorView } from '../feed/types';
 import { costText, journeyText } from '../feed/time';
 import { isExpired, showableOffer } from '../feed/offer';
+import { WAY_AHEAD_SENTENCE } from '../feed/words';
 import { Body, Card, Eyebrow, Headline, PrimaryAction, SecondaryAction, StatusPill } from '../ui/atoms';
 import { Hero, StepList, worstOf } from '../ui/route';
 import { Screen } from '../ui/screen';
@@ -49,7 +50,7 @@ export function AheadScreen({
             {/* The price, above the button, in a full sentence. Nobody should
                 have to interpret a "+4" to know what they are agreeing to. */}
             <Body style={{ fontWeight: '600' }}>
-              The quieter way adds {costText(showable.cost_s).replace('+', '')} — about{' '}
+              The quieter way costs {costText(showable.cost_s)} — about{' '}
               {journeyText(showable.offer.instead.total_walk_s)} in all.
             </Body>
             <PrimaryAction
@@ -70,7 +71,7 @@ export function AheadScreen({
             <Eyebrow>Ahead of you</Eyebrow>
             <Headline>{step.to}</Headline>
             <StatusPill state={step.way_ahead} big />
-            <Body>You can still get across. It is filling up.</Body>
+            <Body>{WAY_AHEAD_SENTENCE[step.way_ahead]}</Body>
             {showable ? <Body tone="soft">{showable.reason}</Body> : null}
           </View>
         </Card>
