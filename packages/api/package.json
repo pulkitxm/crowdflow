@@ -1,0 +1,16 @@
+{
+  "name": "@crowdflow/api",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./wire": "./src/wire.ts" },
+  "bin": { "crowdflow-api": "./src/main.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@crowdflow/contracts": "0.2.0",
+    "@crowdflow/core": "0.2.0",
+    "@crowdflow/cli": "0.2.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": { "@types/ws": "^8.18.1", "typescript": "^6.0.0", "vitest": "^3.2.7" }
+}

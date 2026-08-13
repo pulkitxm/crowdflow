@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
+  "exports": { "./ingest": "./src/ingest.ts" },
   "bin": {
     "crowdflow": "./src/main.ts"
   },
