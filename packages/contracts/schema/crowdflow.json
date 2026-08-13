@@ -390,10 +390,23 @@
               "title": "Participation Rate",
               "type": "number"
             },
+            "density_persons_m2": {
+              "description": "persons per square metre \u2014 the AUTHORITATIVE measure. Flow is not monotonic in density (it peaks then collapses), so a band cannot be read off flow alone: a jammed corridor and an empty one look alike.",
+              "minimum": 0,
+              "title": "Density Persons M2",
+              "type": "number"
+            },
             "flow_ped_m_min": {
-              "description": "pedestrians per metre width per minute \u2014 the primary measure",
+              "description": "pedestrians per metre width per minute \u2014 reported, not classified on",
               "minimum": 0,
               "title": "Flow Ped M Min",
+              "type": "number"
+            },
+            "queue_excess": {
+              "default": 0.0,
+              "description": "people who do not fit at jam density, i.e. backed up behind",
+              "minimum": 0,
+              "title": "Queue Excess",
               "type": "number"
             },
             "mean_speed_ms": {
@@ -436,8 +449,14 @@
             },
             "band": {
               "$ref": "#/$defs/LOSBand",
-              "description": "Operational band. The only classifier \u2014 see standards.band_for_flow.",
+              "description": "Operational band, classified on density (see standards.band_for_density).\n\nCRITICAL means at or beyond capacity density \u2014 the point where flow stops\nimproving and starts to collapse \u2014 not a high flow number.",
               "readOnly": true
+            },
+            "over_capacity": {
+              "description": "Past the peak of the fundamental diagram: more arrivals now reduce\nthroughput. The single most important operator signal.",
+              "readOnly": true,
+              "title": "Over Capacity",
+              "type": "boolean"
             },
             "los_grade": {
               "description": "Full Fruin grade A-F. Console only; the app never shows this.",
@@ -457,6 +476,7 @@
             "timestamp",
             "observed_nodes",
             "participation_rate",
+            "density_persons_m2",
             "flow_ped_m_min",
             "mean_speed_ms",
             "inflow_per_min",
@@ -464,6 +484,7 @@
             "confidence",
             "estimated_population",
             "band",
+            "over_capacity",
             "los_grade",
             "net_flow_per_min"
           ],
@@ -598,10 +619,23 @@
           "title": "Participation Rate",
           "type": "number"
         },
+        "density_persons_m2": {
+          "description": "persons per square metre \u2014 the AUTHORITATIVE measure. Flow is not monotonic in density (it peaks then collapses), so a band cannot be read off flow alone: a jammed corridor and an empty one look alike.",
+          "minimum": 0,
+          "title": "Density Persons M2",
+          "type": "number"
+        },
         "flow_ped_m_min": {
-          "description": "pedestrians per metre width per minute \u2014 the primary measure",
+          "description": "pedestrians per metre width per minute \u2014 reported, not classified on",
           "minimum": 0,
           "title": "Flow Ped M Min",
+          "type": "number"
+        },
+        "queue_excess": {
+          "default": 0.0,
+          "description": "people who do not fit at jam density, i.e. backed up behind",
+          "minimum": 0,
+          "title": "Queue Excess",
           "type": "number"
         },
         "mean_speed_ms": {
@@ -644,8 +678,14 @@
         },
         "band": {
           "$ref": "#/$defs/LOSBand",
-          "description": "Operational band. The only classifier \u2014 see standards.band_for_flow.",
+          "description": "Operational band, classified on density (see standards.band_for_density).\n\nCRITICAL means at or beyond capacity density \u2014 the point where flow stops\nimproving and starts to collapse \u2014 not a high flow number.",
           "readOnly": true
+        },
+        "over_capacity": {
+          "description": "Past the peak of the fundamental diagram: more arrivals now reduce\nthroughput. The single most important operator signal.",
+          "readOnly": true,
+          "title": "Over Capacity",
+          "type": "boolean"
         },
         "los_grade": {
           "description": "Full Fruin grade A-F. Console only; the app never shows this.",
@@ -665,6 +705,7 @@
         "timestamp",
         "observed_nodes",
         "participation_rate",
+        "density_persons_m2",
         "flow_ped_m_min",
         "mean_speed_ms",
         "inflow_per_min",
@@ -672,6 +713,7 @@
         "confidence",
         "estimated_population",
         "band",
+        "over_capacity",
         "los_grade",
         "net_flow_per_min"
       ],

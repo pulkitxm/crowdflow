@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest';
+
+import { isExpired, showableOffer } from './offer';
+import type { RerouteOffer } from './types';
+
+const NOW = 1_700_000_000;
+
+function offer(patch: Partial<RerouteOffer['verdict']> = {}, expiresIn = 300): RerouteOffer {
+  return {
+    command: {
+      command_id: 'cmd-1',
+      issued_at: NOW - 10,
+      expires_at: NOW + expiresIn,
+      source_zone: 'a',
+      destination_zone: 'b',
+      target_fraction: 0.3,
+      reason: 'The bridge at Village is filling up.',
+      expected_cost_s: 240,
+    },
+    verdict: {
+      command_id: 'cmd-1',
+      outcome: 'approved',
+      reason: 'Both routes stay below capacity.',
+      ...patch,
+    },
+    instead: { id: 'r', from: 'a', to: 'b', steps: [], total_walk_s: 600 },
+  };
+}
+
+describe('the safety gate, enforced on the client', () => {
+  it('shows an approved offer with its price attached', () => {
+    const showable = showableOffer(offer());
+    expect(showable?.cost_s).toBe(240);
+    expect(showable?.reason).toContain('filling up');
+  });
+
+  it('refuses a rejected command', () => {
+    expect(showableOffer(offer({ outcome: 'rejected' }))).toBeNull();
+  });
+
+  it('refuses a modified command', () => {
+    // A `modified` verdict means the safety engine changed the routing. The
+    // command in hand is the version safety declined to issue; showing it would
+    // put a person on the route the gate exists to prevent.
+    expect(showableOffer(offer({ outcome: 'modified' }))).toBeNull();
+  });
+
+  it('refuses a verdict that belongs to a different command', () => {
+    // The realistic attack and the realistic bug are the same shape: an approval
+    // for a harmless command arriving stapled to a different one.
+    expect(showableOffer(offer({ command_id: 'cmd-other' }))).toBeNull();
+  });
+});
+
+describe('expiry', () => {
+  it('treats a command past its expiry as gone', () => {
+    // Stale routing is worse than none: diverting people around a crossing that
+    // reopened five minutes ago builds the queue it was meant to prevent.
+    expect(isExpired(offer({}, -1), NOW)).toBe(true);
+    expect(isExpired(offer({}, 300), NOW)).toBe(false);
+  });
+});
