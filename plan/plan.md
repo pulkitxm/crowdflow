@@ -1474,38 +1474,28 @@ For the hackathon, use this:
 
 ## 30. Recommended backend
 
-For a hackathon:
+The implemented runtime is deliberately one language and one package graph:
 
 ```
 Backend
 │
-├── Python
-│
-├── FastAPI
-│
-├── WebSockets
-│
-├── NetworkX
-│
-├── NumPy
-│
-├── Pandas
-│
-├── scikit-learn
-│
-└── PostgreSQL
+├── Node 24 + strict TypeScript
+├── native HTTP + WebSockets
+├── pure local venue graph and simulation engines
+├── authored TypeScript contracts + generated JSON Schema
+└── npm workspaces / one lockfile
 ```
 
-Redis can stay optional.
+A database and Redis remain optional until measured persistence/load requires them.
 
-If you want real-time event processing:
+If real-time event processing is split later:
 
 ```
 Phone
  ↓
 WebSocket
  ↓
-FastAPI
+Node API
  ↓
 Redis Streams
  ↓
@@ -2192,14 +2182,11 @@ SQLite / MMKV
 
 Backend
 ───────
-Python
-FastAPI
-WebSockets
-NetworkX
-NumPy
-Pandas
-scikit-learn
-Typer            (CLI over the same core library)
+Node 24 + strict TypeScript
+native HTTP + WebSockets
+pure local graph/simulation engines
+Node CLI over the same core library
+npm workspaces + one lockfile
 
 
 Prediction
@@ -2211,10 +2198,9 @@ Rule-based baseline
 
 Simulation
 ──────────
-Python
-NetworkX
-NumPy
-Custom agent simulation
+TypeScript
+project-owned seeded MT19937
+pure custom agent simulation
 
 
 AI
@@ -2638,10 +2624,11 @@ For the hackathon, the final demo should tell one complete story: 500 simulated 
 Five decisions were taken after the vision above was written. Each is recorded with full
 context in [`decisions.md`](./decisions.md); this is the summary.
 
-**D1 — Monorepo with generated contracts.** One repository, and the payoff is specifically
-that the §1 schemas are defined once in Python and code-generated into TypeScript for the
-dashboard and app. Without codegen a monorepo is just folders; with it, the app and backend
-cannot silently drift on the telemetry format.
+**D1 — npm/TypeScript monorepo with generated JSON Schema.** One repository, and the payoff
+is specifically that the §1 contracts are authored once in TypeScript and imported directly by
+all JavaScript runtimes. Deterministic codegen emits committed JSON Schema for non-TypeScript
+boundaries. Without this authority a monorepo is just folders; with it, app and backend cannot
+silently drift on the telemetry format.
 
 **D2 — CLI-first over a core library.** `packages/core` is a pure library. The CLI and the
 API are both thin adapters over it, and the CLI is not a phase to graduate from — it stays as

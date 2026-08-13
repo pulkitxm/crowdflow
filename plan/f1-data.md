@@ -12,7 +12,7 @@ What is freely available, what it gives us, where it plugs into the system, and 
 | **Jolpica-F1** | Free, open source, 200 req/hr unauth | Calendar, sessions, circuits, results, quali, standings, lap times | `events/*.yaml` |
 | **OpenF1** | Historical (2023+) free, no auth; **real-time is paid** | Driver positions, car telemetry, race control messages, session/meeting state, weather | Session state machine, dashboard, app |
 | **bacinger/f1-circuits** | Free, GeoJSON | Track outline per circuit, bbox, length, altitude | Circuit pack geometry |
-| **FastF1** | Free Python library | Corner positions, marshal sectors, track rotation, telemetry | Viewing-area naming, sightlines |
+| **FastF1 upstream data** | Free ecosystem dataset/API source; no runtime dependency | Corner positions, marshal sectors, track rotation, telemetry | Optional build-time viewing-area naming, sightlines |
 
 ### Jolpica-F1 — the Ergast replacement
 
