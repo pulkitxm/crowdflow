@@ -48,7 +48,7 @@ OBSERVE → UNDERSTAND → PREDICT → SIMULATE → REDIRECT → OBSERVE AGAIN
 
 | | Decision |
 |---|---|
-| D1 | Monorepo; contracts authored in Pydantic, generated into TypeScript |
+| D1 | npm/TypeScript monorepo; contracts authored once in TypeScript, JSON Schema generated deterministically |
 | D2 | CLI-first over a pure core library; API and CLI are equal adapters |
 | D3 | React Native + Expo app; mesh is a native Kotlin module at the `MeshNetwork` seam |
 | D4 | Each circuit is a data pack (engines) + `SKILL.md` (agent) |

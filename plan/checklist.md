@@ -1,198 +1,74 @@
-# CrowdFlow — Build Checklist
+# CrowdFlow — Current Build Checklist
 
-The complete project as checkable items. Ordering and rationale in
-[`build-plan.md`](./build-plan.md); component detail in [`breakdown.md`](./breakdown.md).
+The implementation status after adversarial review repair and the TypeScript runtime
+cutover. Ordering and rationale remain in [`build-plan.md`](./build-plan.md).
 
-**Legend:** ⬜ not started · 🟡 in progress · ✅ done · ⛔ gate
+## Runtime and contracts ✅
 
-> **Status at merge of PRs #1–#5.** Phases 0–3 are built and the gate passed:
-> critical zone-seconds −34.7% against an identical seed. Phases 4–6 are built
-> and merged but every branch came back `needs-work` from adversarial review —
-> 34 findings are recorded in the merged PR bodies and are NOT fixed. 390 tests
-> passing. Boxes below are ticked for "built and tested", not "reviewed clean".
+- [x] Node 24 + one root npm workspace/lockfile
+- [x] strict TypeScript runtime for contracts, core, CLI, API and agent
+- [x] authored TypeScript wire contracts consumed directly by both apps
+- [x] deterministic TypeScript → JSON Schema generation with byte-for-byte drift tests
+- [x] no Python files, `pyproject.toml`, pytest path, Pydantic emitter, `uv` command or `uv.lock`
+- [x] Kotlin confined to `apps/mobile/modules/mesh/android` for screen-off foreground service
 
----
+## Venue, loop and proof ✅
 
-## Phase 0 · Foundations  ✅
+- [x] cached OSM/f1-circuits venue import, metric frame and barrier subtraction
+- [x] provenance-aware widths, conservative semantic attachment and deterministic SVG rendering
+- [x] dynamic graph, crossing availability, bounded LRU and constrained routing
+- [x] density-based state aggregation; unknown never means empty
+- [x] deterministic prediction, counterfactual intervention, mandatory safety review and tick loop
+- [x] seeded CLI simulation, trace production, dry-run-first refinement and A/B evaluation
+- [x] Silverstone pack validates: 1,875 zones / 2,404 edges
+- [x] full seed-42 gate: critical zone-seconds `2746 → 1792` (`−34.7%`), one dispatch
 
-Blocks everything. Cheap.
+## Surfaces ✅
 
-- [x] `uv` workspace at repo root, five Python packages members
-- [ ] `pnpm` workspace for `apps/*` and generated types  ← deferred to Phase 4
-- [x] **Contracts** — Pydantic models
-  - [x] `standards.py` — Fruin LOS boundaries + walking speed, each with citation
-  - [x] `CrowdNode` — live position, velocity, accuracy
-  - [x] `TraceFragment` — noised, rotated-ID segment (kept separate from CrowdNode)
-  - [x] `ZoneState` — flow rate, LOS band, velocity, inflow/outflow, confidence
-  - [x] `Forecast` — zone, time-to-threshold, probability, causes, confidence
-  - [x] `InterventionCandidate` — fraction, projected peak, cost, score breakdown
-  - [x] `RerouteCommand` — avoid/prefer sets, fraction, expiry
-  - [x] `SafetyVerdict` — approved / rejected with stated reason
-  - [x] `MeshMessage` — envelope: type, source, sequence, ttl
-  - [x] `CircuitPack` / `EventProfile` — venue and timetable
-- [x] Codegen: Pydantic → JSON Schema → TypeScript, generated files committed
-- [x] `packages/core` skeleton, no-I/O rule enforced
-- [x] `packages/cli` — typer entry point, command groups
-- [x] **Done when** simulator output and a hand-written fake phone payload both validate
-      against the same models and the core cannot tell them apart
+- [x] dense operator console: map, zone table, prediction, alternatives, event feed and metrics
+- [x] phone-sized `SpectatorView` feed; operator envelope never reaches the app
+- [x] unobserved route legs remain `unknown`
+- [x] only the exact safety-dispatched reroute becomes an offer, retained only until expiry
+- [x] relative simulation freshness translated once into wall-clock time at the API boundary
+- [x] live mobile shell uses the API when configured; demo shell remains an explicit preview
+- [x] app copy/content tests retain D8's next-sixty-seconds budget
 
-## Phase 1 · Venue  ✅
+## Mesh and privacy 🟡
 
-The frame of reference. Must exist before any crowd data means anything.
+- [x] native Expo module/autolinking and Android foreground-service lifecycle
+- [x] bounded dedupe/buffer, Spray-and-Wait defaults and rate-limited urgent flooding
+- [x] seeded shared-topology mesh comparison, opportunistic uplink election and explicit coverage
+- [x] dashboard fan-in dedupes overlapping reports and reconciles one-way clock skew
+- [x] on-device planar-Laplace trace noise with epsilon attached
+- [x] private keyed Bottom-k, coordinated overlap and Chapman participation estimation
+- [ ] representative handset capability and walk tests
+- [ ] real Wi-Fi Aware → Direct → BLE transport behind `MeshNetwork`
+- [ ] Android Kotlin compile on a host with `ANDROID_HOME` (local host has no SDK)
 
-- [x] Overpass client with on-disk cache (never a live call in the demo path)
-- [x] Venue envelope clip — drop the village, keep the circuit
-- [x] Pedestrian graph from `footway · path · steps · pedestrian · service · track`
-- [x] **Barrier subtraction** — `fence · hedge · wall` define where people *cannot* go
-- [x] Semantic labelling from tags
-  - [x] `building=grandstand` → viewing zones
-  - [x] `barrier=gate` → gates
-  - [x] `amenity=parking` → arrival sources
-  - [x] named features → human-readable landmarks
-- [x] Enrichment
-  - [x] f1-circuits outline + coordinate frame (all 23 indexed)
-  - [x] official venue map → capacities, block numbers
-  - [x] event profile → which crossings gate on session state
-- [x] Graph simplification: junctions, edge widths, distances, gradients
-- [x] `circuit validate` — orphan zones, unreachable exits, disconnected gates, bad capacities
-- [x] `circuit render` — SVG that visibly looks like the venue
-- [x] Silverstone pack complete
-- [x] Second circuit imported to prove the pipeline generalises
+## Refinement and agent ✅
 
-## Phase 2 · Loop  ✅
+- [x] trace matching, privacy-debiased width, sustained capacity and staleness audit
+- [x] desire lines are proposals; adoption requires explicit operator application
+- [x] no recapture overlap returns unknown participation
+- [x] statistical self/peer baselines before any LLM narration
+- [x] Anthropic model configurable; supported extended-thinking request and signed block continuity
+- [x] agent has no dispatch operation and creates only safety-reviewed `{command, verdict}` records
 
-- [x] **Simulator**
-  - [x] crowd generator: origins, destinations, speeds, group sizes
-  - [x] movement model: speed falls with density (flow–density inversion)
-  - [x] demand model: viewing areas as scheduled attractors
-  - [x] scenario library: normal, arrival wave, session end, gate closure, crossing shut
-  - [x] seeded clock, pause, speed-up, reset
-  - [x] **counterfactual fork** — cloneable state from the first commit
-- [x] **State engine**
-  - [x] ingestion, validation, dedupe by (source, sequence)
-  - [x] node → zone binding, sliding window
-  - [x] **flow rate in ped/m/min**, LOS band from the Fruin boundaries
-  - [x] velocity, dominant direction, inflow/outflow, queue length
-  - [x] participation model — measured, never a slider
-  - [x] confidence model — node count, freshness, accuracy, stability
-- [x] **Prediction**
-  - [x] feature builder incl. session-state flags
-  - [x] rule baseline — deterministic time-to-threshold, ships first
-  - [x] training data generation from headless scenario runs
-  - [x] GBM model, evaluated against the baseline
-- [x] **Intervention**
-  - [x] candidate generator over divert fractions
-  - [x] what-if runner through the counterfactual fork
-  - [x] scoring: congestion reduction, walk time, capacity, safety, fairness
-  - [x] minimum-effective selector + the comparison table
-- [x] **Routing**
-  - [x] dynamic edge cost
-  - [x] constrained path search with avoid/prefer
-  - [x] ETA gating against time-limited crossings
-  - [x] command builder
-- [x] **Safety** — hard constraints, emergency mode, veto with stated reason
-- [x] **Tick loop** — state → predict → intervene → route → safety → broadcast
+## Evidence still blocked / not claimed
 
-## Phase 3 · Proof  ✅ ⛔ GATE PASSED
+- [ ] Silverstone crossing identities and schedules — `crossings.json` stays empty until sourced
+- [ ] measured live-event participation, capacity, radio range and hop latency
+- [ ] official second deep circuit pack; importer is generic but only Silverstone is committed
+- [ ] current Expo/React Native/Metro advisories (18: 7 moderate, 11 high); no patched compatible
+      dependency chain is published, and npm's suggested fix is an incompatible downgrade
 
-- [x] Metric definitions precise enough to compare across runs
-  - [x] peak flow rate, time above LOS E, bottleneck duration
-  - [x] average and worst-case walk time
-  - [x] emergency egress accessibility
-- [x] A/B harness — same seed, intervention on vs off
-- [x] Sensitivity sweep — participation rate × scenario
-- [x] Before/after report
-- [x] **GATE: a 30% reroute measurably reduces peak flow and bottleneck duration.**
-      If not, stop and revisit before building any interface.
+## Standing invariants
 
-## Phase 4 · Surfaces  ✅ *(needs-work)*
-
-- [ ] Shared: generated TS types, token layer
-- [ ] **Operator console** — dense, complete, well organised
-  - [ ] live venue map with individual nodes
-  - [ ] zone table, sortable, monospaced
-  - [ ] prediction panel: time-to-event as the headline, confidence beside the claim
-  - [ ] intervention panel showing rejected options with their costs
-  - [ ] race control feed
-  - [ ] metrics strip
-  - [ ] unobserved regions render as unknown, never as empty
-- [ ] **Spectator app** — simple, beautiful, one decision per screen
-  - [ ] where you are, where you're going, how many minutes
-  - [ ] clear / slowing / backing up, in words
-  - [ ] crossing open-close times
-  - [ ] redirect with its honest cost stated before the button
-  - [ ] willing to say *wait*
-  - [ ] no density figures, no model talk, no account
-- [ ] D8 content budget enforced on every app addition
-
-## Phase 5 · Real data  ✅ *(needs-work)*
-
-- [ ] Wi-Fi Aware capability check on the actual demo phones ← do first, 30 min
-- [ ] Expo dev client shell, prebuild, EAS config
-- [ ] Location engine, map matching to the venue frame
-- [ ] Telemetry composer, rotating anonymous IDs
-- [ ] **Native Kotlin `MeshNetwork` module**
-  - [ ] the 7-method interface — the JS/native boundary
-  - [ ] Wi-Fi Aware → Wi-Fi Direct → BLE, behind the interface
-  - [ ] **foreground service** so relay survives screen-off
-  - [ ] Spray-and-Wait for state traffic
-  - [ ] PRoPHET for uplink-bound traffic
-  - [ ] rate-limited epidemic for alerts only
-  - [ ] TTL, sequence dedupe, local aggregation
-- [ ] Opportunistic uplink election; dashboard fans in over N uplinks
-- [ ] On-device geo-indistinguishability before anything is stored
-- [ ] Coverage metric — which regions are currently observed
-- [ ] Degraded sync and reconciliation on reconnect
-
-## Phase 6 · Refinement  ✅ *(needs-work)*
-
-- [ ] Trace refinement written back to packs
-  - [ ] desire-line discovery — paths no map has
-  - [ ] measured capacity replacing assumed
-  - [ ] staleness detection against OSM
-  - [ ] per-edge confidence and sample count
-- [ ] Order-invariant private sketches for unique counting
-- [ ] Capture–recapture participation estimator
-- [ ] Crowd Ops Agent — tool layer, reasoning loop, explanation, memory
-- [ ] Insight engine — statistical anomaly detection, then LLM narration
-- [ ] Agent recommendations pass through safety like any other proposal
-
----
-
-## Standing invariants — checked every merge
-
-- [ ] No constant absent from [`standards.md`](./standards.md)
-- [ ] App content budget (D8) — changes where feet go in the next 60 seconds, or it's console
-- [ ] Simulator and phone telemetry byte-identical
-- [ ] Nothing reaches the mesh without passing safety
-- [ ] The LLM never computes a route, a density, or a prediction
-- [ ] Every simulation run seeded and reproducible
-- [ ] A circuit swap requires no code change
-
-## Documents still to write
-
-- [ ] `docs/protocol.md` — mesh spec, before Phase 5 mesh work
-- [ ] `docs/demo.md` — run-of-show, after the demo feed is chosen
-
-
----
-
-## What the build changed about the plan
-
-Four defects and one modelling error surfaced only by running the thing. Each is
-recorded where it belongs (decisions.md, standards.md), but collected here
-because they are the argument for building the gate before the interfaces:
-
-1. Zone area was the mean incident edge length, so a 3 m access stub defined a
-   grandstand's area and reported CRITICAL ten seconds into any egress.
-2. Density was uncapped, producing flow rates of 1,630 ped/m/min against a
-   physical maximum of 80.4.
-3. The observation window counted records rather than devices, and a moving
-   device was counted in both the zone it left and the one it entered.
-4. Participation was resampled every tick, so the union over any window
-   approached the whole crowd.
-5. Classification ran on flow, which is non-monotonic — and Fruin's LOS E/F
-   boundary turned out to be unreachable under this fundamental diagram.
-
-All five produced *plausible* numbers. None would have been caught by a
-dashboard, which is why Phase 3 came before Phase 4.
+- [x] assumptions are registered or labelled
+- [x] core performs no I/O
+- [x] density is the sole operational classifier
+- [x] simulator and phone use one `CrowdNode` contract
+- [x] nothing dispatches without `SafetyEngine.review()`
+- [x] the LLM never computes a route, density or prediction
+- [x] simulations and policy comparisons are seeded
+- [x] circuit selection is data-driven
