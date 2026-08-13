@@ -388,3 +388,61 @@ def sim_ab(
                     "Stop and revisit before building on this.",
                     fg=typer.colors.RED, bold=True)
         raise typer.Exit(code=1)
+
+
+# ----------------------------------------------------------------------- mesh --
+
+mesh_app = typer.Typer(no_args_is_help=True, help="Mesh transport, measured without devices.")
+app.add_typer(mesh_app, name="mesh")
+
+
+@mesh_app.command("compare")
+def mesh_compare(
+    ticks: int = typer.Option(200, help="simulated ticks"),
+    nodes: int = typer.Option(150, help="participating devices"),
+    span: float = typer.Option(400.0, help="side of the area they move in, metres"),
+    connectivity: float = typer.Option(0.05, help="fraction of handsets with a data plan"),
+    seed: int = typer.Option(7),
+) -> None:
+    """Compare the three routing policies on one topology.
+
+    The justification for not flooding, as a number rather than an argument:
+    copies-per-message is what a phone pays in battery, and it is the column that
+    separates the policies. Delivery ratio barely does.
+    """
+    from crowdflow_core.mesh import MeshSimConfig, MeshSimulator
+
+    config = MeshSimConfig.crowd(
+        seed=seed, node_count=nodes, span_m=span, data_plan_fraction=connectivity
+    )
+    metrics = MeshSimulator(config).run(ticks)
+
+    typer.secho("Mesh routing by traffic class", bold=True)
+    typer.echo(
+        f"  {nodes} devices, {span:.0f} m square, {connectivity:.0%} with a data plan, "
+        f"seed {seed}, {ticks} ticks\n"
+    )
+    header = f"  {'class':<8}{'policy':<24}{'delivery':>9}{'hops':>7}{'copies/msg':>12}{'lag s':>8}"
+    typer.echo(header)
+    typer.echo(f"  {'-' * (len(header) - 2)}")
+    for name, policy, delivery, hops, copies, lag in metrics.rows():
+        typer.echo(f"  {name:<8}{policy:<24}{delivery:>9.3f}{hops:>7.2f}{copies:>12.1f}{lag:>8.1f}")
+
+    typer.echo()
+    typer.echo(f"  flooding costs {metrics.epidemic_cost_ratio:.0f}x the radio traffic of "
+               "a bounded copy count")
+    typer.echo(f"  uplinks elected per tick   {metrics.mean_uplinks:.1f} "
+               f"(of {metrics.mean_online_nodes:.1f} handsets online)")
+    typer.echo(f"  nodes within reach of one  {metrics.mean_coverage:.0%}")
+    typer.echo(f"  observation age on arrival {metrics.mean_observation_age_s:.0f}s mean, "
+               f"{metrics.p95_observation_age_s:.0f}s p95")
+    typer.echo(f"  reports per observation    {metrics.uplink_redundancy:.2f} "
+               "(deduplicated by source and sequence)")
+
+    if metrics.mean_coverage < 1.0:
+        typer.echo()
+        typer.secho(
+            f"  {1 - metrics.mean_coverage:.0%} of nodes were out of reach of any uplink on "
+            "average.\n  Those regions are unheard, not quiet — they must render as unknown.",
+            fg=typer.colors.YELLOW,
+        )
