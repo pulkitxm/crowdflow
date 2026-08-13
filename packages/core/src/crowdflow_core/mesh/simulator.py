@@ -8,19 +8,15 @@ measure the three things the policy choice rests on.
 
 Two modelling decisions worth defending:
 
-  * **Random waypoint mobility** (Johnson & Maltz 1996; Camp et al. 2002), the
-    standard mobility model in the DTN literature these protocols come from.
-    Using the venue simulator's crowd instead would be more realistic and less
-    comparable — the published delivery-ratio results this implementation is
-    checked against are all on random waypoint. The agent simulator is where
-    realism lives; this is where the protocol is falsified.
+  * **Clustered random waypoint mobility.** Initial homes are clustered and
+    waypoints are either venue-wide or bounded around those homes. This is not
+    the uniform literature baseline; the clustering is what gives encounter
+    history information to learn, and the distinction is stated in config.
 
-  * **Cell saturation is modelled, not assumed away.** A node's data connection
-    fails when the local crowd density is at or past capacity, using the SAME
-    density band as the rest of the system. That is the actual argument for a
-    floating gateway: the connectivity a fixed gateway depends on disappears
-    precisely where the crowd it is watching gets dangerous. Turn `saturating`
-    off and the mesh looks much better than it has any right to.
+  * **Cell saturation is an explicit scenario input.** At the standards-derived
+    density the 150-node design case cannot trigger it arithmetically, so the
+    default is a prior, not a claimed effect. Tests that study saturation lower
+    the configured threshold visibly; reported default runs do not say it helped.
 
 Seeded end to end (invariant 6): same seed, same node placement, same waypoints,
 same encounters, same numbers.
@@ -128,12 +124,11 @@ class MeshSimConfig:
     def crowd(cls, **overrides) -> MeshSimConfig:
         """The design case, and the one the reported numbers come from.
 
-        Sparse connectivity (5% of handsets with a usable data plan, further
-        reduced by saturation), a clustered crowd, and spectators who roam a
-        fifth of the neighbourhood rather than all of it. Defaults elsewhere in
-        this dataclass describe the LITERATURE case — uniform random waypoint —
-        which exists so results can be compared with published DTN work, not
-        because a crowd looks like that.
+        Sparse connectivity (5% of handsets with a usable data plan), a
+        clustered crowd, and spectators who roam a
+        fifth of the neighbourhood rather than all of it. The base dataclass
+        uses venue-wide waypoints but still starts from clustered homes; it is
+        not labelled as a uniform literature baseline.
         """
         settings: dict = {
             "span_m": 400.0,
@@ -198,7 +193,7 @@ class MeshSimulator:
         self.metrics = MeshRunMetrics(
             by_class={
                 MeshClass.STATE: PolicyMetrics(MeshClass.STATE, "spray-and-wait"),
-                MeshClass.UPLINK: PolicyMetrics(MeshClass.UPLINK, "prophet"),
+                MeshClass.UPLINK: PolicyMetrics(MeshClass.UPLINK, "spray-and-wait"),
                 MeshClass.URGENT: PolicyMetrics(MeshClass.URGENT, "rate-limited-epidemic"),
             }
         )
@@ -345,8 +340,12 @@ class MeshSimulator:
             coverage(self.adjacency, election.uplinks, max_hops=self.config.ttl).node_fraction
         )
 
+        elected = set(election.uplinks)
         for node in self.nodes:
-            if not node.uplinked:
+            # Election must affect uploads, not merely the reported count. One
+            # winner per island drains the overlapping view; every online phone
+            # uploading made election decorative and inflated redundancy.
+            if node.id not in elected or not node.uplinked:
                 continue
             already = self._drained.get(node.id, 0)
             fresh = node.uplinked[already:]

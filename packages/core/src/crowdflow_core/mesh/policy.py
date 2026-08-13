@@ -10,14 +10,12 @@ the message says what it is, and the class chooses what it costs:
           battery, and the class is defined as loss-tolerant: one lost zone
           update is one sample missing from an aggregate over thousands.
 
-  UPLINK  PRoPHET. The destination is not an address, it is ANY node with
-          internet — and PRoPHET's delivery predictability is already the
-          quantity "how likely is this node to reach the destination". Point it
-          at a sentinel destination meaning 'the internet' and routing toward
-          connectivity is not bolted on, it is what the algorithm computes. A
-          node that is online sets its own predictability to certainty; everyone
-          who meets it inherits a fraction of that through the transitivity term,
-          and the gradient that results points at connectivity.
+  UPLINK  Spray-and-Wait too. PRoPHET is a compelling fit for a destination
+          that means "any internet-connected node", but the branch's seeded
+          design case measured 0.971 delivery / 53.7 copies per message against
+          blind spray's 0.965 / 17.1. Six parts in a thousand of delivery did not
+          justify 3.1x the battery traffic, and the sign flipped on some seeds.
+          The class remains separate so deployment evidence can revisit this.
 
   URGENT  Epidemic, rate limited. Affordable precisely because it is rare, and
           the rate limit is what keeps 'rare' true when something misbehaves.
@@ -148,8 +146,14 @@ class RoutingPolicy(ABC):
     ) -> Transmission | None:
         """Return a Transmission to send, or None to keep carrying."""
 
-    def commit(self, carried: Carried, transmission: Transmission, local: MeshNode) -> None:
-        """Account for a transmission that actually happened."""
+    def commit(
+        self,
+        carried: Carried,
+        transmission: Transmission,
+        local: MeshNode,
+        now: float,
+    ) -> None:
+        """Account for a transmission that actually happened at ``now``."""
 
 
 class SprayAndWait(RoutingPolicy):
@@ -177,7 +181,7 @@ class SprayAndWait(RoutingPolicy):
             return Transmission(copies=1) if peer.online else None
         return Transmission(copies=carried.copies // 2)
 
-    def commit(self, carried, transmission, local):
+    def commit(self, carried, transmission, local, now):
         carried.copies = max(1, carried.copies - transmission.copies)
 
 
@@ -199,14 +203,11 @@ class Prophet(RoutingPolicy):
     internet" and connectivity is scarce: an undelivered message survives its
     whole TTL and spawns a fresh copy at every encounter with a marginally better
     peer. TTL bounds how FAR a message travels, not how many times it is
-    duplicated. Measured at 5% connectivity, 150 nodes, 200 ticks:
-
-        GRTR alone        delivery 0.987    733 copies/message
-        GRTR + budget     delivery 0.978     49 copies/message
-
-    Fifteen times the radio traffic for nine parts in a thousand of delivery.
-    `copy_budget=False` restores literal GRTR, kept because that comparison is
-    the evidence for this paragraph and should stay re-runnable.
+    duplicated. Historical measurements found hundreds of copies per message
+    for GRTR against tens for the bounded variant, for negligible delivery gain.
+    The original table had no recorded seed and went stale, so it is deliberately
+    not repeated here. ``copy_budget=False`` keeps literal GRTR reproducible;
+    current claims must come from the seeded CLI, not this docstring.
 
     With the budget on, this is Spray and Focus (Spyropoulos et al. 2007) using
     PRoPHET's predictability as the focus utility: binary spraying bounds how
@@ -222,13 +223,9 @@ class Prophet(RoutingPolicy):
     custody transfer measured 0.72 delivery against blind spraying's 0.95, and
     it did help. The actual cause was elsewhere (see `MeshNode.has_seen`): a copy
     handed to a peer that then refused it on dedupe was dropped by the sender,
-    so the message simply ceased to exist. With that fixed the curve flattens
-    and the knob stops paying for itself:
-
-        retain=0   delivery 0.978     49 copies/message
-        retain=1   delivery 0.980     76 copies/message
-        retain=2   delivery 0.982    110 copies/message
-        retain=3   delivery 0.987    151 copies/message
+    so the message simply ceased to exist. With that fixed the measured curve
+    flattened and the knob stopped paying for itself. The stale, seedless table
+    is removed; reproduce any retention comparison before citing it.
     """
 
     traffic_class = MeshClass.UPLINK
@@ -278,7 +275,7 @@ class Prophet(RoutingPolicy):
             focus_forwards=carried.focus_forwards + 1 if retaining else carried.focus_forwards
         )
 
-    def commit(self, carried, transmission, local):
+    def commit(self, carried, transmission, local, now):
         if not self.copy_budget:
             return
         remaining = carried.copies - transmission.copies
@@ -317,16 +314,21 @@ class RateLimitedEpidemic(RoutingPolicy):
             return None
         return Transmission()
 
-    def commit(self, carried, transmission, local):
-        local.relay_budget.take(local.clock)
+    def commit(self, carried, transmission, local, now):
+        local.relay_budget.take(now)
 
 
 def default_policies() -> dict[MeshClass, RoutingPolicy]:
-    """The class -> policy table. One place, so a class cannot silently fall
-    back to flooding by being forgotten."""
+    """The measured class -> policy table.
+
+    UPLINK deliberately uses the same bounded policy as STATE. The standalone
+    ``Prophet`` implementation stays available for reproducible comparison, but
+    it is not a production default until it materially beats blind spray per
+    radio transmission rather than merely matching delivery.
+    """
     return {
         MeshClass.STATE: SprayAndWait(),
-        MeshClass.UPLINK: Prophet(),
+        MeshClass.UPLINK: SprayAndWait(),
         MeshClass.URGENT: RateLimitedEpidemic(),
     }
 

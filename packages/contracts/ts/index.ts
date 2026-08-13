@@ -548,7 +548,10 @@ export interface InterventionCandidate {
  *
  * Flooding everything is epidemic routing: highest delivery, but buffer
  * exhaustion and battery drain, which is fatal for phones in pockets.
- * See plan/methods.md section 5.
+ * See plan/methods.md section 5. The UPLINK recommendation was deliberately
+ * revised after measurement: PRoPHET bought only 0.6 percentage points of
+ * delivery for about 3.1x the radio traffic, so both loss-tolerant classes now
+ * use the bounded policy until encounter predictability proves a material gain.
  */
 export type MeshClass = "state" | "uplink" | "urgent";
 

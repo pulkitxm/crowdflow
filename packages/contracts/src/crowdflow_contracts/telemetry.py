@@ -109,19 +109,22 @@ class MeshClass(str, Enum):
 
     Flooding everything is epidemic routing: highest delivery, but buffer
     exhaustion and battery drain, which is fatal for phones in pockets.
-    See plan/methods.md section 5.
+    See plan/methods.md section 5. The UPLINK recommendation was deliberately
+    revised after measurement: PRoPHET bought only 0.6 percentage points of
+    delivery for about 3.1x the radio traffic, so both loss-tolerant classes now
+    use the bounded policy until encounter predictability proves a material gain.
     """
 
     STATE = "state"
     """High volume, loss-tolerant -> Spray-and-Wait with a small copy bound."""
 
     UPLINK = "uplink"
-    """Must reach the dashboard -> PRoPHET delivery predictability.
+    """Must reach any connected node -> bounded Spray-and-Wait.
 
-    Under D7 the destination is not an address but *any node with internet*, and
-    PRoPHET's encounter-history metric is exactly 'how likely is this node to
-    reach connectivity'. The protocol's native metric and the opportunistic
-    gateway model are the same quantity.
+    D7 makes the destination a property rather than an address. PRoPHET is an
+    elegant theoretical fit, but the branch's own seeded comparison did not
+    justify its battery cost. Keep the class separate so a measured deployment
+    can revisit the policy without changing the wire format.
     """
 
     URGENT = "urgent"

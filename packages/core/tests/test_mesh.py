@@ -44,11 +44,13 @@ from crowdflow_core.mesh import (
     MeshSimulator,
     MessageBuffer,
     Prophet,
+    SprayAndWait,
     TokenBucket,
     UplinkReport,
     aggregate_density,
     components,
     coverage,
+    default_policies,
     elect_uplinks,
     encounter,
     expected_displacement_m,
@@ -356,16 +358,21 @@ def test_spray_and_wait_respects_its_copy_bound():
     assert 0 < transmissions <= limit
 
 
-def test_prophet_stays_bounded_too_because_of_the_copy_budget():
-    """L copies, each moving at most TTL hops, is the analytic ceiling. Without
-    the budget there is no ceiling at all: GRTR keeps its copy every time it
-    forwards, so an undelivered message duplicates for its whole lifetime."""
+def test_uplink_defaults_to_the_measured_bounded_policy():
+    """PRoPHET remains a benchmark, not a production default.
+
+    The seeded branch comparison bought only 0.6 percentage points of delivery
+    for roughly 3.1x the radio traffic, so UPLINK must default to blind spray
+    until deployment evidence changes that trade.
+    """
+    defaults = default_policies()
+    assert isinstance(defaults[MeshClass.UPLINK], SprayAndWait)
+
     transmissions, population = _single_message_run(MeshClass.UPLINK)
-    ceiling = spray_copies_for(population) * MESH_TTL_MAX
-    assert 0 < transmissions <= ceiling
+    assert 0 < transmissions <= 2 * spray_copies_for(population)
 
     unbounded, _ = _single_message_run(MeshClass.UPLINK, policy=Prophet(copy_budget=False))
-    assert unbounded > ceiling
+    assert unbounded > spray_copies_for(population) * MESH_TTL_MAX
 
 
 def test_epidemic_costs_far_more_than_the_bounded_policies():
@@ -693,9 +700,11 @@ def test_coverage_is_reported_as_partial_rather_than_assumed_complete():
     assert 0.0 < metrics.mean_coverage < 1.0
 
 
-def test_overlapping_uplinks_are_deduplicated_by_the_dashboard():
-    metrics = MeshSimulator(MeshSimConfig.crowd(seed=4)).run(60)
-    assert metrics.uplink_redundancy > 1.0
+def test_election_limits_uploads_to_one_winner_per_island():
+    sim = MeshSimulator(MeshSimConfig.crowd(seed=4))
+    metrics = sim.run(60)
+    assert metrics.uplink_redundancy >= 1.0
+    assert metrics.mean_uplinks < metrics.mean_online_nodes
     for class_metrics in metrics.by_class.values():
         assert class_metrics.delivery_ratio <= 1.0
 
