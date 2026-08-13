@@ -9,5 +9,4 @@ dist/
 uv.lock
 circuits/*/raw/
 circuits/_geometry/
-plan/
 mockups/
