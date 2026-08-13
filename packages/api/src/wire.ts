@@ -1,7 +1,7 @@
 /** Authored TypeScript wire contracts for the operator API. */
 
-// Contract types are imported, never restated: one definition of a
-// ZoneState exists and it is generated from the Pydantic model.
+// Contract types are imported, never restated: one authored TypeScript
+// definition of ZoneState serves every runtime and UI.
 import type { Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, Edge, Forecast, InterventionCandidate, LOSBand, Position, Provenance, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "@crowdflow/contracts";
 export type { Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, Edge, Forecast, InterventionCandidate, LOSBand, Position, Provenance, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, Sourced, VenueState, Zone, ZoneKind, ZoneState };
 
@@ -45,7 +45,7 @@ export interface CircuitSummary {
  *
  * The console shows a word and a number for every state; this is where the
  * numbers come from. Serving them rather than hard-coding them in TypeScript
- * is the whole point — change a constant in `standards.py` and the legend on
+ * is the whole point — change a constant in `contracts/src/standards.ts` and the legend on
  * the wall moves with it.
  */
 export interface BandBoundary {
@@ -238,7 +238,7 @@ export interface TickEnvelope {
   state: VenueState;
   forecasts?: Forecast[];
   /**
-   * zone ids whose forecast passes Forecast.is_actionable. Sent because that bar is a property on the contract rather than a serialised field, and a console that restated it in TypeScript would be a second copy of a threshold — the exact thing standards.py exists to prevent.
+   * zone ids whose forecast passes the authored contract judgement. Sent so the console never restates a threshold.
    */
   actionable?: string[];
   /**

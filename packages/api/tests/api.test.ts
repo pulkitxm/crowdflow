@@ -21,6 +21,14 @@ describe('TypeScript API adapter', () => {
     expect(standards.bands.map((band: any) => band.label)).toEqual(['NOMINAL', 'BUILDING', 'CRITICAL']);
   });
 
+  it('serves a wall-clock spectator conclusion without exposing the envelope', async () => {
+    server = new CrowdFlowServer(root); const session = server.startSession({ population: 100, intervene: false }); session.control('step'); await server.listen(0);
+    const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;
+    const origin = session.option.origins![0]!; const view = await get(port, `/api/spectator/view?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(session.option.destination!)}&now=1700000000`) as any;
+    expect(['walk', 'ahead']).toContain(view.kind); expect(view.now).toBe(1700000000); expect(view.link.updated_at).toBeGreaterThan(1600000000); expect(view.state).toBeUndefined(); expect(view.metrics).toBeUndefined();
+    expect(view.route.steps.some((step: any) => step.way_ahead === 'unknown')).toBe(true);
+  });
+
   it('streams a hello and a real tick over WebSocket', async () => {
     server = new CrowdFlowServer(root); const session = server.startSession({ population: 100, intervene: false }); await server.listen(0);
     const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;

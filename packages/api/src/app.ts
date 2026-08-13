@@ -5,6 +5,7 @@ import { CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_
 import { capacityFlow, egress } from '@crowdflow/core';
 import { availableCircuits, geometry, loadCircuit, summary, type LoadedCircuit } from './packs.js';
 import { ScenarioSession } from './session.js';
+import { SpectatorFeed } from './spectator.js';
 import type { ScenarioOption, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
 
 export function standardsReport(): StandardsReport {
@@ -17,6 +18,7 @@ export function standardsReport(): StandardsReport {
 
 export class CrowdFlowServer {
   session: ScenarioSession | null = null;
+  spectator: SpectatorFeed | null = null;
   private circuits = new Map<string, LoadedCircuit>();
   readonly server = createServer((request, response) => void this.handle(request, response));
   readonly sockets = new WebSocketServer({ noServer: true });
@@ -45,7 +47,7 @@ export class CrowdFlowServer {
     const count = request.population ?? 2500; const seed = request.seed ?? 42;
     const scenario = egress(circuit.graph, origins, exit, count, seed);
     const option: ScenarioOption = { id: 'egress', name: 'Post-race egress', description: scenario.description, origins, destination: exit, origin_names: origins.map((id) => circuit.pack.zones?.[id]?.name ?? id), destination_name: circuit.pack.zones?.[exit]?.name ?? exit };
-    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); return this.session;
+    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); return this.session;
   }
   private load(id: string): LoadedCircuit { const cached = this.circuits.get(id); if (cached) return cached; const circuit = loadCircuit(this.root, id); this.circuits.set(id, circuit); return circuit; }
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -57,6 +59,7 @@ export class CrowdFlowServer {
       const geometryMatch = path.match(/^\/api\/circuits\/([^/]+)\/geometry$/); if (request.method === 'GET' && geometryMatch) return json(response, 200, geometry(this.load(geometryMatch[1]!)));
       const scenarioMatch = path.match(/^\/api\/circuits\/([^/]+)\/scenarios$/); if (request.method === 'GET' && scenarioMatch) { const circuit = this.load(scenarioMatch[1]!); const exit = defaultExit(circuit); const origins = standsReaching(circuit, exit); return json(response, 200, [{ id: 'egress', name: 'Post-race egress', description: 'Everyone leaves at the flag', origins, destination: exit, origin_names: origins.map((id) => circuit.pack.zones?.[id]?.name ?? id), destination_name: circuit.pack.zones?.[exit]?.name ?? exit }]); }
       if (request.method === 'GET' && path === '/api/session') return this.session ? json(response, 200, this.session.info()) : json(response, 404, { detail: 'no session started' });
+      if (request.method === 'GET' && path === '/api/spectator/view') { if (!this.spectator) return json(response, 404, { detail: 'no session started' }); const origin = String(url.query.origin ?? ''); const destination = String(url.query.destination ?? ''); if (!origin || !destination) return json(response, 422, { detail: 'origin and destination are required' }); return json(response, 200, this.spectator.view({ origin, destination, online: url.query.online !== 'false', mesh_peers: Number(url.query.mesh_peers ?? 0), now_unix_s: Number(url.query.now ?? Date.now() / 1000) })); }
       if (request.method === 'POST' && path === '/api/session') return json(response, 200, this.startSession(await body(request)).info());
       if (request.method === 'POST' && path === '/api/session/control') { if (!this.session) return json(response, 404, { detail: 'no session started' }); const command = await body(request) as { action: 'play' | 'pause' | 'step' | 'speed'; speed?: number }; return json(response, 200, this.session.control(command.action, command.speed)); }
       return json(response, 404, { detail: 'not found' });
