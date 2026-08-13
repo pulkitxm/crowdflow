@@ -21,7 +21,14 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field, replace
 
-from crowdflow_contracts import CrowdNode, FREE_FLOW_SPEED_MS, Position
+from crowdflow_contracts import (
+    ASSUMED_FRAGMENT_MAX_DURATION_S,
+    GEOIND_EPSILON_VENUE,
+    CrowdNode,
+    FREE_FLOW_SPEED_MS,
+    Position,
+    TraceFragment,
+)
 
 from ..routing.graph import VenueGraph
 from ..state.flow import speed_at_density
@@ -87,6 +94,8 @@ class Simulation:
         self.reroute_fraction: float = 0.0
         self._next_id = 0
         self.arrived_walk_times: list[float] = []
+        self._trace_points: dict[int, list[tuple[float, Position]]] = {}
+        self._trace_fragment_index: dict[int, int] = {}
 
     # -- population --------------------------------------------------------
 
@@ -259,12 +268,19 @@ class Simulation:
             dens = occupancy.get(agent.edge_id, 1) / max(
                 edge.length_m * edge.width_m.value, 1.0
             )
+            position = Position(x=round(x, 2), y=round(y, 2))
+            trace = self._trace_points.setdefault(agent.id, [])
+            trace.append((self.time_s, position))
+            cutoff = self.time_s - ASSUMED_FRAGMENT_MAX_DURATION_S
+            while len(trace) > 2 and trace[1][0] <= cutoff:
+                trace.pop(0)
+
             out.append(
                 CrowdNode(
                     node_id=f"{agent.id:x}-{epoch}",
                     epoch=epoch,
                     timestamp=self.time_s,
-                    position=Position(x=round(x, 2), y=round(y, 2)),
+                    position=position,
                     speed_ms=round(min(agent.desired_speed_ms, speed_at_density(dens)), 3),
                     heading_deg=0.0,
                     accuracy_m=round(rng.uniform(4.0, 12.0), 1),
@@ -272,6 +288,47 @@ class Simulation:
                 )
             )
         return out
+
+    def emit_trace_fragments(self) -> list[TraceFragment]:
+        """Emit short noised fragments through the real phone privacy path.
+
+        The simulator used to claim it emitted TraceFragment while producing
+        only CrowdNode. This adapter-facing method closes that gap without
+        mixing live state and refinement telemetry: callers choose when to drain
+        fragments, and each agent's fragment id rotates on every drain.
+        """
+        from ..mesh.privacy import FragmentPolicy, noise_fragment
+
+        policy = FragmentPolicy(epsilon=GEOIND_EPSILON_VENUE)
+        fragments: list[TraceFragment] = []
+        for agent_id in sorted(self._trace_points):
+            agent = next((item for item in self.agents if item.id == agent_id), None)
+            if agent is None or not agent.participates:
+                continue
+            points = self._trace_points[agent_id]
+            if len(points) < 2:
+                continue
+            index = self._trace_fragment_index.get(agent_id, 0)
+            rng = random.Random(
+                self.config.seed
+                ^ (agent_id + 1) * 1_000_003
+                ^ index * 97_409
+            )
+            fragments.append(
+                noise_fragment(
+                    [point for _, point in points],
+                    points[0][0],
+                    points[-1][0],
+                    rng,
+                    policy,
+                    fragment_id=f"sim-frag-{agent_id:x}-{index:x}",
+                )
+            )
+            self._trace_fragment_index[agent_id] = index + 1
+            # Retain the endpoint so consecutive fragments meet but cannot be
+            # linked by an id. The per-fragment id rotates regardless.
+            self._trace_points[agent_id] = [points[-1]]
+        return fragments
 
     # -- what-if -----------------------------------------------------------
 
@@ -290,6 +347,10 @@ class Simulation:
         clone.prefer = set(self.prefer)
         clone.agents = [replace(a, path=list(a.path)) for a in self.agents]
         clone.arrived_walk_times = list(self.arrived_walk_times)
+        clone._trace_points = {
+            agent_id: list(points) for agent_id, points in self._trace_points.items()
+        }
+        clone._trace_fragment_index = dict(self._trace_fragment_index)
         return clone
 
     @property
