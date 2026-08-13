@@ -237,7 +237,10 @@ export class ZoneTable {
     // Unknown rows carry no per-tick data, so they are rebuilt only when the set
     // itself changes. Re-rendering 1,800 identical rows every second would cost
     // more than everything else on the screen put together.
-    const signature = `${unknown.length}:${unknown[0]?.id ?? ""}:${unknown[unknown.length - 1]?.id ?? ""}`;
+    // The full id set is the state. Length plus endpoints missed churn in the
+    // middle and left a stale unknown list on the one panel devoted to honesty
+    // about missing data.
+    const signature = unknown.map((row) => row.id).sort().join("\u0000");
     if (signature === this.unknownSignature) return;
     this.unknownSignature = signature;
     clear(this.unknownBody);

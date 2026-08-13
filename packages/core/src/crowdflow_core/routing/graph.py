@@ -148,7 +148,6 @@ class VenueGraph:
         e = self.pack.edges[edge_id]
         state = (states or {}).get(e.destination) or (states or {}).get(e.source)
 
-        speed = MIN_SPEED_MS
         band = LOSBand.NOMINAL
         if state is not None:
             speed = max(MIN_SPEED_MS, state.mean_speed_ms)
@@ -170,13 +169,17 @@ class VenueGraph:
 
     # -- search ------------------------------------------------------------
 
-    def _heuristic(self, a: str, b: str) -> float:
-        za, zb = self.pack.zones.get(a), self.pack.zones.get(b)
-        if not za or not zb:
-            return 0.0
-        d = math.dist((za.position.x, za.position.y), (zb.position.x, zb.position.y))
-        # Optimistic: free-flow walk on the straight line, so A* stays admissible.
-        return d / FREE_FLOW_SPEED_MS
+    @staticmethod
+    def _heuristic(_a: str, _b: str) -> float:
+        """Dijkstra's zero heuristic.
+
+        Preferred edges are discounted below free-flow travel time, so the old
+        straight-line/free-speed heuristic could overestimate the remaining
+        cost and make A* close a suboptimal node permanently. Zero is admissible
+        under every advisory and keeps correctness independent of a presentation
+        preference.
+        """
+        return 0.0
 
     def route(
         self,
@@ -185,12 +188,11 @@ class VenueGraph:
         states: dict[str, ZoneState] | None = None,
         avoid: set[str] | None = None,
         prefer: set[str] | None = None,
-        depart_at: float = 0.0,
         crossing_deadlines: dict[str, float] | None = None,
     ) -> RouteResult:
         """A* over dynamic cost, with the ETA gate on time-limited edges.
 
-        crossing_deadlines maps edge_id -> seconds from depart_at after which
+        crossing_deadlines maps edge_id -> seconds from departure after which
         that edge closes. A path is rejected if the walker would arrive at an
         edge after it shuts: routing someone toward a crossing that closes before
         they get there manufactures the queue it was trying to prevent.

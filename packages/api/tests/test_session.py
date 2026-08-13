@@ -167,10 +167,20 @@ def test_feed_reports_transitions_not_conditions(toy_circuit, toy_option):
 
 def test_first_sight_of_a_quiet_zone_is_not_an_event(toy_circuit, toy_option):
     session = build_session(toy_circuit, toy_option)
-    first = run(session, 1)[0]
-    assert not [
-        e for e in first.events if e.kind is EventKind.BAND and "NOMINAL" in e.message
-    ]
+    first_nominal = None
+    for envelope in run(session, 30):
+        nominal = [
+            zone_id
+            for zone_id, state in envelope.state.zones.items()
+            if state.band is LOSBand.NOMINAL
+        ]
+        if nominal:
+            first_nominal = (envelope, nominal)
+            break
+    assert first_nominal is not None, "fixture must actually observe a nominal zone"
+    envelope, nominal = first_nominal
+    announced = {event.zone_id for event in envelope.events if event.kind is EventKind.BAND}
+    assert announced.isdisjoint(nominal)
 
 
 def test_losing_a_busy_zone_is_reported(toy_circuit, toy_option):
@@ -258,6 +268,20 @@ def test_step_and_pause_do_not_advance_the_clock(toy_circuit, toy_option):
     session.control(ControlAction.PAUSE)
     assert session.status is SessionStatus.PAUSED
     assert session.sim.time_s == 0.0
+
+
+def test_control_events_reach_the_next_live_envelope(toy_circuit, toy_option):
+    session = build_session(toy_circuit, toy_option)
+    session.control(ControlAction.SPEED, 4.0)
+    envelope = session.tick_once()
+    assert any("clock set to 4x" in event.message for event in envelope.events)
+
+
+def test_a_finished_session_refuses_an_extra_step(toy_circuit, toy_option):
+    session = build_session(toy_circuit, toy_option)
+    session.status = SessionStatus.FINISHED
+    session.control(ControlAction.STEP)
+    assert not session._step_requested
 
 
 def test_speed_requires_a_speed(toy_circuit, toy_option):
