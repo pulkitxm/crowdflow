@@ -1,16 +1,17 @@
 {
+  "$ref": "#/$defs/Zone",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Position": {
-      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
       "properties": {
         "x": {
           "description": "metres east of venue origin",
-          "title": "X",
           "type": "number"
         },
         "y": {
           "description": "metres north of venue origin",
-          "title": "Y",
           "type": "number"
         }
       },
@@ -18,11 +19,10 @@
         "x",
         "y"
       ],
-      "title": "Position",
       "type": "object"
     },
     "Provenance": {
-      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "description": "Where a value came from. Never decorative — routing weights it.",
       "enum": [
         "osm",
         "venue_map",
@@ -31,50 +31,80 @@
         "measured",
         "assumed"
       ],
-      "title": "Provenance",
       "type": "string"
     },
     "Sourced": {
+      "additionalProperties": false,
       "description": "A value with its provenance and, where applicable, its sample count.",
       "properties": {
-        "value": {
-          "title": "Value",
-          "type": "number"
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
         },
         "samples": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "observations behind a MEASURED value",
-          "title": "Samples"
+          "type": [
+            "number",
+            "null"
+          ]
         },
-        "note": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Note"
+        "value": {
+          "type": "number"
         }
       },
       "required": [
         "value",
         "provenance"
       ],
-      "title": "Sourced",
+      "type": "object"
+    },
+    "Zone": {
+      "additionalProperties": false,
+      "description": "A named place. Imported from OSM tags where possible.",
+      "properties": {
+        "capacity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ZoneKind"
+        },
+        "name": {
+          "description": "human-readable; the app uses this",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "osm_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "position"
+      ],
       "type": "object"
     },
     "ZoneKind": {
@@ -87,64 +117,7 @@
         "parking",
         "exit"
       ],
-      "title": "ZoneKind",
       "type": "string"
     }
-  },
-  "description": "A named place. Imported from OSM tags where possible.",
-  "properties": {
-    "id": {
-      "title": "Id",
-      "type": "string"
-    },
-    "kind": {
-      "$ref": "#/$defs/ZoneKind"
-    },
-    "name": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "human-readable; the app uses this",
-      "title": "Name"
-    },
-    "position": {
-      "$ref": "#/$defs/Position"
-    },
-    "capacity": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Sourced"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
-    },
-    "osm_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Osm Id"
-    }
-  },
-  "required": [
-    "id",
-    "kind",
-    "position"
-  ],
-  "title": "Zone",
-  "type": "object"
+  }
 }

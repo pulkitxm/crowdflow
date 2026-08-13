@@ -1,7 +1,68 @@
 {
+  "$ref": "#/$defs/Edge",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Edge": {
+      "additionalProperties": false,
+      "description": "A walkable connection.\n\nwidth_m matters more than it looks: flow rate is per metre of width, so the LOS band cannot be computed without it.",
+      "properties": {
+        "bidirectional": {
+          "type": "boolean"
+        },
+        "capacity_flow_ped_m_min": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "observed peak sustained flow per metre of width; never invented"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "free_speed_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "observed where available, else the standards prior"
+        },
+        "gradient": {
+          "description": "rise over run; affects walking speed",
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "length_m": {
+          "type": "number"
+        },
+        "source": {
+          "type": "string"
+        },
+        "width_m": {
+          "$ref": "#/$defs/Sourced",
+          "description": "required — LOS flow is per metre of width"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "destination",
+        "length_m",
+        "width_m"
+      ],
+      "type": "object"
+    },
     "Provenance": {
-      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "description": "Where a value came from. Never decorative — routing weights it.",
       "enum": [
         "osm",
         "venue_map",
@@ -10,119 +71,37 @@
         "measured",
         "assumed"
       ],
-      "title": "Provenance",
       "type": "string"
     },
     "Sourced": {
+      "additionalProperties": false,
       "description": "A value with its provenance and, where applicable, its sample count.",
       "properties": {
-        "value": {
-          "title": "Value",
-          "type": "number"
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
         },
         "samples": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "observations behind a MEASURED value",
-          "title": "Samples"
+          "type": [
+            "number",
+            "null"
+          ]
         },
-        "note": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Note"
+        "value": {
+          "type": "number"
         }
       },
       "required": [
         "value",
         "provenance"
       ],
-      "title": "Sourced",
       "type": "object"
     }
-  },
-  "description": "A walkable connection.\n\nwidth_m matters more than it looks: flow rate is per metre of width, so the\nLOS band cannot be computed without it.",
-  "properties": {
-    "id": {
-      "title": "Id",
-      "type": "string"
-    },
-    "source": {
-      "title": "Source",
-      "type": "string"
-    },
-    "destination": {
-      "title": "Destination",
-      "type": "string"
-    },
-    "length_m": {
-      "exclusiveMinimum": 0,
-      "title": "Length M",
-      "type": "number"
-    },
-    "width_m": {
-      "$ref": "#/$defs/Sourced",
-      "description": "required \u2014 LOS flow is per metre of width"
-    },
-    "gradient": {
-      "default": 0.0,
-      "description": "rise over run; affects walking speed",
-      "title": "Gradient",
-      "type": "number"
-    },
-    "bidirectional": {
-      "default": true,
-      "title": "Bidirectional",
-      "type": "boolean"
-    },
-    "free_speed_ms": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Sourced"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "observed where available, else the standards prior"
-    },
-    "capacity_flow_ped_m_min": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Sourced"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "observed peak sustained flow per metre of width; never invented"
-    }
-  },
-  "required": [
-    "id",
-    "source",
-    "destination",
-    "length_m",
-    "width_m"
-  ],
-  "title": "Edge",
-  "type": "object"
+  }
 }

@@ -8,6 +8,7 @@
     "./standards": "./src/standards.ts"
   },
   "scripts": {
+    "codegen": "node --import tsx scripts/generate.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

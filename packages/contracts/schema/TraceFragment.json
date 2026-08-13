@@ -1,16 +1,17 @@
 {
+  "$ref": "#/$defs/TraceFragment",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Position": {
-      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
       "properties": {
         "x": {
           "description": "metres east of venue origin",
-          "title": "X",
           "type": "number"
         },
         "y": {
           "description": "metres north of venue origin",
-          "title": "Y",
           "type": "number"
         }
       },
@@ -18,57 +19,49 @@
         "x",
         "y"
       ],
-      "title": "Position",
+      "type": "object"
+    },
+    "TraceFragment": {
+      "additionalProperties": false,
+      "description": "A short, noised path segment contributed for venue refinement.\n\nCarries planar Laplace noise applied ON DEVICE before storage (geo-indistinguishability, Andres et al. CCS 2013 -- see plan/methods.md section 4). Fragments are deliberately too short to reconstruct one person's day, and their IDs rotate per fragment.\n\nAccurate in aggregate, deniable individually: map refinement is density estimation over many fragments, and zero-mean noise averages out.",
+      "properties": {
+        "epsilon": {
+          "description": "geo-indistinguishability privacy parameter actually applied",
+          "type": "number"
+        },
+        "fragment_id": {
+          "description": "per-fragment random; never reused, never linkable",
+          "type": "string"
+        },
+        "noise_radius_m": {
+          "description": "radius within which the true path is indistinguishable",
+          "type": "number"
+        },
+        "points": {
+          "description": "noised, in venue frame",
+          "items": {
+            "$ref": "#/$defs/Position"
+          },
+          "type": "array"
+        },
+        "t_end": {
+          "description": "unix seconds",
+          "type": "number"
+        },
+        "t_start": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fragment_id",
+        "points",
+        "t_start",
+        "t_end",
+        "epsilon",
+        "noise_radius_m"
+      ],
       "type": "object"
     }
-  },
-  "description": "A short, noised path segment contributed for venue refinement.\n\nCarries planar Laplace noise applied ON DEVICE before storage\n(geo-indistinguishability, Andres et al. CCS 2013 -- see plan/methods.md\nsection 4). Fragments are deliberately too short to reconstruct one person's\nday, and their IDs rotate per fragment.\n\nAccurate in aggregate, deniable individually: map refinement is density\nestimation over many fragments, and zero-mean noise averages out.",
-  "properties": {
-    "fragment_id": {
-      "description": "per-fragment random; never reused, never linkable",
-      "title": "Fragment Id",
-      "type": "string"
-    },
-    "points": {
-      "description": "noised, in venue frame",
-      "items": {
-        "$ref": "#/$defs/Position"
-      },
-      "minItems": 2,
-      "title": "Points",
-      "type": "array"
-    },
-    "t_start": {
-      "description": "unix seconds",
-      "title": "T Start",
-      "type": "number"
-    },
-    "t_end": {
-      "description": "unix seconds",
-      "title": "T End",
-      "type": "number"
-    },
-    "epsilon": {
-      "description": "geo-indistinguishability privacy parameter actually applied",
-      "exclusiveMinimum": 0,
-      "title": "Epsilon",
-      "type": "number"
-    },
-    "noise_radius_m": {
-      "description": "radius within which the true path is indistinguishable",
-      "exclusiveMinimum": 0,
-      "title": "Noise Radius M",
-      "type": "number"
-    }
-  },
-  "required": [
-    "fragment_id",
-    "points",
-    "t_start",
-    "t_end",
-    "epsilon",
-    "noise_radius_m"
-  ],
-  "title": "TraceFragment",
-  "type": "object"
+  }
 }

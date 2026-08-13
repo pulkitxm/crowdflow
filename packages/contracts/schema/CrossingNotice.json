@@ -1,89 +1,73 @@
 {
+  "$ref": "#/$defs/CrossingNotice",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CrossingClosed": {
+      "additionalProperties": false,
+      "description": "Authored CrowdFlow wire contracts. Runtime derivations live beside them.",
       "properties": {
         "open": {
           "const": false,
-          "title": "Open",
           "type": "boolean"
         },
         "opens_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
           "description": "absolute unix seconds; None when no reopening time is known",
-          "title": "Opens At"
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
         "open",
         "opens_at"
       ],
-      "title": "CrossingClosed",
+      "type": "object"
+    },
+    "CrossingNotice": {
+      "additionalProperties": false,
+      "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CrossingOpen"
+            },
+            {
+              "$ref": "#/$defs/CrossingClosed"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
       "type": "object"
     },
     "CrossingOpen": {
+      "additionalProperties": false,
       "properties": {
+        "closes_at": {
+          "description": "absolute unix seconds; None when no closing time is known",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "open": {
           "const": true,
-          "title": "Open",
           "type": "boolean"
-        },
-        "closes_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "absolute unix seconds; None when no closing time is known",
-          "title": "Closes At"
         }
       },
       "required": [
         "open",
         "closes_at"
       ],
-      "title": "CrossingOpen",
       "type": "object"
     }
-  },
-  "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
-  "properties": {
-    "name": {
-      "title": "Name",
-      "type": "string"
-    },
-    "state": {
-      "discriminator": {
-        "mapping": {
-          "False": "#/$defs/CrossingClosed",
-          "True": "#/$defs/CrossingOpen"
-        },
-        "propertyName": "open"
-      },
-      "oneOf": [
-        {
-          "$ref": "#/$defs/CrossingOpen"
-        },
-        {
-          "$ref": "#/$defs/CrossingClosed"
-        }
-      ],
-      "title": "State"
-    }
-  },
-  "required": [
-    "name",
-    "state"
-  ],
-  "title": "CrossingNotice",
-  "type": "object"
+  }
 }

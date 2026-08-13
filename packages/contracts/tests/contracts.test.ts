@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { documents, render } from '../scripts/generate.js';
 import {
   bandForDensity,
   completeZoneState,
@@ -49,6 +53,12 @@ describe('load-bearing contract conclusions', () => {
     expect(zone.over_capacity).toBe(true);
     expect(zone.net_flow_per_min).toBe(7);
     expect(zone.confidence.reportable).toBe(true);
+  });
+
+  it('keeps every committed schema byte-identical to authored TypeScript', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..'); const expected = documents();
+    expect(readdirSync(join(root, 'schema')).filter((name) => name.endsWith('.json')).sort()).toEqual(Object.keys(expected).sort());
+    for (const [name, document] of Object.entries(expected)) expect(readFileSync(join(root, 'schema', name), 'utf8'), name).toBe(render(document));
   });
 
   it('only dispatches the exact approved command', () => {

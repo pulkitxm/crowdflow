@@ -1,16 +1,67 @@
 {
+  "$ref": "#/$defs/CrowdNode",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "CrowdNode": {
+      "additionalProperties": false,
+      "description": "One anonymous device's live movement state.\n\nnode_id is a rotating pseudonym, not an identity. It is valid only within its rotation epoch and must never be joined across epochs.",
+      "properties": {
+        "accuracy_m": {
+          "description": "positional 1-sigma; feeds the confidence model",
+          "type": "number"
+        },
+        "epoch": {
+          "description": "ID rotation epoch; IDs are not comparable across epochs",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "degrees clockwise from north",
+          "type": "number"
+        },
+        "node_id": {
+          "description": "rotating pseudonym, valid within its epoch only",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "speed_ms": {
+          "description": "metres per second",
+          "type": "number"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        },
+        "zone_id": {
+          "description": "assigned by the state engine, not self-reported",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "node_id",
+        "epoch",
+        "timestamp",
+        "position",
+        "speed_ms",
+        "heading_deg",
+        "accuracy_m"
+      ],
+      "type": "object"
+    },
     "Position": {
-      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
       "properties": {
         "x": {
           "description": "metres east of venue origin",
-          "title": "X",
           "type": "number"
         },
         "y": {
           "description": "metres north of venue origin",
-          "title": "Y",
           "type": "number"
         }
       },
@@ -18,72 +69,7 @@
         "x",
         "y"
       ],
-      "title": "Position",
       "type": "object"
     }
-  },
-  "description": "One anonymous device's live movement state.\n\nnode_id is a rotating pseudonym, not an identity. It is valid only within its\nrotation epoch and must never be joined across epochs.",
-  "properties": {
-    "node_id": {
-      "description": "rotating pseudonym, valid within its epoch only",
-      "title": "Node Id",
-      "type": "string"
-    },
-    "epoch": {
-      "description": "ID rotation epoch; IDs are not comparable across epochs",
-      "title": "Epoch",
-      "type": "integer"
-    },
-    "timestamp": {
-      "description": "unix seconds",
-      "title": "Timestamp",
-      "type": "number"
-    },
-    "position": {
-      "$ref": "#/$defs/Position"
-    },
-    "speed_ms": {
-      "description": "metres per second",
-      "minimum": 0,
-      "title": "Speed Ms",
-      "type": "number"
-    },
-    "heading_deg": {
-      "description": "degrees clockwise from north",
-      "exclusiveMaximum": 360,
-      "minimum": 0,
-      "title": "Heading Deg",
-      "type": "number"
-    },
-    "accuracy_m": {
-      "description": "positional 1-sigma; feeds the confidence model",
-      "exclusiveMinimum": 0,
-      "title": "Accuracy M",
-      "type": "number"
-    },
-    "zone_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "assigned by the state engine, not self-reported",
-      "title": "Zone Id"
-    }
-  },
-  "required": [
-    "node_id",
-    "epoch",
-    "timestamp",
-    "position",
-    "speed_ms",
-    "heading_deg",
-    "accuracy_m"
-  ],
-  "title": "CrowdNode",
-  "type": "object"
+  }
 }

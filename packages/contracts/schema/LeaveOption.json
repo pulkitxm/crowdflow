@@ -1,5 +1,43 @@
 {
+  "$ref": "#/$defs/LeaveOption",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "LeaveOption": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "recommendation_note": {
+          "description": "engine-authored reason this option is recommended; absent otherwise",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spent": {
+          "type": "string"
+        },
+        "total_s": {
+          "description": "door-to-car seconds, including any wait",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "total_s",
+        "way_ahead",
+        "spent"
+      ],
+      "type": "object"
+    },
     "WayAhead": {
       "enum": [
         "nominal",
@@ -7,53 +45,7 @@
         "critical",
         "unknown"
       ],
-      "title": "WayAhead",
       "type": "string"
     }
-  },
-  "properties": {
-    "id": {
-      "title": "Id",
-      "type": "string"
-    },
-    "label": {
-      "title": "Label",
-      "type": "string"
-    },
-    "total_s": {
-      "description": "door-to-car seconds, including any wait",
-      "minimum": 0,
-      "title": "Total S",
-      "type": "number"
-    },
-    "way_ahead": {
-      "$ref": "#/$defs/WayAhead"
-    },
-    "spent": {
-      "title": "Spent",
-      "type": "string"
-    },
-    "recommendation_note": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "engine-authored reason this option is recommended; absent otherwise",
-      "title": "Recommendation Note"
-    }
-  },
-  "required": [
-    "id",
-    "label",
-    "total_s",
-    "way_ahead",
-    "spent"
-  ],
-  "title": "LeaveOption",
-  "type": "object"
+  }
 }

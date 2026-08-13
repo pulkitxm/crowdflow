@@ -1,7 +1,9 @@
 {
+  "$ref": "#/$defs/Sourced",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Provenance": {
-      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "description": "Where a value came from. Never decorative — routing weights it.",
       "enum": [
         "osm",
         "venue_map",
@@ -10,49 +12,37 @@
         "measured",
         "assumed"
       ],
-      "title": "Provenance",
       "type": "string"
-    }
-  },
-  "description": "A value with its provenance and, where applicable, its sample count.",
-  "properties": {
-    "value": {
-      "title": "Value",
-      "type": "number"
     },
-    "provenance": {
-      "$ref": "#/$defs/Provenance"
-    },
-    "samples": {
-      "anyOf": [
-        {
-          "type": "integer"
+    "Sourced": {
+      "additionalProperties": false,
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "observations behind a MEASURED value",
-      "title": "Samples"
-    },
-    "note": {
-      "anyOf": [
-        {
-          "type": "string"
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
         },
-        {
-          "type": "null"
+        "samples": {
+          "description": "observations behind a MEASURED value",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "value": {
+          "type": "number"
         }
+      },
+      "required": [
+        "value",
+        "provenance"
       ],
-      "default": null,
-      "title": "Note"
+      "type": "object"
     }
-  },
-  "required": [
-    "value",
-    "provenance"
-  ],
-  "title": "Sourced",
-  "type": "object"
+  }
 }

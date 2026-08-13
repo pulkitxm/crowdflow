@@ -1,31 +1,85 @@
 {
+  "$ref": "#/$defs/InterventionCandidate",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
-    "ScoreBreakdown": {
-      "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components\nis an assertion; with them it is an argument.",
+    "InterventionCandidate": {
+      "additionalProperties": false,
+      "description": "One simulated what-if. Rejected candidates are kept and displayed.",
       "properties": {
-        "congestion_reduction": {
-          "title": "Congestion Reduction",
+        "candidate_id": {
+          "type": "string"
+        },
+        "description": {
+          "description": "plain language, e.g. 'Divert 30% of Vale to Gate 4'",
+          "type": "string"
+        },
+        "divert_fraction": {
+          "description": "0.0 is the do-nothing baseline",
           "type": "number"
         },
-        "walk_time_cost": {
-          "title": "Walk Time Cost",
+        "from_zone": {
+          "type": "string"
+        },
+        "projected_bottleneck_duration_s": {
           "type": "number"
         },
+        "projected_peak_density_persons_m2": {
+          "description": "persons/m2 at the projected peak",
+          "type": "number"
+        },
+        "projected_walk_time_delta_s": {
+          "description": "positive means longer. Always shown beside the benefit, never hidden.",
+          "type": "number"
+        },
+        "score": {
+          "$ref": "#/$defs/ScoreBreakdown"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "to_zone": {
+          "type": "string"
+        },
+        "via": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "description",
+        "divert_fraction",
+        "from_zone",
+        "to_zone",
+        "projected_peak_density_persons_m2",
+        "projected_walk_time_delta_s",
+        "projected_bottleneck_duration_s",
+        "score"
+      ],
+      "type": "object"
+    },
+    "ScoreBreakdown": {
+      "additionalProperties": false,
+      "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components is an assertion; with them it is an argument.",
+      "properties": {
         "capacity_headroom": {
-          "title": "Capacity Headroom",
           "type": "number"
         },
-        "safety_margin": {
-          "title": "Safety Margin",
+        "congestion_reduction": {
           "type": "number"
         },
         "fairness": {
-          "title": "Fairness",
+          "type": "number"
+        },
+        "safety_margin": {
           "type": "number"
         },
         "total": {
-          "readOnly": true,
-          "title": "Total",
+          "type": "number"
+        },
+        "walk_time_cost": {
           "type": "number"
         }
       },
@@ -37,79 +91,7 @@
         "fairness",
         "total"
       ],
-      "title": "ScoreBreakdown",
       "type": "object"
     }
-  },
-  "description": "One simulated what-if. Rejected candidates are kept and displayed.",
-  "properties": {
-    "candidate_id": {
-      "title": "Candidate Id",
-      "type": "string"
-    },
-    "description": {
-      "description": "plain language, e.g. 'Divert 30% of Vale to Gate 4'",
-      "title": "Description",
-      "type": "string"
-    },
-    "divert_fraction": {
-      "description": "0.0 is the do-nothing baseline",
-      "maximum": 1,
-      "minimum": 0,
-      "title": "Divert Fraction",
-      "type": "number"
-    },
-    "from_zone": {
-      "title": "From Zone",
-      "type": "string"
-    },
-    "to_zone": {
-      "title": "To Zone",
-      "type": "string"
-    },
-    "via": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Via",
-      "type": "array"
-    },
-    "projected_peak_density_persons_m2": {
-      "description": "persons/m2 at the projected peak",
-      "minimum": 0,
-      "title": "Projected Peak Density Persons M2",
-      "type": "number"
-    },
-    "projected_walk_time_delta_s": {
-      "description": "positive means longer. Always shown beside the benefit, never hidden.",
-      "title": "Projected Walk Time Delta S",
-      "type": "number"
-    },
-    "projected_bottleneck_duration_s": {
-      "minimum": 0,
-      "title": "Projected Bottleneck Duration S",
-      "type": "number"
-    },
-    "score": {
-      "$ref": "#/$defs/ScoreBreakdown"
-    },
-    "selected": {
-      "default": false,
-      "title": "Selected",
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "candidate_id",
-    "description",
-    "divert_fraction",
-    "from_zone",
-    "to_zone",
-    "projected_peak_density_persons_m2",
-    "projected_walk_time_delta_s",
-    "projected_bottleneck_duration_s",
-    "score"
-  ],
-  "title": "InterventionCandidate",
-  "type": "object"
+  }
 }

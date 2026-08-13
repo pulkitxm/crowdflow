@@ -1,113 +1,111 @@
 {
+  "$ref": "#/$defs/Route",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CrossingClosed": {
+      "additionalProperties": false,
+      "description": "Authored CrowdFlow wire contracts. Runtime derivations live beside them.",
       "properties": {
         "open": {
           "const": false,
-          "title": "Open",
           "type": "boolean"
         },
         "opens_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
           "description": "absolute unix seconds; None when no reopening time is known",
-          "title": "Opens At"
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
         "open",
         "opens_at"
       ],
-      "title": "CrossingClosed",
       "type": "object"
     },
     "CrossingNotice": {
+      "additionalProperties": false,
       "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
       "properties": {
         "name": {
-          "title": "Name",
           "type": "string"
         },
         "state": {
-          "discriminator": {
-            "mapping": {
-              "False": "#/$defs/CrossingClosed",
-              "True": "#/$defs/CrossingOpen"
-            },
-            "propertyName": "open"
-          },
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/CrossingOpen"
             },
             {
               "$ref": "#/$defs/CrossingClosed"
             }
-          ],
-          "title": "State"
+          ]
         }
       },
       "required": [
         "name",
         "state"
       ],
-      "title": "CrossingNotice",
       "type": "object"
     },
     "CrossingOpen": {
+      "additionalProperties": false,
       "properties": {
+        "closes_at": {
+          "description": "absolute unix seconds; None when no closing time is known",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "open": {
           "const": true,
-          "title": "Open",
           "type": "boolean"
-        },
-        "closes_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "absolute unix seconds; None when no closing time is known",
-          "title": "Closes At"
         }
       },
       "required": [
         "open",
         "closes_at"
       ],
-      "title": "CrossingOpen",
+      "type": "object"
+    },
+    "Route": {
+      "additionalProperties": false,
+      "description": "Where the spectator is, where they are going and the walk between them.",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "type": "array"
+        },
+        "to": {
+          "type": "string"
+        },
+        "total_walk_s": {
+          "description": "door-to-door seconds from routing, including waits; never summed on the phone",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "steps",
+        "total_walk_s"
+      ],
       "type": "object"
     },
     "Step": {
+      "additionalProperties": false,
       "description": "One already-priced leg of a route.",
       "properties": {
-        "id": {
-          "title": "Id",
-          "type": "string"
-        },
-        "to": {
-          "description": "human-readable landmark from the circuit pack",
-          "title": "To",
-          "type": "string"
-        },
-        "walk_s": {
-          "description": "walking seconds computed by the routing engine",
-          "minimum": 0,
-          "title": "Walk S",
-          "type": "number"
-        },
-        "way_ahead": {
-          "$ref": "#/$defs/WayAhead"
-        },
         "crossing": {
           "anyOf": [
             {
@@ -116,8 +114,21 @@
             {
               "type": "null"
             }
-          ],
-          "default": null
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "to": {
+          "description": "human-readable landmark from the circuit pack",
+          "type": "string"
+        },
+        "walk_s": {
+          "description": "walking seconds computed by the routing engine",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
         }
       },
       "required": [
@@ -126,7 +137,6 @@
         "walk_s",
         "way_ahead"
       ],
-      "title": "Step",
       "type": "object"
     },
     "WayAhead": {
@@ -136,45 +146,7 @@
         "critical",
         "unknown"
       ],
-      "title": "WayAhead",
       "type": "string"
     }
-  },
-  "description": "Where the spectator is, where they are going and the walk between them.",
-  "properties": {
-    "id": {
-      "title": "Id",
-      "type": "string"
-    },
-    "from": {
-      "title": "From",
-      "type": "string"
-    },
-    "to": {
-      "title": "To",
-      "type": "string"
-    },
-    "steps": {
-      "items": {
-        "$ref": "#/$defs/Step"
-      },
-      "title": "Steps",
-      "type": "array"
-    },
-    "total_walk_s": {
-      "description": "door-to-door seconds from routing, including waits; never summed on the phone",
-      "minimum": 0,
-      "title": "Total Walk S",
-      "type": "number"
-    }
-  },
-  "required": [
-    "id",
-    "from",
-    "to",
-    "steps",
-    "total_walk_s"
-  ],
-  "title": "Route",
-  "type": "object"
+  }
 }

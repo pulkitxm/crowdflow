@@ -1,38 +1,36 @@
 {
-  "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
-  "properties": {
-    "always_open": {
-      "default": true,
-      "title": "Always Open",
-      "type": "boolean"
-    },
-    "open_when": {
-      "description": "session states",
-      "items": {
-        "type": "string"
+  "$ref": "#/$defs/Availability",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Availability": {
+      "additionalProperties": false,
+      "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty minutes\". At-grade crossings close whenever cars are running, which makes routing time-dependent: a path is valid only if each edge is still open when the walker would actually reach it.",
+      "properties": {
+        "always_open": {
+          "type": "boolean"
+        },
+        "close_lead_s": {
+          "description": "closes this long before cars run",
+          "type": "number"
+        },
+        "closed_when": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "open_when": {
+          "description": "session states",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reopen_lag_s": {
+          "type": "number"
+        }
       },
-      "title": "Open When",
-      "type": "array"
-    },
-    "closed_when": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Closed When",
-      "type": "array"
-    },
-    "close_lead_s": {
-      "default": 0,
-      "description": "closes this long before cars run",
-      "title": "Close Lead S",
-      "type": "number"
-    },
-    "reopen_lag_s": {
-      "default": 0,
-      "title": "Reopen Lag S",
-      "type": "number"
+      "type": "object"
     }
-  },
-  "title": "Availability",
-  "type": "object"
+  }
 }
