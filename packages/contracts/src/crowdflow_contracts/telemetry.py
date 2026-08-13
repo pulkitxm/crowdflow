@@ -146,7 +146,7 @@ class MeshMessage(BaseModel):
 
     payload: dict = Field(default_factory=dict)
 
-    def hop(self) -> "MeshMessage":
+    def hop(self) -> MeshMessage:
         """Decrement TTL for relay. Returns a new message; originals stay frozen."""
         return self.model_copy(update={"ttl": max(0, self.ttl - 1)})
 
