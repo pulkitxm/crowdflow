@@ -39,6 +39,11 @@ FORBIDDEN = {
     "anthropic": "the LLM never computes a route, a density or a prediction",
     "openai": "the LLM never computes a route, a density or a prediction",
     "langchain": "the LLM never computes a route, a density or a prediction",
+    # direction of dependency
+    "crowdflow_agent": (
+        "the agent depends on core, never the reverse — core is why the agent's "
+        "numbers are trustworthy, and a cycle would put a model client inside it"
+    ),
 }
 
 

@@ -134,6 +134,41 @@ MEASURED_NOT_ASSUMED = (
 
 
 # --------------------------------------------------------------------------
+# Evidence and inference.
+#
+# How many observations make a measurement, and how far from its own history a
+# reading must sit before it is worth waking someone for. Both were previously
+# bare literals inside the code that used them; a threshold nobody can find is a
+# threshold nobody can argue with.
+# --------------------------------------------------------------------------
+
+MEASURED_SAMPLE_FLOOR = 30
+"""Observations below which a MEASURED value is not yet trustworthy.
+
+ASSUMED, with reasoning: thirty is the conventional point at which the sampling
+distribution of a mean is treated as approximately normal, so it is the smallest
+count at which quoting a mean and a spread is defensible. It is a convention, not
+a measurement, which is exactly why it is named here rather than typed inline —
+an edge refined by nine traces is not an edge refined by nine thousand, and the
+line between them should be visible.
+"""
+
+MAD_TO_SIGMA = 1.4826
+"""Scale factor making the median absolute deviation a consistent estimator of
+the standard deviation for normally distributed data (1 / Phi^-1(3/4)).
+
+Source: standard robust-statistics result; see Rousseeuw & Croux (1993)."""
+
+MODIFIED_Z_OUTLIER = 3.5
+"""Modified z-score above which a point is labelled an outlier.
+
+Source: Iglewicz and Hoaglin, "How to Detect and Handle Outliers" (1993), as
+carried in the NIST/SEMATECH e-Handbook section 1.3.5.17. Chosen over a mean and
+standard deviation because a crowd series contains the very spikes being looked
+for, and they drag a mean-based threshold up behind them."""
+
+
+# --------------------------------------------------------------------------
 # Density thresholds, DERIVED from the flow thresholds above.
 #
 # Fruin's LOS is stated as a flow rate, but flow is not monotonic in density:
