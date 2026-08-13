@@ -145,6 +145,43 @@ def write_pack(repo_root: Path, pack, track_xy: list[tuple[float, float]]) -> Pa
     return out
 
 
+def write_refined_pack(
+    repo_root: Path,
+    pack,
+    *,
+    source_circuit_id: str | None = None,
+) -> Path:
+    """Write refined graph facts while preserving imported geometry artefacts.
+
+    The circuit pack is a generated artefact, so write-back goes through the same
+    serializer as import. Track geometry is copied from the source pack; nothing
+    in refinement fabricates or re-fetches it.
+    """
+    source_id = source_circuit_id or pack.id
+    return write_pack(repo_root, pack, read_track(repo_root, source_id))
+
+
+def read_trace_fragments(path: Path):
+    """Read JSON/JSONL TraceFragment telemetry at the adapter boundary."""
+    from crowdflow_contracts import TraceFragment
+
+    text = path.read_text()
+    if path.suffix == ".jsonl":
+        rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+    else:
+        payload = json.loads(text)
+        rows = payload if isinstance(payload, list) else payload.get("fragments", [])
+    return [TraceFragment.model_validate(row) for row in rows]
+
+
+def write_trace_fragments(path: Path, fragments) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(fragment.model_dump_json() + "\n" for fragment in fragments)
+    )
+    return path
+
+
 def read_pack(repo_root: Path, circuit_id: str):
     """Load a pack back into a CircuitPack. The inverse of write_pack."""
     from crowdflow_contracts import CircuitPack

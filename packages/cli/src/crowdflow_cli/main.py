@@ -273,6 +273,62 @@ if __name__ == "__main__":
     app()
 
 
+# ----------------------------------------------------------------- refinement --
+
+refine_app = typer.Typer(
+    no_args_is_help=True,
+    help="Analyse private traces and write reviewed refinements back to a pack.",
+)
+app.add_typer(refine_app, name="refine")
+
+
+@refine_app.command("run")
+def refine_run(
+    circuit_id: str = typer.Argument("silverstone"),
+    traces: Path = typer.Option(..., exists=True, dir_okay=False),
+    participation: float = typer.Option(..., min=0.000001, max=1.0),
+    apply: bool = typer.Option(False, "--apply", help="write trusted measurements back"),
+    adopt_desire_lines: bool = typer.Option(
+        False,
+        help="also adopt supported desire-line proposals; implies --apply",
+    ),
+) -> None:
+    """Run trace refinement; analysis is dry-run unless --apply is explicit."""
+    from crowdflow_core.refinement import refine
+    from crowdflow_core.routing import VenueGraph
+
+    from . import ingest
+
+    root = _repo_root()
+    pack = ingest.read_pack(root, circuit_id)
+    fragments = ingest.read_trace_fragments(traces)
+    report = refine(
+        pack,
+        fragments,
+        participation,
+        graph=VenueGraph(pack),
+    )
+    for line in report.summary():
+        typer.echo(f"  {line}")
+
+    if not apply and not adopt_desire_lines:
+        typer.echo("  dry run — pack unchanged (pass --apply after review)")
+        return
+
+    updated = report.apply(pack, adopt_proposals=adopt_desire_lines)
+    out = ingest.write_refined_pack(root, updated, source_circuit_id=circuit_id)
+    typer.secho(
+        f"  wrote {len(report.refined_edges)} measured edge updates"
+        + (
+            f" and {len(report.proposed_edges)} desire-line proposals"
+            if adopt_desire_lines
+            else ""
+        )
+        + f" -> {out}",
+        fg=typer.colors.GREEN,
+    )
+
+
 # ------------------------------------------------------------------- simulate --
 
 sim_app = typer.Typer(no_args_is_help=True, help="Simulation, evaluation and the gate.")
@@ -346,6 +402,41 @@ def sim_run(
 
     for label, value in metrics.as_rows():
         typer.echo(f"  {value:>10}  {label}")
+
+
+@sim_app.command("traces")
+def sim_traces(
+    circuit_id: str = typer.Argument("silverstone"),
+    out: Path = typer.Option(..., help="JSONL output path"),
+    count: int = typer.Option(6000, help="spectators"),
+    ticks: int = typer.Option(400),
+    participation: float = typer.Option(0.18),
+    seed: int = typer.Option(42),
+    every: int = typer.Option(60, min=1, help="drain fragments every N ticks"),
+) -> None:
+    """Produce short, noised TraceFragments from a seeded venue simulation."""
+    pack, graph = _load_world(circuit_id)
+    scenario, _, _ = _egress_scenario(pack, graph, None, count, seed)
+    sim = scenario.build(graph, participation=participation)
+
+    fragments = []
+    for tick in range(ticks):
+        sim.step()
+        # emit() is the sensor pass: it records participating devices' current
+        # positions while producing live telemetry. Refinement is drained through
+        # a separate method so the two contracts never become linkable.
+        sim.emit()
+        if (tick + 1) % every == 0:
+            fragments.extend(sim.emit_trace_fragments())
+    fragments.extend(sim.emit_trace_fragments())
+
+    from . import ingest
+
+    ingest.write_trace_fragments(out, fragments)
+    typer.echo(
+        f"{len(fragments)} private fragments -> {out} "
+        f"(seed {seed}, epsilon attached to every fragment)"
+    )
 
 
 @sim_app.command("ab")
