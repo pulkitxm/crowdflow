@@ -76,6 +76,15 @@ UNIFORM_SPREAD_TO_WIDTH = math.sqrt(12.0)
 """Standard deviation of a uniform distribution over width w is w/sqrt(12).
 Derived, not chosen — see the module docstring for the assumption it rests on."""
 
+PLANAR_LAPLACE_AXIS_SIGMA_FACTOR = math.sqrt(3.0)
+"""Per-axis standard deviation of planar Laplace noise is sqrt(3)/epsilon.
+
+Derived from the mechanism used in ``mesh.privacy``: the radial density is
+``epsilon² r exp(-epsilon r)``, so E[r²] = 6/epsilon²; isotropy gives half that
+variance on each axis. ``TraceFragment.noise_radius_m`` stores privacy radius
+``l/epsilon``, not sigma, hence sigma = sqrt(3) * radius / l.
+"""
+
 
 @dataclass(frozen=True)
 class EdgeMeasurement:
@@ -130,12 +139,28 @@ def measure_width(
     # Each fragment declares its own noise; the population's noise scale is the
     # median of what contributed, so one heavily noised fragment cannot inflate
     # the correction for everyone else.
-    noise = median([t.noise_radius_m for t in traversals])
-    corrected_var = observed * observed - noise * noise
+    privacy_radius = median([t.noise_radius_m for t in traversals])
+    # Radius and standard deviation are different quantities. The old code
+    # subtracted the geo-indistinguishability radius as if it were sigma, which
+    # over-corrected width and could turn a measurable corridor into "unknown".
+    # Epsilon is attached to every real fragment, so prefer it directly; the
+    # radius/level conversion is only for manually constructed traversals.
+    from crowdflow_contracts import GEOIND_PRIVACY_LEVEL
+
+    epsilons = [t.epsilon for t in traversals if t.epsilon is not None]
+    noise_sigma = (
+        PLANAR_LAPLACE_AXIS_SIGMA_FACTOR / median(epsilons)
+        if epsilons
+        else PLANAR_LAPLACE_AXIS_SIGMA_FACTOR
+        * privacy_radius
+        / GEOIND_PRIVACY_LEVEL
+    )
+    corrected_var = observed * observed - noise_sigma * noise_sigma
     if corrected_var <= 0:
         return imported, (
-            f"lateral spread ({observed:.2f} m) is within the declared privacy "
-            f"noise ({noise:.2f} m); width is not measurable from these traces"
+            f"lateral spread ({observed:.2f} m) is within the planar-Laplace "
+            f"axis sigma ({noise_sigma:.2f} m, from {privacy_radius:.2f} m privacy "
+            "radius); width is not measurable from these traces"
         )
 
     width = UNIFORM_SPREAD_TO_WIDTH * math.sqrt(corrected_var)
@@ -146,7 +171,8 @@ def measure_width(
             samples=count,
             note=(
                 f"lateral spread of {count} trace fragments, de-biased for "
-                f"{noise:.1f} m declared privacy noise"
+                f"{privacy_radius:.1f} m declared privacy radius "
+                f"({noise_sigma:.1f} m axis sigma)"
             ),
         ),
         None,
@@ -303,6 +329,11 @@ def apply_measurements(
             update["width_m"] = m.width
         if m.free_speed is not None and m.free_speed.is_trustworthy:
             update["free_speed_ms"] = m.free_speed
+        if (
+            m.capacity_flow_ped_m_min is not None
+            and m.capacity_flow_ped_m_min.is_trustworthy
+        ):
+            update["capacity_flow_ped_m_min"] = m.capacity_flow_ped_m_min
         if update:
             refined[edge_id] = edge.model_copy(update=update)
     return refined

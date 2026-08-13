@@ -124,7 +124,10 @@ class CrowdOpsAgent:
             )
             messages.append(
                 Message(
-                    role="assistant", text=response.text, tool_calls=response.tool_calls
+                    role="assistant",
+                    text=response.text,
+                    tool_calls=response.tool_calls,
+                    thinking_blocks=response.thinking_blocks,
                 )
             )
             messages.append(Message(role="tool", tool_results=results))

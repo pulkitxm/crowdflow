@@ -130,6 +130,31 @@ def test_a_venue_where_every_gate_agrees_reports_nothing():
     assert engine.insights() == []
 
 
+def test_exactly_three_gates_are_not_three_peers_for_each_subject():
+    """Regression for the guard/estimator off-by-one.
+
+    MIN_PEERS counts *other* gates. With three gates total, each subject has only
+    two peers; admitting the group and then asking modified_z for four samples
+    silently returned None for every gate.
+    """
+    pack = build_pack(extra_gates={"gate-3": "Gate 3"})
+    engine = InsightEngine(pack)
+    for tick in range(12):
+        engine.observe(
+            build_state(
+                pack,
+                now=float(tick),
+                session_id="quali",
+                overrides={
+                    "gate-1": zone_state("gate-1", now=float(tick), outflow=100.0),
+                    "gate-2": zone_state("gate-2", now=float(tick), outflow=104.0),
+                    "gate-3": zone_state("gate-3", now=float(tick), outflow=10.0),
+                },
+            )
+        )
+    assert [i for i in engine.insights() if i.kind is InsightKind.PEER_GAP] == []
+
+
 def test_a_peer_group_of_two_is_not_a_peer_group():
     """With two gates, every difference is 100% of the variation and 'the peer
     median' is just the other gate."""

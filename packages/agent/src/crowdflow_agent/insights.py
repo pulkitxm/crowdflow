@@ -278,7 +278,11 @@ class InsightEngine:
                     continue
                 per_gate[gate] = median(per_session)
                 counts[gate] = sum(len(values(gate, s, metric)) for s in sessions)
-            if len(per_gate) < MIN_PEERS:
+            # The score sample includes the subject itself. MIN_PEERS describes
+            # peers, so a valid comparison needs that many *other* gates plus the
+            # subject. The old guard admitted exactly three gates and then asked
+            # modified_z for four points, silently producing no insight.
+            if len(per_gate) < MIN_PEERS + 1:
                 continue
 
             for gate, value in per_gate.items():

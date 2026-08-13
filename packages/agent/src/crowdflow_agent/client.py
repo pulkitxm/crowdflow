@@ -58,7 +58,7 @@ class ToolResult:
 
 @dataclass(frozen=True)
 class Message:
-    """One turn of the transcript."""
+    """One turn of the transcript, including provider continuity blocks."""
 
     role: str
     """user | assistant | tool"""
@@ -66,6 +66,13 @@ class Message:
     text: str | None = None
     tool_calls: tuple[ToolCall, ...] = ()
     tool_results: tuple[ToolResult, ...] = ()
+    thinking_blocks: tuple[dict[str, Any], ...] = ()
+    """Opaque signed thinking blocks returned by Anthropic.
+
+    Adaptive thinking requires these blocks to be sent back unchanged on the
+    next turn. The agent never reads them; preserving them is transcript
+    continuity, not exposing reasoning to application logic.
+    """
 
 
 @dataclass(frozen=True)
@@ -74,6 +81,7 @@ class ModelResponse:
 
     text: str | None = None
     tool_calls: tuple[ToolCall, ...] = ()
+    thinking_blocks: tuple[dict[str, Any], ...] = ()
 
     @property
     def wants_tools(self) -> bool:
@@ -206,7 +214,7 @@ class AnthropicClient:
                     ],
                 })
                 continue
-            blocks: list[dict[str, Any]] = []
+            blocks: list[dict[str, Any]] = [dict(block) for block in m.thinking_blocks]
             if m.text:
                 blocks.append({"type": "text", "text": m.text})
             blocks.extend(
@@ -244,4 +252,13 @@ class AnthropicClient:
             for b in response.content
             if b.type == "tool_use"
         )
-        return ModelResponse(text=text, tool_calls=calls)
+        thinking = tuple(
+            b.model_dump() if hasattr(b, "model_dump") else dict(b)
+            for b in response.content
+            if b.type in ("thinking", "redacted_thinking")
+        )
+        return ModelResponse(
+            text=text,
+            tool_calls=calls,
+            thinking_blocks=thinking,
+        )
