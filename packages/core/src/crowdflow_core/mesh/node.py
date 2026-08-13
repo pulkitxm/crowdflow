@@ -14,6 +14,7 @@ TTL before it costs a transmission.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 from crowdflow_contracts import (
     ASSUMED_MESH_BUFFER_MESSAGES,
@@ -34,6 +35,46 @@ ONLINE_CERTAINTY = 1.0
 
 Not a tuned parameter — it is the definition of the destination. Everything else
 in the predictability table is an estimate; this one is an observation."""
+
+
+class AcceptOutcome(str, Enum):
+    """Why an offer ended the way it did.
+
+    A bare bool cannot carry this. `accept` returns False for four unrelated
+    reasons, two of which mean the message is SAFE (the peer already had it, or
+    the peer was an uplink and it has arrived) and two of which mean it is at
+    risk. A sender deciding whether to keep its own copy needs to tell those
+    apart: releasing custody on a genuine refusal loses the message, and keeping
+    custody on a completed delivery makes the node relay traffic whose journey
+    is over.
+    """
+
+    STORED = "stored"
+    """Held by the receiver. Custody transferred."""
+
+    DUPLICATE = "duplicate"
+    """The receiver already had it. Safe — nothing to keep custody for."""
+
+    DELIVERED = "delivered"
+    """The receiver was an uplink: this reached the internet. The best outcome
+    there is, and the one most easily mistaken for a failure."""
+
+    EXPIRED = "expired"
+    """The hop exhausted the TTL. The sender can see this before transmitting."""
+
+    NO_ROOM = "no_room"
+    """The receiver's buffer refused it. THE ONLY case where the sender must
+    keep its copy — the message exists nowhere else."""
+
+    @property
+    def held_somewhere(self) -> bool:
+        """Is the message safe without the sender? Custody may transfer iff true."""
+        return self in (AcceptOutcome.STORED, AcceptOutcome.DUPLICATE,
+                        AcceptOutcome.DELIVERED)
+
+    def __bool__(self) -> bool:
+        """Truthiness preserves the old bool contract: only STORED was ever True."""
+        return self is AcceptOutcome.STORED
 
 
 @dataclass(frozen=True)
@@ -117,6 +158,12 @@ class MeshNode:
         self.transmissions_by_class: dict[MeshClass, int] = {c: 0 for c in MeshClass}
         """Per class, because the comparison that justifies not flooding is a
         per-class cost and a global counter cannot make it."""
+        self.failed_handoffs = 0
+        """Offers the peer refused — full buffer, or TTL exhausted by the hop.
+
+        Radio time was spent and nothing was stored. Counted rather than silently
+        swallowed: a rising number means the mesh is saturated, which is exactly
+        when an operator needs to know the picture is thinning."""
         self.sequence = 0
         self.peers_met: set[str] = set()
         self.contacts: set[str] = set()
@@ -162,6 +209,22 @@ class MeshNode:
         self.clock = now
         self.previous_contacts = self.contacts
         self.contacts = set(peers) if peers is not None else set()
+
+        # A peer that refused an offer is not re-offered for the rest of THIS
+        # contact — otherwise the sender spends a transmission per tick for as
+        # long as the two stay in range, which is unbounded and breaks the copy
+        # bound. But a peer that walks away and comes back is a new contact and
+        # a genuinely new opportunity: its buffer may have drained.
+        #
+        # Safe to clear because `consider` independently filters on
+        # `peer.has_seen(key)`, so a peer that ACCEPTED is still never re-offered.
+        # forwarded_to therefore only ever suppresses retries to refusers, which
+        # is exactly what should expire when the contact does.
+        departed = self.previous_contacts - self.contacts
+        if departed:
+            for carried in self.buffer.relayable():
+                carried.forwarded_to -= departed
+
         self.seen.expire(now)
         self.buffer.prune_expired()
         if self.online:
@@ -216,8 +279,12 @@ class MeshNode:
         initial_ttl: int = MESH_TTL_MAX,
         copies: int | None = None,
         focus_forwards: int = 0,
-    ) -> bool:
-        """Take custody of a message. False if dropped.
+    ) -> AcceptOutcome:
+        """Take custody of a message, and say what happened.
+
+        Returns an AcceptOutcome rather than a bool because the caller has to
+        distinguish "the peer has it" from "the peer refused it" — see the enum.
+        Truthiness is preserved: only STORED is True.
 
         `copies` is the allowance handed over by the sender; None means this node
         originated the message and takes the class's full opening allowance.
@@ -243,7 +310,7 @@ class MeshNode:
         """
         key = key_of(message)
         if not self.seen.check_and_add(key, now):
-            return False
+            return AcceptOutcome.DUPLICATE
 
         if self.online:
             self.uplinked.append(
@@ -257,16 +324,16 @@ class MeshNode:
                     delivered_at=now,
                 )
             )
-            return False
+            return AcceptOutcome.DELIVERED
 
         if message.expired:
-            return False
+            return AcceptOutcome.EXPIRED
         allowance = (
             initial_copies(message.traffic_class, self.population_hint)
             if copies is None
             else copies
         )
-        return self.buffer.add(
+        stored = self.buffer.add(
             Carried(
                 message=message,
                 initial_ttl=initial_ttl,
@@ -275,6 +342,7 @@ class MeshNode:
                 focus_forwards=focus_forwards,
             )
         )
+        return AcceptOutcome.STORED if stored else AcceptOutcome.NO_ROOM
 
 
 def encounter(a: MeshNode, b: MeshNode, now: float) -> int:
@@ -330,7 +398,15 @@ def _offer_all(sender: MeshNode, receiver: MeshNode, now: float) -> int:
         # at the receiver instead would let a message with one hop left cross an
         # unbounded number of radios as long as nobody stored it.
         relayed = carried.message.hop()
-        receiver.accept(
+
+        # A hop that exhausts the TTL is refusable BEFORE the radio is used: the
+        # sender can see the result of its own decrement, and the receiver would
+        # only drop it. Checking here spends nothing.
+        if relayed.expired:
+            carried.forwarded_to.add(receiver.id)
+            continue
+
+        outcome = receiver.accept(
             relayed,
             now,
             initial_ttl=carried.initial_ttl,
@@ -340,7 +416,30 @@ def _offer_all(sender: MeshNode, receiver: MeshNode, now: float) -> int:
         sender.transmissions += 1
         sender.transmissions_by_class[carried.message.traffic_class] += 1
         sent += 1
+
+        # Offered-to either way, so a peer that refused is not re-offered on
+        # every subsequent tick of the same contact. Without this the sender
+        # spends a transmission per tick for as long as the two stay in range,
+        # which is unbounded and breaks the copy bound that is the entire reason
+        # the STATE class uses Spray-and-Wait.
         carried.forwarded_to.add(receiver.id)
+
+        if not outcome.held_somewhere:
+            # CUSTODY TRANSFERS ONLY IF THE MESSAGE IS SAFE WITHOUT THE SENDER.
+            #
+            # NO_ROOM is the one outcome where it is not. Committing anyway hands
+            # custody to a peer holding nothing: Prophet.commit drops the
+            # sender's last copy and SprayAndWait.commit deducts the transferred
+            # allowance, so the message ceases to exist anywhere — silently, with
+            # the transmission counted as sent and nothing recording the loss.
+            #
+            # DUPLICATE and DELIVERED are NOT losses and must not land here.
+            # DELIVERED especially: the receiver was an uplink, so the message
+            # reached the internet. Keeping custody on the best possible outcome
+            # would make the sender relay traffic whose journey is over.
+            sender.failed_handoffs += 1
+            continue
+
         policy.commit(carried, decision, sender)
 
         if receiver.online:

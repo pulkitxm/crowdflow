@@ -33,6 +33,7 @@ from crowdflow_contracts import (
 )
 from crowdflow_core.mesh import (
     UPLINK_DESTINATION,
+    AcceptOutcome,
     Carried,
     ClockSkew,
     DedupeCache,
@@ -110,13 +111,23 @@ def test_a_message_never_travels_more_hops_than_its_ttl():
 
 def test_expired_message_is_still_delivered_but_never_relayed():
     """Arrival is arrival. Refusing a delivery on TTL grounds discards a completed
-    journey to enforce a rule about journeys not yet taken."""
+    journey to enforce a rule about journeys not yet taken.
+
+    Asserted on the OUTCOME, not on falsiness. Both calls below were once `is
+    False` — identical answers for a completed delivery and a dead message, which
+    is exactly how a sender came to treat the best possible result as a failure.
+    """
     uplink = node("up", online=True)
-    assert uplink.accept(message(ttl=0), now=1.0) is False  # not stored...
-    assert len(uplink.uplinked) == 1  # ...but recorded as delivered
+    delivered = uplink.accept(message(ttl=0), now=1.0)
+    assert delivered is AcceptOutcome.DELIVERED
+    assert delivered.held_somewhere        # the sender may release it
+    assert not delivered                   # ...though it was not STORED here
+    assert len(uplink.uplinked) == 1
 
     relay = node("relay")
-    assert relay.accept(message(source="b", ttl=0), now=1.0) is False
+    dropped = relay.accept(message(source="b", ttl=0), now=1.0)
+    assert dropped is AcceptOutcome.EXPIRED
+    assert not dropped.held_somewhere      # nobody has it now
     assert len(relay.buffer) == 0
 
 
@@ -135,8 +146,10 @@ def test_dedupe_happens_at_every_hop_not_only_at_the_destination():
     is the destination."""
     relay = node("relay")
     m = message()
-    assert relay.accept(m, 0.0) is True
-    assert relay.accept(m, 1.0) is False
+    assert relay.accept(m, 0.0) is AcceptOutcome.STORED
+    second = relay.accept(m, 1.0)
+    assert second is AcceptOutcome.DUPLICATE
+    assert second.held_somewhere           # the peer has it; custody may pass
     assert len(relay.buffer) == 1
 
 
@@ -714,3 +727,77 @@ def test_urgent_that_stops_being_rare_degrades_rather_than_taking_the_mesh_down(
     assert flooded.evictions > 0
     # ...and it degrades rather than collapsing.
     assert flooded.delivery_ratio > 0.5
+
+
+# ------------------------------------------------------- custody transfer --
+
+def test_a_refused_message_stays_with_the_sender():
+    """The blocker: custody was transferred whatever the receiver did with it.
+
+    `accept` returns a falsy outcome for four unrelated reasons, and the relay
+    path ignored which one. On NO_ROOM the sender committed anyway — Prophet
+    dropping its last copy, Spray-and-Wait deducting the transferred allowance —
+    so the message existed nowhere afterwards. Silently: the transmission counted
+    as sent and nothing recorded the deletion.
+    """
+    sender = node("sender")
+    receiver = node("receiver", buffer_capacity=1)
+
+    # Fill the receiver with URGENT, which STATE never displaces: EVICTION_ORDER
+    # sacrifices STATE first, so a STATE offer into a full URGENT buffer is the
+    # one that genuinely loses the eviction contest. Filling with STATE instead
+    # would let the newcomer evict the filler and be stored, and the test would
+    # be exercising eviction rather than refusal.
+    filler = message(source="filler", sequence=99, traffic_class=MeshClass.URGENT)
+    assert receiver.accept(filler, 0.0) is AcceptOutcome.STORED
+
+    m = message(source="sender", sequence=1)
+    assert sender.accept(m, 0.0) is AcceptOutcome.STORED
+    held_before = sender.holds(key_of(m))
+    assert held_before
+
+    sender.advance(1.0, peers={receiver.id})
+    receiver.advance(1.0, peers={sender.id})
+    encounter(sender, receiver, 1.0)
+
+    assert not receiver.holds(key_of(m)), "receiver had no room, so it cannot hold it"
+    assert sender.holds(key_of(m)), (
+        "SENDER MUST KEEP IT — the receiver refused, so this is the only copy"
+    )
+    assert sender.failed_handoffs >= 1, "the refusal must be counted, not swallowed"
+
+
+def test_a_delivered_message_is_released_by_the_sender():
+    """The other half, and the reason a bare bool could not express this.
+
+    Handing a message to an uplink returns falsy — it was not STORED, it was
+    DELIVERED. Treating that as a refusal would make the sender go on relaying
+    traffic that already reached the internet.
+    """
+    sender = node("sender")
+    uplink = node("uplink", online=True)
+
+    m = message(source="sender", sequence=1)
+    assert sender.accept(m, 0.0) is AcceptOutcome.STORED
+
+    sender.advance(1.0, peers={uplink.id})
+    uplink.advance(1.0, peers={sender.id})
+    encounter(sender, uplink, 1.0)
+
+    assert len(uplink.uplinked) == 1, "it reached the internet"
+    assert not sender.holds(key_of(m)), (
+        "sender must let go: the journey is over and re-relaying costs battery "
+        "spreading a message whose job is done"
+    )
+    assert sender.failed_handoffs == 0, "a delivery is not a failed handoff"
+
+
+def test_outcomes_partition_into_safe_and_at_risk():
+    """held_somewhere is the whole custody rule, so it is worth asserting directly."""
+    safe = {AcceptOutcome.STORED, AcceptOutcome.DUPLICATE, AcceptOutcome.DELIVERED}
+    at_risk = {AcceptOutcome.EXPIRED, AcceptOutcome.NO_ROOM}
+    assert safe | at_risk == set(AcceptOutcome)
+    assert all(o.held_somewhere for o in safe)
+    assert not any(o.held_somewhere for o in at_risk)
+    # Truthiness is the narrower question and must not be confused with safety.
+    assert bool(AcceptOutcome.STORED) and not bool(AcceptOutcome.DELIVERED)

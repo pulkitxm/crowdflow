@@ -26,7 +26,7 @@ metrics     delivery ratio, hops, copies per message
 
 from .buffer import Carried, DedupeCache, MessageBuffer, MessageKey, TokenBucket, key_of
 from .metrics import MeshRunMetrics, PolicyMetrics
-from .node import Delivery, MeshNode, NodeRadio, encounter
+from .node import AcceptOutcome, Delivery, MeshNode, NodeRadio, encounter
 from .policy import (
     UPLINK_DESTINATION,
     DeliveryPredictability,
@@ -63,6 +63,7 @@ from .uplink import (
 )
 
 __all__ = [
+    "AcceptOutcome",
     "UPLINK_DESTINATION",
     "Carried",
     "ClockSkew",
