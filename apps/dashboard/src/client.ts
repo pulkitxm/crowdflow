@@ -58,8 +58,21 @@ export interface LinkHandlers {
 
 export class ConsoleLink {
   private backoff = RECONNECT_MIN_MS;
-  /** Wall clock of the last frame of any kind. The header counts up from it. */
+  /** Wall clock of the last frame of any kind — proves the SOCKET is alive. */
   lastFrameAt = 0;
+
+  /**
+   * Wall clock of the last TICK frame, which is what the header must count from.
+   *
+   * Counting from any frame made staleness undetectable: the server sends a
+   * STATUS heartbeat every 0.5 s, so the age never exceeded ~0.5 s while the
+   * socket was open, and the header's staleness threshold (2 tick periods,
+   * 1 s under SPEED=4) could never be reached. A console whose data had stopped
+   * arriving minutes ago read "WAITING 0.4s" — which is exactly the reassuring
+   * lie this transport exists to prevent. The two clocks answer different
+   * questions and must not be conflated.
+   */
+  lastTickAt = 0;
 
   constructor(private readonly handlers: LinkHandlers) {}
 
@@ -74,8 +87,12 @@ export class ConsoleLink {
       this.backoff = RECONNECT_MIN_MS;
     };
     socket.onmessage = (event) => {
-      this.lastFrameAt = performance.now();
+      const now = performance.now();
+      this.lastFrameAt = now;
       const frame = JSON.parse(event.data as string) as SocketFrame;
+      if (frame.type === "tick") {
+        this.lastTickAt = now;
+      }
       this.handlers.onLink(frame.type === "tick" ? "live" : "waiting", frame.session.status);
       this.handlers.onFrame(frame);
     };
@@ -92,7 +109,10 @@ export class ConsoleLink {
   /** Seconds since the last frame, by the console's own clock — not the
    *  server's, because a dead server cannot tell you it is dead. */
   secondsSinceFrame(): number | null {
-    if (this.lastFrameAt === 0) return null;
-    return (performance.now() - this.lastFrameAt) / 1000;
+    // Deliberately measured from the last TICK, not the last frame. The header
+    // is answering "is the picture current", and a heartbeat proves only that
+    // the socket is open. See lastTickAt.
+    if (this.lastTickAt === 0) return null;
+    return (performance.now() - this.lastTickAt) / 1000;
   }
 }

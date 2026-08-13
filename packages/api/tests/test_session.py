@@ -281,4 +281,62 @@ def test_a_console_that_falls_behind_is_dropped_not_buffered(toy_circuit, toy_op
 
     session, queue = asyncio.run(scenario())
     assert queue not in session._subscribers
-    assert queue.qsize() == CLIENT_QUEUE_DEPTH
+    # The backlog is DRAINED and replaced by the sentinel. Retaining it would
+    # contradict this test's own premise: the console reconnects and replays
+    # from last_envelope, so four stale envelopes are worth nothing and the one
+    # thing it must be able to read is the signal to stop waiting.
+    assert queue.qsize() == 1
+    assert queue.get_nowait() is None
+
+
+# ------------------------------------------------- dropping a slow console --
+
+def test_a_console_dropped_for_falling_behind_is_told(toy_circuit, toy_option):
+    """BLOCKER. _broadcast discarded a full subscriber's queue and sent nothing.
+
+    The websocket handler only breaks on a None sentinel; with no sentinel it
+    fell through to the heartbeat branch and kept sending STATUS frames forever.
+    The result is a control-room screen reporting a healthy link over a venue
+    picture that stopped updating minutes ago — the one failure this transport
+    exists to prevent.
+    """
+    import asyncio
+
+    session = build_session(toy_circuit, toy_option)
+    envelope = session.tick_once()
+    queue = session.subscribe()
+
+    # Fill it past capacity so the next broadcast cannot be delivered.
+    for _ in range(queue.maxsize + 2):
+        try:
+            queue.put_nowait(envelope)
+        except asyncio.QueueFull:
+            break
+    assert queue.full()
+
+    session._broadcast(envelope)
+
+    assert queue not in session._subscribers, "the slow console is unsubscribed"
+    assert session.dropped_consoles == 1, "and the drop is counted, not swallowed"
+
+    # The sentinel must be reachable — draining the stale backlog is the point,
+    # since everything in it is old anyway and the console replays on reconnect.
+    drained = []
+    while not queue.empty():
+        drained.append(queue.get_nowait())
+    assert drained and drained[-1] is None, (
+        "the last thing a dropped console reads must be the sentinel that ends "
+        f"its loop, got {drained[-1]!r}"
+    )
+
+
+def test_a_healthy_console_is_never_dropped(toy_circuit, toy_option):
+    """Guards against the fix degenerating into dropping everyone."""
+    session = build_session(toy_circuit, toy_option)
+    envelope = session.tick_once()
+    queue = session.subscribe()
+    for _ in range(3):
+        session._broadcast(envelope)
+    assert queue in session._subscribers
+    assert session.dropped_consoles == 0
+    assert queue.qsize() == 3

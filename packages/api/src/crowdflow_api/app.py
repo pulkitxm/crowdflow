@@ -318,6 +318,11 @@ def create_app(
                     )
                     continue
                 if envelope is None:
+                    # Dropped for falling behind. Close with a code the console
+                    # can act on rather than leaving the socket open: a live
+                    # header over a frozen picture is worse than a visible
+                    # disconnect, because only one of them prompts a reconnect.
+                    await socket.close(code=1013, reason="console fell behind")
                     break
                 await socket.send_text(
                     SocketFrame(

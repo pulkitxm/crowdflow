@@ -142,6 +142,9 @@ class ScenarioSession:
         self._seq = 0
         self._memory = _ZoneMemory()
         self._subscribers: set[asyncio.Queue[TickEnvelope | None]] = set()
+        self.dropped_consoles = 0
+        """Consoles dropped for falling behind. Surfaced rather than swallowed:
+        a rising count means the render loop cannot keep up with the tick rate."""
         self._task: asyncio.Task | None = None
         self._step_requested = False
 
@@ -468,12 +471,34 @@ class ScenarioSession:
         self._subscribers.discard(queue)
 
     def _broadcast(self, envelope: TickEnvelope) -> None:
-        """Push to every console, dropping any that has fallen behind."""
+        """Push to every console, dropping any that has fallen behind.
+
+        A dropped console MUST be told. Discarding the queue silently leaves the
+        socket open and the handler blocked on a queue nobody writes to any more,
+        so it falls through to the heartbeat branch and keeps reporting healthy
+        session status forever — a control-room screen showing a live header over
+        a venue picture that stopped updating minutes ago. That is verbatim the
+        failure this transport exists to prevent.
+
+        The queue is drained before the sentinel goes in, for two reasons: it is
+        full by definition, and everything in it is stale anyway. The console
+        reconnects and replays from last_envelope.
+        """
         for queue in list(self._subscribers):
             try:
                 queue.put_nowait(envelope)
             except asyncio.QueueFull:
                 self._subscribers.discard(queue)
+                while not queue.empty():
+                    try:
+                        queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                try:
+                    queue.put_nowait(None)
+                except asyncio.QueueFull:
+                    pass
+                self.dropped_consoles += 1
 
     # -- control -----------------------------------------------------------
 
