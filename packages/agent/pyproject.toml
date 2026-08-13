@@ -1,0 +1,20 @@
+[project]
+name = "crowdflow-agent"
+version = "0.1.0"
+description = "The Crowd Ops Agent. Reads what the engines produced; recommends, never acts."
+requires-python = ">=3.11"
+dependencies = ["crowdflow-contracts", "crowdflow-core"]
+
+# The model provider SDK is deliberately NOT a dependency. The agent talks to a
+# ModelClient protocol; the Anthropic adapter imports its SDK lazily, so the test
+# suite runs with no API key, no network and nothing installed. That is also what
+# keeps `uv run pytest` honest: a green run cannot have called a model.
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crowdflow_agent"]
