@@ -1,0 +1,11 @@
+At large venues, crowd pressure can build faster than operations teams can see it. A queue at an entrance, concession, or exit can become a dangerous bottleneck before anyone has the full picture.
+
+CrowdFlow Optimiser closes that gap. Give it a venue layout, expected attendance, and event schedule. It simulates movement, blends signals from cameras, turnstiles, Wi-Fi, lidar, and opted-in app pings, then turns them into one live view.
+
+On the control-room map, density becomes a heat layer. The system ranks active bottlenecks, forecasts risks up to forty-five minutes ahead, and recommends the next operational action.
+
+Under the hood, a capacity-aware crowd model follows the event schedule. Sensor confidence updates the state, while congestion-aware pathfinding compares the shortest path with the safest available route. Teams can test closures, staffing, emergency scenarios, and multiple circuits before changing the real venue.
+
+Guidance does not stop at the dashboard. Spectators receive quieter routes and timely nudges. And where connectivity is weak, the companion mesh can relay compact, anonymous reroutes between nearby phones over Bluetooth and Wi-Fi.
+
+The result is a closed loop: sense, predict, reroute, and verify — before a crowd becomes a crisis. CrowdFlow Optimiser. Safer movement, in real time.

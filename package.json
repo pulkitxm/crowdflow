@@ -9,7 +9,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "video:capture": "bun video/scripts/capture-demo.mjs",
+    "video:studio": "remotion studio video/index.ts",
+    "video:render": "remotion render video/index.ts CrowdFlowProductVideo exports/crowdflow-product-video.mp4 --codec=h264 --crf=18 --audio-codec=aac --pixel-format=yuv420p --browser-executable=/usr/bin/google-chrome",
+    "video:still": "remotion still video/index.ts CrowdFlowProductVideo exports/crowdflow-cover.png --frame=2650 --browser-executable=/usr/bin/google-chrome"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -63,11 +67,12 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^3.24.2"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.10.0",
+    "@remotion/cli": "4.0.509",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -79,7 +84,9 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "playwright-core": "1.62.1",
     "prettier": "^3.7.3",
+    "remotion": "4.0.509",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0"

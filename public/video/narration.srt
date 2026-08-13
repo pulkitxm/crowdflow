@@ -1,0 +1,63 @@
+1
+00:00:01,100 --> 00:00:06,477
+At large venues, crowd pressure can build faster than operations teams can see it.
+
+2
+00:00:06,427 --> 00:00:12,889
+A queue at an entrance, concession, or exit can become a dangerous bottleneck before anyone has the full picture.
+
+3
+00:00:12,889 --> 00:00:15,814
+CrowdFlow Optimiser closes that gap.
+
+4
+00:00:15,814 --> 00:00:20,141
+Give it a venue layout, expected attendance, and event schedule.
+
+5
+00:00:20,141 --> 00:00:29,516
+It simulates movement, blends signals from cameras, turnstiles, Wi-Fi, lidar, and opted-in app pings, then turns them into one live view.
+
+6
+00:00:29,516 --> 00:00:33,231
+On the control-room map, density becomes a heat layer.
+
+7
+00:00:33,231 --> 00:00:40,708
+The system ranks active bottlenecks, forecasts risks up to forty-five minutes ahead, and recommends the next operational action.
+
+8
+00:00:40,708 --> 00:00:45,118
+Under the hood, a capacity-aware crowd model follows the event schedule.
+
+9
+00:00:45,118 --> 00:00:52,406
+Sensor confidence updates the state, while congestion-aware pathfinding compares the shortest path with the safest available route.
+
+10
+00:00:52,406 --> 00:00:59,434
+Teams can test closures, staffing, emergency scenarios, and multiple circuits before changing the real venue.
+
+11
+00:00:59,434 --> 00:01:02,193
+Guidance does not stop at the dashboard.
+
+12
+00:01:02,193 --> 00:01:06,002
+Spectators receive quieter routes and timely nudges.
+
+13
+00:01:06,002 --> 00:01:14,222
+And where connectivity is weak, the companion mesh can relay compact, anonymous reroutes between nearby phones over Bluetooth and Wi-Fi.
+
+14
+00:01:14,222 --> 00:01:21,250
+The result is a closed loop: sense, predict, reroute, and verify — before a crowd becomes a crisis.
+
+15
+00:01:21,250 --> 00:01:23,373
+CrowdFlow Optimiser.
+
+16
+00:01:23,373 --> 00:01:26,179
+Safer movement, in real time.
