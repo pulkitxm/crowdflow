@@ -7,18 +7,20 @@ dependencies = [
     "crowdflow-contracts",
     "crowdflow-core",
     "crowdflow-cli",
+    "crowdflow-agent",
 ]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/contracts", "packages/core", "packages/cli"]
+members = ["packages/contracts", "packages/core", "packages/cli", "packages/agent"]
 
 [tool.uv.sources]
 crowdflow-contracts = { workspace = true }
 crowdflow-core = { workspace = true }
 crowdflow-cli = { workspace = true }
+crowdflow-agent = { workspace = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]

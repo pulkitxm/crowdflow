@@ -16,6 +16,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .standards import MEASURED_SAMPLE_FLOOR
 from .telemetry import Position
 
 
@@ -42,8 +43,16 @@ class Sourced(BaseModel):
 
     @property
     def is_trustworthy(self) -> bool:
+        """Whether routing should treat this value as settled.
+
+        A MEASURED value is only better than an imported one once enough
+        observations stand behind it — nine traces and nine thousand traces are
+        not the same fact, and `samples` is what tells them apart. The floor is
+        `standards.MEASURED_SAMPLE_FLOOR`, not a literal, so it can be argued
+        with in one place.
+        """
         if self.provenance is Provenance.MEASURED:
-            return (self.samples or 0) >= 30
+            return (self.samples or 0) >= MEASURED_SAMPLE_FLOOR
         return self.provenance is not Provenance.ASSUMED
 
 
