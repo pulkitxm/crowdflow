@@ -106,6 +106,12 @@ def diamond_pack() -> CircuitPack:
         zone("north", 100.0, 200.0),
         zone("south", 100.0, -200.0),
         zone("exit", 200.0, 0.0, ZoneKind.EXIT),
+        # A working position beside the track. Reachable on paper, never
+        # routable: it exists so `never_route_through` names something that is
+        # genuinely forbidden rather than a legitimate detour. Marking `north`
+        # forbidden — as this fixture used to — made the constraint inert,
+        # because every routing test walks through north and expected to.
+        zone("marshal", 100.0, 60.0),
     ]
     edges = [
         edge("e_direct", "gate", "exit", 200.0),
@@ -113,6 +119,8 @@ def diamond_pack() -> CircuitPack:
         edge("e_north_exit", "north", "exit", 600.0),
         edge("e_gate_south", "gate", "south", 1200.0),
         edge("e_south_exit", "south", "exit", 1200.0),
+        edge("e_gate_marshal", "gate", "marshal", 150.0),
+        edge("e_marshal_exit", "marshal", "exit", 150.0),
     ]
     crossings = [
         Crossing(
@@ -127,7 +135,7 @@ def diamond_pack() -> CircuitPack:
         zones,
         edges,
         crossings,
-        SafetyConstraints(never_route_through=["north"], emergency_exits=["exit"]),
+        SafetyConstraints(never_route_through=["marshal"], emergency_exits=["exit"]),
     )
 
 

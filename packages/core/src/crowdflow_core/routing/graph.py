@@ -75,6 +75,7 @@ class VenueGraph:
         self.session_state = session_state
         self._adj: dict[str, list[tuple[str, str]]] = {}
         self._closed: set[str] = set()
+        self._forbidden: set[str] = set()
         self._route_cache: dict[
             tuple[str, str, frozenset[str], frozenset[str]], RouteResult
         ] = {}
@@ -100,9 +101,19 @@ class VenueGraph:
             if not crossing.availability.is_open_during(session_state):
                 self._closed.add(crossing.edge_id)
 
+        # Forbidden zones are REMOVED, not penalised. `avoid` is a preference
+        # expressed as a cost multiplier, which is right for "steer traffic away"
+        # and wrong for "never route through a live-circuit working position": a
+        # multiplier still yields a path when it is the only one, and a path is
+        # what the caller then acts on. If the only way runs through a marshal
+        # post, the honest answer is that there is no way.
+        self._forbidden = set(self.pack.constraints.never_route_through)
+
         self._adj = {zid: [] for zid in self.pack.zones}
         for eid, e in self.pack.edges.items():
             if eid in self._closed:
+                continue
+            if e.source in self._forbidden or e.destination in self._forbidden:
                 continue
             self._adj.setdefault(e.source, []).append((e.destination, eid))
             if e.bidirectional:
@@ -111,6 +122,16 @@ class VenueGraph:
     @property
     def closed_edges(self) -> set[str]:
         return set(self._closed)
+
+    @property
+    def forbidden_zones(self) -> set[str]:
+        """Zones no route may traverse. Structurally absent from the graph."""
+        return set(self._forbidden)
+
+    def path_violations(self, path: list[str]) -> list[str]:
+        """Forbidden zones a path traverses. Should always be empty — this is the
+        independent check that the structural exclusion actually held."""
+        return [z for z in path if z in self._forbidden]
 
     def neighbours(self, zone_id: str) -> list[tuple[str, str]]:
         return self._adj.get(zone_id, [])

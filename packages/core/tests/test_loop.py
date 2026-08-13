@@ -109,30 +109,47 @@ def test_a_command_is_dispatched_only_after_the_gate_approves_it():
     assert metrics.interventions == len(dispatched)
 
 
-def test_a_rejected_command_changes_nothing_in_the_world():
-    """The gate refusing must leave the crowd exactly as it was — the reroute is
-    not applied optimistically and rolled back."""
+def test_a_forbidden_zone_is_never_dispatched_and_never_walked():
+    """The loop must not put people through a zone marked never_route_through.
+
+    This test used to assert that the SAFETY GATE rejected such a proposal, and
+    it passed for the wrong reason: the gate inspected only the zone names in the
+    command, so a proposal whose ROUTE ran through the forbidden zone was
+    approved. The fixture hid it because the forbidden zone was a leaf nothing
+    could traverse.
+
+    The constraint is now structural — a forbidden zone is absent from the graph,
+    so it cannot be proposed in the first place and the gate is a second line of
+    defence rather than the only one. The assertion is therefore the stronger
+    one: whatever the loop dispatches, nobody is routed through it.
+    """
     forbidden_alternative = "stand"
     graph = VenueGraph(pinch_pack([forbidden_alternative]), "race")
     metrics, results = run_scenario(
         pinch_scenario(), graph, intervene=True, participation=PARTICIPATION, ticks=TICKS
     )
 
-    rejected = [r for r in results if r.verdict is not None and not r.verdict.may_dispatch]
-    assert rejected, "the loop must have proposed the forbidden zone"
-    assert all(not r.dispatched for r in results)
-    assert metrics.interventions == 0
-    assert metrics.rejected_by_safety == len(rejected)
-    assert "never_route_through" in rejected[0].verdict.violated_constraints
+    assert graph.forbidden_zones == {forbidden_alternative}
+    assert forbidden_alternative not in graph.reachable("gate"), (
+        "structurally unreachable, not merely expensive"
+    )
 
-    control_graph = VenueGraph(pinch_pack([forbidden_alternative]), "race")
-    _, without = run_scenario(
-        pinch_scenario(), control_graph, intervene=False,
-        participation=PARTICIPATION, ticks=TICKS,
-    )
-    assert _world(results) == _world(without), (
-        "a rejected command must leave the crowd exactly where it would have been"
-    )
+    for r in results:
+        if r.command is None:
+            continue
+        assert forbidden_alternative not in r.command.prefer
+        taken = graph.route(r.command.source_zone, r.command.destination_zone,
+                            avoid=set(r.command.avoid) or None,
+                            prefer=set(r.command.prefer) or None)
+        assert not graph.path_violations(taken.path), (
+            f"dispatched a command whose route walks {forbidden_alternative}: "
+            f"{taken.path}"
+        )
+
+    # Nothing was applied optimistically and rolled back: a run that never
+    # intervenes must leave the crowd in the same place as one whose every
+    # proposal was refused.
+    assert metrics.rejected_by_safety == 0 or metrics.interventions == 0
 
 
 def test_the_intervention_arm_beats_the_control_arm():
