@@ -54,7 +54,15 @@ export interface MeshStatus {
   online: boolean;
 }
 
-export interface MeshModule {
+import { requireNativeModule } from 'expo-modules-core';
+import type { EventSubscription, NativeModule } from 'expo-modules-core';
+
+interface MeshEvents {
+  onPeersChanged: (event: { peers: MeshPeer[] }) => void;
+  onMessage: (message: MeshMessage) => void;
+}
+
+export interface MeshModule extends NativeModule<MeshEvents> {
   start(): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<MeshStatus>;
@@ -64,3 +72,46 @@ export interface MeshModule {
   addPeerListener(listener: (peers: MeshPeer[]) => void): () => void;
   addMessageListener(listener: (message: MeshMessage) => void): () => void;
 }
+
+const native: MeshModule | null =
+  typeof document === 'undefined' ? requireNativeModule<MeshModule>('Mesh') : null;
+
+function nativeMesh(): MeshModule {
+  if (native === null) {
+    throw new Error('The mesh requires an Android development build; it is unavailable on web.');
+  }
+  return native;
+}
+
+/** Typed adapter over Expo's event subscriptions. */
+export const Mesh = {
+  start: () => nativeMesh().start(),
+  stop: () => nativeMesh().stop(),
+  getStatus: () => nativeMesh().getStatus(),
+  getNearbyNodes: () => nativeMesh().getNearbyNodes(),
+  send: (nodeId: string, message: MeshMessage) => nativeMesh().send(nodeId, message),
+  broadcast: (message: MeshMessage) => nativeMesh().broadcast(message),
+  addPeerListener(listener: (peers: MeshPeer[]) => void): () => void {
+    const subscription: EventSubscription = nativeMesh().addListener(
+      'onPeersChanged',
+      ({ peers }) => listener(peers),
+    );
+    return () => subscription.remove();
+  },
+  addMessageListener(listener: (message: MeshMessage) => void): () => void {
+    const subscription: EventSubscription = nativeMesh().addListener('onMessage', listener);
+    return () => subscription.remove();
+  },
+} satisfies Pick<
+  MeshModule,
+  | 'start'
+  | 'stop'
+  | 'getStatus'
+  | 'getNearbyNodes'
+  | 'send'
+  | 'broadcast'
+  | 'addPeerListener'
+  | 'addMessageListener'
+>;
+
+export default Mesh;

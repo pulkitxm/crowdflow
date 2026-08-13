@@ -44,6 +44,9 @@ interface MeshNetwork {
     /** Whether the foreground service is running and a transport is available. */
     val isRunning: Boolean
 
+    /** Current internet reachability, measured by the implementation. */
+    val isOnline: Boolean
+
     /**
      * Continuously discover peers in range.
      *

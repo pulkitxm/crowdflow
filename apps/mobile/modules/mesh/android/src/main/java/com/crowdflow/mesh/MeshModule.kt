@@ -1,46 +1,61 @@
 package com.crowdflow.mesh
 
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import android.util.Base64
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-/**
- * The Expo bridge: the narrow window through which JS sees the mesh.
- *
- * It is deliberately thin, and the thinness is the design. Everything exposed
- * here is either a fact JS needs to render (are we running, how many peers, are
- * we online) or an action a user took (start, stop, send). Nothing about
- * transports crosses — no scan intervals, no connection states, no Wi-Fi Aware
- * session handles. A JS caller cannot tell which radio carried a byte, and that
- * is what keeps the app from growing per-handset special cases that nobody can
- * test.
- *
- * `network` is a [StubMeshNetwork] until a real transport exists. The swap is a
- * one-line change here and invisible everywhere else, which is the whole point
- * of having an interface rather than a class.
- *
- * Note what is NOT bridged: relayMessage. Relaying is driven by the foreground
- * service, not by JS, because the JS runtime is suspended for most of the event.
- * Exposing it would invite a caller to drive the mesh from a component's
- * useEffect, which works beautifully in a demo with the screen on and covers
- * almost nobody at a race.
- */
+/** The narrow Expo bridge over [MeshNetwork]. Radio details never cross it. */
 class MeshModule : Module() {
 
     private val network: MeshNetwork = StubMeshNetwork()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun definition() = ModuleDefinition {
         Name("Mesh")
-
         Events("onPeersChanged", "onMessage")
 
+        OnCreate {
+            scope.launch {
+                network.discoverPeers().collectLatest { peers ->
+                    sendEvent("onPeersChanged", mapOf("peers" to peers.map(::peerMap)))
+                }
+            }
+            scope.launch {
+                network.incoming().collect { message ->
+                    sendEvent("onMessage", messageMap(message))
+                }
+            }
+        }
+
+        OnDestroy { scope.cancel() }
+
         AsyncFunction("start") {
-            // A real implementation starts MeshForegroundService here and waits
-            // for it to reach the foreground, rather than reporting success and
-            // letting the caller believe in a mesh that is not running.
+            val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, MeshForegroundService::class.java).setAction(
+                    MeshForegroundService.ACTION_START
+                ),
+            )
             (network as? StubMeshNetwork)?.start()
         }
 
         AsyncFunction("stop") {
+            val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+            context.startService(
+                Intent(context, MeshForegroundService::class.java).setAction(
+                    MeshForegroundService.ACTION_STOP
+                ),
+            )
             (network as? StubMeshNetwork)?.stop()
         }
 
@@ -48,23 +63,60 @@ class MeshModule : Module() {
             mapOf(
                 "running" to network.isRunning,
                 "peerCount" to network.getNearbyNodes().size,
-                // Whether this handset can currently reach the internet, i.e.
-                // whether it is eligible to be elected uplink. An observation
-                // that flips as the cell saturates, never a setting.
-                "online" to false,
+                "online" to network.isOnline,
             )
         }
 
         AsyncFunction("getNearbyNodes") {
-            network.getNearbyNodes().map { peer ->
-                mapOf(
-                    "nodeId" to peer.nodeId,
-                    "epoch" to peer.epoch,
-                    "transport" to peer.transport.name.lowercase(),
-                    "rssiDbm" to peer.rssiDbm,
-                    "lastSeenMs" to peer.lastSeenMs,
-                )
-            }
+            network.getNearbyNodes().map(::peerMap)
         }
+
+        AsyncFunction("send") { nodeId: String, raw: Map<String, Any?> ->
+            network.sendMessage(nodeId, messageFrom(raw))
+        }
+
+        AsyncFunction("broadcast") { raw: Map<String, Any?> ->
+            network.broadcast(messageFrom(raw))
+        }
+    }
+
+    private fun peerMap(peer: MeshPeer): Map<String, Any?> = mapOf(
+        "nodeId" to peer.nodeId,
+        "epoch" to peer.epoch,
+        "transport" to peer.transport.name.lowercase(),
+        "rssiDbm" to peer.rssiDbm,
+        "lastSeenMs" to peer.lastSeenMs,
+    )
+
+    private fun messageMap(message: MeshMessage): Map<String, Any?> = mapOf(
+        "type" to message.type,
+        "trafficClass" to message.trafficClass.name.lowercase(),
+        "source" to message.source,
+        "sequence" to message.sequence,
+        "ttl" to message.ttl,
+        "timestampMs" to message.timestampMs,
+        "payload" to Base64.encodeToString(message.payload, Base64.NO_WRAP),
+    )
+
+    private fun messageFrom(raw: Map<String, Any?>): MeshMessage {
+        fun required(name: String): Any = raw[name]
+            ?: throw IllegalArgumentException("mesh message missing $name")
+        val payload = when (val value = required("payload")) {
+            is String -> Base64.decode(value, Base64.DEFAULT)
+            is ByteArray -> value
+            is List<*> -> value.map { (it as Number).toByte() }.toByteArray()
+            else -> throw IllegalArgumentException("mesh payload must be bytes or base64")
+        }
+        return MeshMessage(
+            type = required("type") as String,
+            trafficClass = MeshTrafficClass.valueOf(
+                (required("trafficClass") as String).uppercase()
+            ),
+            source = required("source") as String,
+            sequence = (required("sequence") as Number).toLong(),
+            ttl = (required("ttl") as Number).toInt(),
+            timestampMs = (required("timestampMs") as Number).toLong(),
+            payload = payload,
+        )
     }
 }

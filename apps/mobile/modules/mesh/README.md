@@ -59,14 +59,17 @@ android/src/main/
   java/com/crowdflow/mesh/
     MeshNetwork.kt                         the interface — the actual boundary
     MeshTypes.kt                           peer, message, traffic class, transport
-    MeshForegroundService.kt               documented stub of the relay service
-    StubMeshNetwork.kt                     in-memory implementation for wiring up
-index.ts                                   the TS surface, transport-free
-expo-module.config.json
+    MeshForegroundService.kt               real foreground lifecycle + user stop action
+    StubMeshNetwork.kt                     in-memory transport for wiring up
+  build.gradle                              Expo local-module Android build
+index.ts                                   typed JS bridge and event subscriptions
+expo-module.config.json                    autolinking metadata
+package.json                               local-module metadata
 ```
 
-`StubMeshNetwork` is a stub on purpose. Writing a real Wi-Fi Aware implementation
-before the routing logic has been measured would be building the expensive half
-first: the protocol comparison in `crowdflow_core.mesh` (delivery ratio, hop
-count, copies per message for each of the three policies) runs today, with no
-devices, and it is what tells us whether any of this is worth a radio.
+`StubMeshNetwork` remains an in-memory transport on purpose. The bridge and
+foreground-service lifecycle are executable and autolinked, but no source file
+claims to be Wi-Fi Aware, Direct or BLE: choosing one without the required demo-
+handset capability/walk test would be fabricating hardware support. The measured
+routing policies in `crowdflow_core.mesh` are ready behind the seam; replacing
+the in-memory transport is explicitly the hardware-dependent remainder.
