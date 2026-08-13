@@ -379,7 +379,21 @@ export class MapPanel {
         continue;
       }
 
-      const band = row?.band ?? "nominal";
+      // An observed payload is required to carry a band. If malformed wire data
+      // violates that contract, draw unknown rather than choosing green as a
+      // convenient fallback.
+      if (!row?.band) {
+        ctx.strokeStyle = UNKNOWN_COLOUR;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y - 2);
+        ctx.lineTo(x + 2, y + 2);
+        ctx.moveTo(x + 2, y - 2);
+        ctx.lineTo(x - 2, y + 2);
+        ctx.stroke();
+        continue;
+      }
+      const band = row.band;
       ctx.fillStyle = BAND_COLOUR[band];
       if (band === "nominal") {
         ctx.beginPath();
@@ -420,8 +434,7 @@ export class MapPanel {
       ctx.fillStyle = "rgba(8,11,14,0.82)";
       const w = ctx.measureText(text).width;
       ctx.fillRect(x + 7, y - 7, w + 6, 14);
-      ctx.fillStyle =
-        row.visibility === "silent" ? SILENT_COLOUR : BAND_COLOUR[row.band ?? "nominal"];
+      ctx.fillStyle = row.band ? BAND_COLOUR[row.band] : UNKNOWN_COLOUR;
       ctx.fillText(text, x + 10, y);
     }
 

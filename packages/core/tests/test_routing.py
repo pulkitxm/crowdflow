@@ -193,6 +193,33 @@ def test_prefer_discounts_a_route_without_forcing_it(diamond: VenueGraph):
     assert PREFER_DISCOUNT < 1
 
 
+def test_prefer_discount_cannot_make_the_search_return_a_suboptimal_path():
+    """Regression for the inadmissible free-flow A* heuristic.
+
+    A preferred edge can cost less than straight-line free-flow time. Dijkstra's
+    zero heuristic must therefore still find the genuinely cheapest path.
+    """
+    pack = make_pack(
+        [
+            zone("s", 0, 0),
+            zone("near", 90, 0),
+            zone("far", 0, 100),
+            zone("x", 100, 0),
+        ],
+        [
+            edge("e-s-near", "s", "near", 90),
+            edge("e-near-x", "near", "x", 90),
+            edge("e-s-far", "s", "far", 100),
+            edge("e-far-x", "far", "x", 100),
+        ],
+    )
+    graph = VenueGraph(pack)
+    result = graph.route("s", "x", prefer={"far"})
+    assert result.path == ["s", "far", "x"]
+    expected = (100 / 1.34 * PREFER_DISCOUNT) + (100 / 1.34)
+    assert result.cost_s == pytest.approx(expected)
+
+
 def test_a_critical_zone_costs_more_than_a_nominal_one(diamond: VenueGraph):
     """Cost is time under current conditions, not distance."""
     clear = diamond.edge_cost("e_direct", {"exit": _zone_state("exit", 0.1, 1.34)})[0]

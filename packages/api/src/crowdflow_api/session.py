@@ -29,6 +29,7 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass, field
+from threading import Lock
 
 from crowdflow_contracts import LOSBand, VenueState
 from crowdflow_core.loop import ControlLoop, TickResult
@@ -140,6 +141,7 @@ class ScenarioSession:
         self.events: deque[ConsoleEvent] = deque(maxlen=EVENT_LOG_CAPACITY)
         self._pending: list[ConsoleEvent] = []
         self._seq = 0
+        self._event_lock = Lock()
         self._memory = _ZoneMemory()
         self._subscribers: set[asyncio.Queue[TickEnvelope | None]] = set()
         self.dropped_consoles = 0
@@ -205,19 +207,20 @@ class ScenarioSession:
         zone_id: str | None = None,
         detail: str | None = None,
     ) -> ConsoleEvent:
-        self._seq += 1
-        event = ConsoleEvent(
-            seq=self._seq,
-            time_s=self.sim.time_s,
-            kind=kind,
-            severity=severity,
-            message=message,
-            zone_id=zone_id,
-            detail=detail,
-        )
-        self.events.append(event)
-        self._pending.append(event)
-        return event
+        with self._event_lock:
+            self._seq += 1
+            event = ConsoleEvent(
+                seq=self._seq,
+                time_s=self.sim.time_s,
+                kind=kind,
+                severity=severity,
+                message=message,
+                zone_id=zone_id,
+                detail=detail,
+            )
+            self.events.append(event)
+            self._pending.append(event)
+            return event
 
     def _zone_label(self, zone_id: str) -> str:
         zone = self.circuit.pack.zones.get(zone_id)
@@ -233,7 +236,12 @@ class ScenarioSession:
         The judgement here is *which transitions are worth a line*; the
         transitions themselves are core's.
         """
-        self._pending.clear()
+        # Control actions can log from FastAPI's worker thread while this tick is
+        # computed on another. Drain atomically; clearing at tick start used to
+        # erase every pause/play/speed line before a console could receive it.
+        with self._event_lock:
+            pending_before_tick = list(self._pending)
+            self._pending.clear()
         state = result.state
 
         for zone_id, zone in state.zones.items():
@@ -357,7 +365,10 @@ class ScenarioSession:
                 ),
             )
 
-        return list(self._pending)
+        with self._event_lock:
+            generated = list(self._pending)
+            self._pending.clear()
+        return pending_before_tick + generated
 
     def _coverage(self, state: VenueState, silent: list[str]) -> CoverageReport:
         total = len(self.circuit.pack.zones)
@@ -512,7 +523,8 @@ class ScenarioSession:
                 self.status = SessionStatus.PAUSED
                 self._log(EventKind.SESSION, EventSeverity.INFO, "run paused")
         elif action is ControlAction.STEP:
-            self._step_requested = True
+            if self.status is not SessionStatus.FINISHED:
+                self._step_requested = True
         elif action is ControlAction.SPEED:
             if speed is None:
                 raise ValueError("action=speed requires a speed")

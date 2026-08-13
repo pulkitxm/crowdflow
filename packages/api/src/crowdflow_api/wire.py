@@ -331,7 +331,12 @@ class SessionInfo(BaseModel):
 
     seed: int
     population: int
-    participation: float = Field(description="measured share running the app")
+    participation: float = Field(
+        description=(
+            "participation source for this run; a simulation input is ASSUMED, "
+            "a live session must supply a measured estimate"
+        )
+    )
     compliance: float = Field(description="share who act on a reroute — ASSUMED in core")
     tick_s: float = Field(description="simulation seconds per tick")
     speed: float = Field(description="wall-clock multiplier; 1.0 is real time")

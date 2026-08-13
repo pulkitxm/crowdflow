@@ -32,7 +32,6 @@ COMMAND_TTL_S = 300.0
 """Reroute commands expire. Stale routing advice is actively harmful — the
 crowd it was written for has moved on."""
 
-
 @dataclass
 class TickResult:
     """Everything one tick produced. The dashboard renders this and nothing else."""
@@ -74,6 +73,14 @@ class ControlLoop:
         self._last_intervention_s = -1e9
 
     def tick(self, session_state: str | None = None) -> TickResult:
+        if session_state is not None and session_state != self.graph.session_state:
+            # D5: the edge set changes with the session, not merely the label on
+            # VenueState. Rebuild before anyone plans this tick, and clear any
+            # advisory whose path was computed against the old structure.
+            self.graph.rebuild(session_state)
+            self.active_command = None
+            self.sim.avoid = set()
+            self.sim.prefer = set()
         self.sim.step()
         now = self.sim.time_s
 
@@ -91,7 +98,7 @@ class ControlLoop:
         if not self.intervene:
             return result
 
-        actionable = [f for f in forecasts if f.is_actionable]
+        actionable = [forecast for forecast in forecasts if forecast.is_actionable]
         if not actionable or self.active_command:
             return result
         if now - self._last_intervention_s < 120.0:
@@ -102,17 +109,17 @@ class ControlLoop:
         if alternative is None:
             return result
 
-        what_if = self.intervention.evaluate(
+        chosen = self.intervention.evaluate(
             self.sim,
             from_zone=target.zone_id,
             to_zone=alternative,
             avoid={target.zone_id},
             prefer={alternative},
         )
-        result.candidates = what_if.candidates
+        result.candidates = chosen.candidates
         self._last_intervention_s = now
 
-        if what_if.selected is None:
+        if chosen.selected is None:
             return result
 
         command = RerouteCommand(
@@ -120,12 +127,12 @@ class ControlLoop:
             issued_at=now,
             expires_at=now + COMMAND_TTL_S,
             source_zone=target.zone_id,
-            destination_zone=alternative,
+            destination_zone=chosen.selected.to_zone,
             avoid=[target.zone_id],
-            prefer=[alternative],
-            target_fraction=what_if.selected.divert_fraction,
+            prefer=[chosen.selected.to_zone],
+            target_fraction=chosen.selected.divert_fraction,
             reason=(target.causes[0] if target.causes else "flow rising toward capacity"),
-            expected_cost_s=what_if.selected.projected_walk_time_delta_s,
+            expected_cost_s=chosen.selected.projected_walk_time_delta_s,
         )
         verdict = self.safety.review(command, state, self.graph)
         result.command = command

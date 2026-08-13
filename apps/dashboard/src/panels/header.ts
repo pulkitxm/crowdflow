@@ -122,7 +122,8 @@ export class HeaderPanel {
       stat(
         "PARTICIPATION",
         percent(s.participation),
-        "measured share running the app; every population estimate is scaled by it",
+        "simulation input, not measured attendance; every population estimate is scaled by it",
+        "hstat--assumed",
       ),
       stat(
         "COMPLIANCE",
