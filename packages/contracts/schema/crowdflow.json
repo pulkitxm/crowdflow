@@ -1,0 +1,2175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CrowdFlow contracts",
+  "description": "Generated from packages/contracts. Do not edit.",
+  "$defs": {
+    "CrowdNode": {
+      "$defs": {
+        "Position": {
+          "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+          "properties": {
+            "x": {
+              "description": "metres east of venue origin",
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "description": "metres north of venue origin",
+              "title": "Y",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "title": "Position",
+          "type": "object"
+        }
+      },
+      "description": "One anonymous device's live movement state.\n\nnode_id is a rotating pseudonym, not an identity. It is valid only within its\nrotation epoch and must never be joined across epochs.",
+      "properties": {
+        "node_id": {
+          "description": "rotating pseudonym, valid within its epoch only",
+          "title": "Node Id",
+          "type": "string"
+        },
+        "epoch": {
+          "description": "ID rotation epoch; IDs are not comparable across epochs",
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "title": "Timestamp",
+          "type": "number"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "speed_ms": {
+          "description": "metres per second",
+          "minimum": 0,
+          "title": "Speed Ms",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "degrees clockwise from north",
+          "exclusiveMaximum": 360,
+          "minimum": 0,
+          "title": "Heading Deg",
+          "type": "number"
+        },
+        "accuracy_m": {
+          "description": "positional 1-sigma; feeds the confidence model",
+          "exclusiveMinimum": 0,
+          "title": "Accuracy M",
+          "type": "number"
+        },
+        "zone_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "assigned by the state engine, not self-reported",
+          "title": "Zone Id"
+        }
+      },
+      "required": [
+        "node_id",
+        "epoch",
+        "timestamp",
+        "position",
+        "speed_ms",
+        "heading_deg",
+        "accuracy_m"
+      ],
+      "title": "CrowdNode",
+      "type": "object"
+    },
+    "MeshMessage": {
+      "$defs": {
+        "MeshClass": {
+          "description": "Traffic class, which selects the routing protocol.\n\nFlooding everything is epidemic routing: highest delivery, but buffer\nexhaustion and battery drain, which is fatal for phones in pockets.\nSee plan/methods.md section 5.",
+          "enum": [
+            "state",
+            "uplink",
+            "urgent"
+          ],
+          "title": "MeshClass",
+          "type": "string"
+        },
+        "MeshMessageType": {
+          "enum": [
+            "hello",
+            "peer_discovery",
+            "state_update",
+            "zone_update",
+            "trace_fragment",
+            "route_update",
+            "alert",
+            "reroute",
+            "ack",
+            "heartbeat",
+            "sync"
+          ],
+          "title": "MeshMessageType",
+          "type": "string"
+        }
+      },
+      "description": "Envelope for anything crossing the mesh.\n\nsequence prevents duplicate processing; ttl stops packets travelling forever.\nBoth are enforced at every hop, not just at the destination.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/MeshMessageType"
+        },
+        "traffic_class": {
+          "$ref": "#/$defs/MeshClass"
+        },
+        "source": {
+          "description": "rotating node pseudonym of the originator",
+          "title": "Source",
+          "type": "string"
+        },
+        "sequence": {
+          "description": "per-source monotonic; used for dedupe",
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "ttl": {
+          "description": "hops remaining",
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Ttl",
+          "type": "integer"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "number"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "traffic_class",
+        "source",
+        "sequence",
+        "ttl",
+        "timestamp"
+      ],
+      "title": "MeshMessage",
+      "type": "object"
+    },
+    "Position": {
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "TraceFragment": {
+      "$defs": {
+        "Position": {
+          "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+          "properties": {
+            "x": {
+              "description": "metres east of venue origin",
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "description": "metres north of venue origin",
+              "title": "Y",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "title": "Position",
+          "type": "object"
+        }
+      },
+      "description": "A short, noised path segment contributed for venue refinement.\n\nCarries planar Laplace noise applied ON DEVICE before storage\n(geo-indistinguishability, Andres et al. CCS 2013 -- see plan/methods.md\nsection 4). Fragments are deliberately too short to reconstruct one person's\nday, and their IDs rotate per fragment.\n\nAccurate in aggregate, deniable individually: map refinement is density\nestimation over many fragments, and zero-mean noise averages out.",
+      "properties": {
+        "fragment_id": {
+          "description": "per-fragment random; never reused, never linkable",
+          "title": "Fragment Id",
+          "type": "string"
+        },
+        "points": {
+          "description": "noised, in venue frame",
+          "items": {
+            "$ref": "#/$defs/Position"
+          },
+          "minItems": 2,
+          "title": "Points",
+          "type": "array"
+        },
+        "t_start": {
+          "description": "unix seconds",
+          "title": "T Start",
+          "type": "number"
+        },
+        "t_end": {
+          "description": "unix seconds",
+          "title": "T End",
+          "type": "number"
+        },
+        "epsilon": {
+          "description": "geo-indistinguishability privacy parameter actually applied",
+          "exclusiveMinimum": 0,
+          "title": "Epsilon",
+          "type": "number"
+        },
+        "noise_radius_m": {
+          "description": "radius within which the true path is indistinguishable",
+          "exclusiveMinimum": 0,
+          "title": "Noise Radius M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fragment_id",
+        "points",
+        "t_start",
+        "t_end",
+        "epsilon",
+        "noise_radius_m"
+      ],
+      "title": "TraceFragment",
+      "type": "object"
+    },
+    "Confidence": {
+      "description": "How much to trust the state beside it.\n\nNever presented without the claim it qualifies. With thirty nodes reporting,\nthe system says so; it does not quietly present the same number it would give\nfor four hundred.",
+      "properties": {
+        "value": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        },
+        "observed_nodes": {
+          "description": "devices contributing to this estimate",
+          "minimum": 0,
+          "title": "Observed Nodes",
+          "type": "integer"
+        },
+        "freshness_s": {
+          "description": "age of the newest observation",
+          "minimum": 0,
+          "title": "Freshness S",
+          "type": "number"
+        },
+        "mean_accuracy_m": {
+          "description": "mean positional 1-sigma",
+          "exclusiveMinimum": 0,
+          "title": "Mean Accuracy M",
+          "type": "number"
+        },
+        "stability": {
+          "description": "agreement with recent estimates for this zone",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Stability",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "observed_nodes",
+        "freshness_s",
+        "mean_accuracy_m",
+        "stability"
+      ],
+      "title": "Confidence",
+      "type": "object"
+    },
+    "VenueState": {
+      "$defs": {
+        "Confidence": {
+          "description": "How much to trust the state beside it.\n\nNever presented without the claim it qualifies. With thirty nodes reporting,\nthe system says so; it does not quietly present the same number it would give\nfor four hundred.",
+          "properties": {
+            "value": {
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Value",
+              "type": "number"
+            },
+            "observed_nodes": {
+              "description": "devices contributing to this estimate",
+              "minimum": 0,
+              "title": "Observed Nodes",
+              "type": "integer"
+            },
+            "freshness_s": {
+              "description": "age of the newest observation",
+              "minimum": 0,
+              "title": "Freshness S",
+              "type": "number"
+            },
+            "mean_accuracy_m": {
+              "description": "mean positional 1-sigma",
+              "exclusiveMinimum": 0,
+              "title": "Mean Accuracy M",
+              "type": "number"
+            },
+            "stability": {
+              "description": "agreement with recent estimates for this zone",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Stability",
+              "type": "number"
+            }
+          },
+          "required": [
+            "value",
+            "observed_nodes",
+            "freshness_s",
+            "mean_accuracy_m",
+            "stability"
+          ],
+          "title": "Confidence",
+          "type": "object"
+        },
+        "LOSBand": {
+          "description": "Operational density band. Always rendered with its word and its number.",
+          "enum": [
+            "nominal",
+            "building",
+            "critical"
+          ],
+          "title": "LOSBand",
+          "type": "string"
+        },
+        "ZoneState": {
+          "description": "One zone at one instant.",
+          "properties": {
+            "zone_id": {
+              "title": "Zone Id",
+              "type": "string"
+            },
+            "timestamp": {
+              "title": "Timestamp",
+              "type": "number"
+            },
+            "observed_nodes": {
+              "description": "devices seen; NOT people",
+              "minimum": 0,
+              "title": "Observed Nodes",
+              "type": "integer"
+            },
+            "participation_rate": {
+              "description": "measured, never assumed \u2014 see standards.MEASURED_NOT_ASSUMED",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Participation Rate",
+              "type": "number"
+            },
+            "flow_ped_m_min": {
+              "description": "pedestrians per metre width per minute \u2014 the primary measure",
+              "minimum": 0,
+              "title": "Flow Ped M Min",
+              "type": "number"
+            },
+            "mean_speed_ms": {
+              "minimum": 0,
+              "title": "Mean Speed Ms",
+              "type": "number"
+            },
+            "dominant_heading_deg": {
+              "anyOf": [
+                {
+                  "exclusiveMaximum": 360,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Dominant Heading Deg"
+            },
+            "inflow_per_min": {
+              "minimum": 0,
+              "title": "Inflow Per Min",
+              "type": "number"
+            },
+            "outflow_per_min": {
+              "minimum": 0,
+              "title": "Outflow Per Min",
+              "type": "number"
+            },
+            "confidence": {
+              "$ref": "#/$defs/Confidence"
+            },
+            "estimated_population": {
+              "description": "Observed devices scaled by measured participation.\n\nThe single most load-bearing number in the system, which is why\nparticipation_rate is measured rather than configured.",
+              "readOnly": true,
+              "title": "Estimated Population",
+              "type": "integer"
+            },
+            "band": {
+              "$ref": "#/$defs/LOSBand",
+              "description": "Operational band. The only classifier \u2014 see standards.band_for_flow.",
+              "readOnly": true
+            },
+            "los_grade": {
+              "description": "Full Fruin grade A-F. Console only; the app never shows this.",
+              "readOnly": true,
+              "title": "Los Grade",
+              "type": "string"
+            },
+            "net_flow_per_min": {
+              "description": "Positive means filling. Sustained positive net flow is the early warning.",
+              "readOnly": true,
+              "title": "Net Flow Per Min",
+              "type": "number"
+            }
+          },
+          "required": [
+            "zone_id",
+            "timestamp",
+            "observed_nodes",
+            "participation_rate",
+            "flow_ped_m_min",
+            "mean_speed_ms",
+            "inflow_per_min",
+            "outflow_per_min",
+            "confidence",
+            "estimated_population",
+            "band",
+            "los_grade",
+            "net_flow_per_min"
+          ],
+          "title": "ZoneState",
+          "type": "object"
+        }
+      },
+      "description": "Every zone at one tick, plus what the system knows it cannot see.",
+      "properties": {
+        "circuit_id": {
+          "title": "Circuit Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "number"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "drives crossing availability",
+          "title": "Session Id"
+        },
+        "zones": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ZoneState"
+          },
+          "title": "Zones",
+          "type": "object"
+        },
+        "unobserved_zones": {
+          "description": "Zones with no reporting device. MUST render as unknown, never as empty. Under D7 uplinks are opportunistic, so coverage genuinely varies.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unobserved Zones",
+          "type": "array"
+        }
+      },
+      "required": [
+        "circuit_id",
+        "timestamp"
+      ],
+      "title": "VenueState",
+      "type": "object"
+    },
+    "ZoneState": {
+      "$defs": {
+        "Confidence": {
+          "description": "How much to trust the state beside it.\n\nNever presented without the claim it qualifies. With thirty nodes reporting,\nthe system says so; it does not quietly present the same number it would give\nfor four hundred.",
+          "properties": {
+            "value": {
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Value",
+              "type": "number"
+            },
+            "observed_nodes": {
+              "description": "devices contributing to this estimate",
+              "minimum": 0,
+              "title": "Observed Nodes",
+              "type": "integer"
+            },
+            "freshness_s": {
+              "description": "age of the newest observation",
+              "minimum": 0,
+              "title": "Freshness S",
+              "type": "number"
+            },
+            "mean_accuracy_m": {
+              "description": "mean positional 1-sigma",
+              "exclusiveMinimum": 0,
+              "title": "Mean Accuracy M",
+              "type": "number"
+            },
+            "stability": {
+              "description": "agreement with recent estimates for this zone",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Stability",
+              "type": "number"
+            }
+          },
+          "required": [
+            "value",
+            "observed_nodes",
+            "freshness_s",
+            "mean_accuracy_m",
+            "stability"
+          ],
+          "title": "Confidence",
+          "type": "object"
+        },
+        "LOSBand": {
+          "description": "Operational density band. Always rendered with its word and its number.",
+          "enum": [
+            "nominal",
+            "building",
+            "critical"
+          ],
+          "title": "LOSBand",
+          "type": "string"
+        }
+      },
+      "description": "One zone at one instant.",
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "number"
+        },
+        "observed_nodes": {
+          "description": "devices seen; NOT people",
+          "minimum": 0,
+          "title": "Observed Nodes",
+          "type": "integer"
+        },
+        "participation_rate": {
+          "description": "measured, never assumed \u2014 see standards.MEASURED_NOT_ASSUMED",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Participation Rate",
+          "type": "number"
+        },
+        "flow_ped_m_min": {
+          "description": "pedestrians per metre width per minute \u2014 the primary measure",
+          "minimum": 0,
+          "title": "Flow Ped M Min",
+          "type": "number"
+        },
+        "mean_speed_ms": {
+          "minimum": 0,
+          "title": "Mean Speed Ms",
+          "type": "number"
+        },
+        "dominant_heading_deg": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 360,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dominant Heading Deg"
+        },
+        "inflow_per_min": {
+          "minimum": 0,
+          "title": "Inflow Per Min",
+          "type": "number"
+        },
+        "outflow_per_min": {
+          "minimum": 0,
+          "title": "Outflow Per Min",
+          "type": "number"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "estimated_population": {
+          "description": "Observed devices scaled by measured participation.\n\nThe single most load-bearing number in the system, which is why\nparticipation_rate is measured rather than configured.",
+          "readOnly": true,
+          "title": "Estimated Population",
+          "type": "integer"
+        },
+        "band": {
+          "$ref": "#/$defs/LOSBand",
+          "description": "Operational band. The only classifier \u2014 see standards.band_for_flow.",
+          "readOnly": true
+        },
+        "los_grade": {
+          "description": "Full Fruin grade A-F. Console only; the app never shows this.",
+          "readOnly": true,
+          "title": "Los Grade",
+          "type": "string"
+        },
+        "net_flow_per_min": {
+          "description": "Positive means filling. Sustained positive net flow is the early warning.",
+          "readOnly": true,
+          "title": "Net Flow Per Min",
+          "type": "number"
+        }
+      },
+      "required": [
+        "zone_id",
+        "timestamp",
+        "observed_nodes",
+        "participation_rate",
+        "flow_ped_m_min",
+        "mean_speed_ms",
+        "inflow_per_min",
+        "outflow_per_min",
+        "confidence",
+        "estimated_population",
+        "band",
+        "los_grade",
+        "net_flow_per_min"
+      ],
+      "title": "ZoneState",
+      "type": "object"
+    },
+    "Forecast": {
+      "$defs": {
+        "LOSBand": {
+          "description": "Operational density band. Always rendered with its word and its number.",
+          "enum": [
+            "nominal",
+            "building",
+            "critical"
+          ],
+          "title": "LOSBand",
+          "type": "string"
+        }
+      },
+      "description": "Where congestion will be, when, and why.\n\nThe headline is time_to_threshold_s, not the current value. \"2:47 until\ncapacity\" drives a decision; \"87% full\" does not.",
+      "properties": {
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        },
+        "issued_at": {
+          "title": "Issued At",
+          "type": "number"
+        },
+        "horizon_s": {
+          "description": "how far ahead this forecast looks",
+          "exclusiveMinimum": 0,
+          "title": "Horizon S",
+          "type": "number"
+        },
+        "target_band": {
+          "$ref": "#/$defs/LOSBand",
+          "description": "the band predicted to be crossed"
+        },
+        "probability": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probability",
+          "type": "number"
+        },
+        "time_to_threshold_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "None when the threshold is not projected to be crossed",
+          "title": "Time To Threshold S"
+        },
+        "projected_peak_flow": {
+          "description": "ped/m/min at the projected peak",
+          "minimum": 0,
+          "title": "Projected Peak Flow",
+          "type": "number"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "model_id": {
+          "description": "which model produced this; baseline is a valid answer",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "causes": {
+          "description": "human-readable drivers, ordered by contribution",
+          "items": {
+            "type": "string"
+          },
+          "title": "Causes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "zone_id",
+        "issued_at",
+        "horizon_s",
+        "target_band",
+        "probability",
+        "projected_peak_flow",
+        "confidence",
+        "model_id"
+      ],
+      "title": "Forecast",
+      "type": "object"
+    },
+    "InterventionCandidate": {
+      "$defs": {
+        "ScoreBreakdown": {
+          "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components\nis an assertion; with them it is an argument.",
+          "properties": {
+            "congestion_reduction": {
+              "title": "Congestion Reduction",
+              "type": "number"
+            },
+            "walk_time_cost": {
+              "title": "Walk Time Cost",
+              "type": "number"
+            },
+            "capacity_headroom": {
+              "title": "Capacity Headroom",
+              "type": "number"
+            },
+            "safety_margin": {
+              "title": "Safety Margin",
+              "type": "number"
+            },
+            "fairness": {
+              "title": "Fairness",
+              "type": "number"
+            },
+            "total": {
+              "readOnly": true,
+              "title": "Total",
+              "type": "number"
+            }
+          },
+          "required": [
+            "congestion_reduction",
+            "walk_time_cost",
+            "capacity_headroom",
+            "safety_margin",
+            "fairness",
+            "total"
+          ],
+          "title": "ScoreBreakdown",
+          "type": "object"
+        }
+      },
+      "description": "One simulated what-if. Rejected candidates are kept and displayed.",
+      "properties": {
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "description": {
+          "description": "plain language, e.g. 'Divert 30% of Vale to Gate 4'",
+          "title": "Description",
+          "type": "string"
+        },
+        "divert_fraction": {
+          "description": "0.0 is the do-nothing baseline",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Divert Fraction",
+          "type": "number"
+        },
+        "from_zone": {
+          "title": "From Zone",
+          "type": "string"
+        },
+        "to_zone": {
+          "title": "To Zone",
+          "type": "string"
+        },
+        "via": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Via",
+          "type": "array"
+        },
+        "projected_peak_flow": {
+          "description": "ped/m/min",
+          "minimum": 0,
+          "title": "Projected Peak Flow",
+          "type": "number"
+        },
+        "projected_walk_time_delta_s": {
+          "description": "positive means longer. Always shown beside the benefit, never hidden.",
+          "title": "Projected Walk Time Delta S",
+          "type": "number"
+        },
+        "projected_bottleneck_duration_s": {
+          "minimum": 0,
+          "title": "Projected Bottleneck Duration S",
+          "type": "number"
+        },
+        "score": {
+          "$ref": "#/$defs/ScoreBreakdown"
+        },
+        "selected": {
+          "default": false,
+          "title": "Selected",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "description",
+        "divert_fraction",
+        "from_zone",
+        "to_zone",
+        "projected_peak_flow",
+        "projected_walk_time_delta_s",
+        "projected_bottleneck_duration_s",
+        "score"
+      ],
+      "title": "InterventionCandidate",
+      "type": "object"
+    },
+    "RerouteCommand": {
+      "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+      "properties": {
+        "command_id": {
+          "title": "Command Id",
+          "type": "string"
+        },
+        "issued_at": {
+          "title": "Issued At",
+          "type": "number"
+        },
+        "expires_at": {
+          "description": "commands must expire; stale routing is harmful",
+          "title": "Expires At",
+          "type": "number"
+        },
+        "source_zone": {
+          "title": "Source Zone",
+          "type": "string"
+        },
+        "destination_zone": {
+          "title": "Destination Zone",
+          "type": "string"
+        },
+        "avoid": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Avoid",
+          "type": "array"
+        },
+        "prefer": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Prefer",
+          "type": "array"
+        },
+        "target_fraction": {
+          "description": "share of affected walkers this should reach",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Target Fraction",
+          "type": "number"
+        },
+        "reason": {
+          "description": "plain language, surfaced in the app",
+          "title": "Reason",
+          "type": "string"
+        },
+        "expected_cost_s": {
+          "description": "honest added walking time, stated before the user accepts",
+          "title": "Expected Cost S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "command_id",
+        "issued_at",
+        "expires_at",
+        "source_zone",
+        "destination_zone",
+        "target_fraction",
+        "reason",
+        "expected_cost_s"
+      ],
+      "title": "RerouteCommand",
+      "type": "object"
+    },
+    "SafetyVerdict": {
+      "$defs": {
+        "SafetyOutcome": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "SafetyOutcome",
+          "type": "string"
+        }
+      },
+      "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+      "properties": {
+        "command_id": {
+          "title": "Command Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/SafetyOutcome"
+        },
+        "reason": {
+          "description": "stated even on approval; rejections are explained",
+          "title": "Reason",
+          "type": "string"
+        },
+        "violated_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Violated Constraints",
+          "type": "array"
+        },
+        "emergency_mode": {
+          "default": false,
+          "title": "Emergency Mode",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "command_id",
+        "outcome",
+        "reason"
+      ],
+      "title": "SafetyVerdict",
+      "type": "object"
+    },
+    "ScoreBreakdown": {
+      "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components\nis an assertion; with them it is an argument.",
+      "properties": {
+        "congestion_reduction": {
+          "title": "Congestion Reduction",
+          "type": "number"
+        },
+        "walk_time_cost": {
+          "title": "Walk Time Cost",
+          "type": "number"
+        },
+        "capacity_headroom": {
+          "title": "Capacity Headroom",
+          "type": "number"
+        },
+        "safety_margin": {
+          "title": "Safety Margin",
+          "type": "number"
+        },
+        "fairness": {
+          "title": "Fairness",
+          "type": "number"
+        },
+        "total": {
+          "readOnly": true,
+          "title": "Total",
+          "type": "number"
+        }
+      },
+      "required": [
+        "congestion_reduction",
+        "walk_time_cost",
+        "capacity_headroom",
+        "safety_margin",
+        "fairness",
+        "total"
+      ],
+      "title": "ScoreBreakdown",
+      "type": "object"
+    },
+    "Availability": {
+      "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
+      "properties": {
+        "always_open": {
+          "default": true,
+          "title": "Always Open",
+          "type": "boolean"
+        },
+        "open_when": {
+          "description": "session states",
+          "items": {
+            "type": "string"
+          },
+          "title": "Open When",
+          "type": "array"
+        },
+        "closed_when": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Closed When",
+          "type": "array"
+        },
+        "close_lead_s": {
+          "default": 0,
+          "description": "closes this long before cars run",
+          "title": "Close Lead S",
+          "type": "number"
+        },
+        "reopen_lag_s": {
+          "default": 0,
+          "title": "Reopen Lag S",
+          "type": "number"
+        }
+      },
+      "title": "Availability",
+      "type": "object"
+    },
+    "CircuitPack": {
+      "$defs": {
+        "Availability": {
+          "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
+          "properties": {
+            "always_open": {
+              "default": true,
+              "title": "Always Open",
+              "type": "boolean"
+            },
+            "open_when": {
+              "description": "session states",
+              "items": {
+                "type": "string"
+              },
+              "title": "Open When",
+              "type": "array"
+            },
+            "closed_when": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Closed When",
+              "type": "array"
+            },
+            "close_lead_s": {
+              "default": 0,
+              "description": "closes this long before cars run",
+              "title": "Close Lead S",
+              "type": "number"
+            },
+            "reopen_lag_s": {
+              "default": 0,
+              "title": "Reopen Lag S",
+              "type": "number"
+            }
+          },
+          "title": "Availability",
+          "type": "object"
+        },
+        "CoordinateFrame": {
+          "description": "Local metric frame. Derived from the source bbox, never estimated.",
+          "properties": {
+            "origin_lat": {
+              "title": "Origin Lat",
+              "type": "number"
+            },
+            "origin_lon": {
+              "title": "Origin Lon",
+              "type": "number"
+            },
+            "rotation_deg": {
+              "default": 0.0,
+              "title": "Rotation Deg",
+              "type": "number"
+            },
+            "track_bounds_m": {
+              "description": "track extent (x, y)",
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "title": "Track Bounds M",
+              "type": "array"
+            },
+            "venue_bounds_m": {
+              "description": "(min_x, min_y, max_x, max_y). Larger than the track: car parks, campsites and park-and-ride sit outside it. Sizing to the track clips arrival routes.",
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "title": "Venue Bounds M",
+              "type": "array"
+            }
+          },
+          "required": [
+            "origin_lat",
+            "origin_lon",
+            "track_bounds_m",
+            "venue_bounds_m"
+          ],
+          "title": "CoordinateFrame",
+          "type": "object"
+        },
+        "Crossing": {
+          "description": "The dominant bottleneck mechanism at a circuit.\n\nBridges and tunnels stay open but carry far less than the at-grade crossings\nthey replace \u2014 which is exactly why they pinch when a session starts.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "$ref": "#/$defs/CrossingKind"
+            },
+            "edge_id": {
+              "title": "Edge Id",
+              "type": "string"
+            },
+            "throughput_per_min": {
+              "$ref": "#/$defs/Sourced"
+            },
+            "availability": {
+              "$ref": "#/$defs/Availability"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "edge_id",
+            "throughput_per_min"
+          ],
+          "title": "Crossing",
+          "type": "object"
+        },
+        "CrossingKind": {
+          "enum": [
+            "bridge",
+            "tunnel",
+            "at_grade"
+          ],
+          "title": "CrossingKind",
+          "type": "string"
+        },
+        "Edge": {
+          "description": "A walkable connection.\n\nwidth_m matters more than it looks: flow rate is per metre of width, so the\nLOS band cannot be computed without it.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "destination": {
+              "title": "Destination",
+              "type": "string"
+            },
+            "length_m": {
+              "exclusiveMinimum": 0,
+              "title": "Length M",
+              "type": "number"
+            },
+            "width_m": {
+              "$ref": "#/$defs/Sourced",
+              "description": "required \u2014 LOS flow is per metre of width"
+            },
+            "gradient": {
+              "default": 0.0,
+              "description": "rise over run; affects walking speed",
+              "title": "Gradient",
+              "type": "number"
+            },
+            "bidirectional": {
+              "default": true,
+              "title": "Bidirectional",
+              "type": "boolean"
+            },
+            "free_speed_ms": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Sourced"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observed where available, else the standards prior"
+            }
+          },
+          "required": [
+            "id",
+            "source",
+            "destination",
+            "length_m",
+            "width_m"
+          ],
+          "title": "Edge",
+          "type": "object"
+        },
+        "Position": {
+          "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+          "properties": {
+            "x": {
+              "description": "metres east of venue origin",
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "description": "metres north of venue origin",
+              "title": "Y",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "title": "Position",
+          "type": "object"
+        },
+        "Provenance": {
+          "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+          "enum": [
+            "osm",
+            "venue_map",
+            "f1_circuits",
+            "authored",
+            "measured",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "SafetyConstraints": {
+          "description": "Hard rules the agent cannot override.",
+          "properties": {
+            "never_route_through": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Never Route Through",
+              "type": "array"
+            },
+            "emergency_exits": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Emergency Exits",
+              "type": "array"
+            },
+            "accessible_routes": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "title": "Accessible Routes",
+              "type": "array"
+            }
+          },
+          "title": "SafetyConstraints",
+          "type": "object"
+        },
+        "Sourced": {
+          "description": "A value with its provenance and, where applicable, its sample count.",
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "provenance": {
+              "$ref": "#/$defs/Provenance"
+            },
+            "samples": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observations behind a MEASURED value",
+              "title": "Samples"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            }
+          },
+          "required": [
+            "value",
+            "provenance"
+          ],
+          "title": "Sourced",
+          "type": "object"
+        },
+        "Zone": {
+          "description": "A named place. Imported from OSM tags where possible.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "$ref": "#/$defs/ZoneKind"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "human-readable; the app uses this",
+              "title": "Name"
+            },
+            "position": {
+              "$ref": "#/$defs/Position"
+            },
+            "capacity": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Sourced"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "osm_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Osm Id"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "position"
+          ],
+          "title": "Zone",
+          "type": "object"
+        },
+        "ZoneKind": {
+          "enum": [
+            "gate",
+            "concourse",
+            "crossing",
+            "viewing",
+            "amenity",
+            "parking",
+            "exit"
+          ],
+          "title": "ZoneKind",
+          "type": "string"
+        }
+      },
+      "description": "One venue. Swapping circuits must require no code change.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "geometry_source": {
+          "description": "f1-circuits id, e.g. gb-1948",
+          "title": "Geometry Source",
+          "type": "string"
+        },
+        "track_length_m": {
+          "title": "Track Length M",
+          "type": "number"
+        },
+        "altitude_m": {
+          "title": "Altitude M",
+          "type": "number"
+        },
+        "frame": {
+          "$ref": "#/$defs/CoordinateFrame"
+        },
+        "zones": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Zone"
+          },
+          "title": "Zones",
+          "type": "object"
+        },
+        "edges": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Edge"
+          },
+          "title": "Edges",
+          "type": "object"
+        },
+        "crossings": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Crossing"
+          },
+          "title": "Crossings",
+          "type": "object"
+        },
+        "constraints": {
+          "$ref": "#/$defs/SafetyConstraints"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "geometry_source",
+        "track_length_m",
+        "altitude_m",
+        "frame"
+      ],
+      "title": "CircuitPack",
+      "type": "object"
+    },
+    "CoordinateFrame": {
+      "description": "Local metric frame. Derived from the source bbox, never estimated.",
+      "properties": {
+        "origin_lat": {
+          "title": "Origin Lat",
+          "type": "number"
+        },
+        "origin_lon": {
+          "title": "Origin Lon",
+          "type": "number"
+        },
+        "rotation_deg": {
+          "default": 0.0,
+          "title": "Rotation Deg",
+          "type": "number"
+        },
+        "track_bounds_m": {
+          "description": "track extent (x, y)",
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Track Bounds M",
+          "type": "array"
+        },
+        "venue_bounds_m": {
+          "description": "(min_x, min_y, max_x, max_y). Larger than the track: car parks, campsites and park-and-ride sit outside it. Sizing to the track clips arrival routes.",
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Venue Bounds M",
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin_lat",
+        "origin_lon",
+        "track_bounds_m",
+        "venue_bounds_m"
+      ],
+      "title": "CoordinateFrame",
+      "type": "object"
+    },
+    "Crossing": {
+      "$defs": {
+        "Availability": {
+          "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
+          "properties": {
+            "always_open": {
+              "default": true,
+              "title": "Always Open",
+              "type": "boolean"
+            },
+            "open_when": {
+              "description": "session states",
+              "items": {
+                "type": "string"
+              },
+              "title": "Open When",
+              "type": "array"
+            },
+            "closed_when": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Closed When",
+              "type": "array"
+            },
+            "close_lead_s": {
+              "default": 0,
+              "description": "closes this long before cars run",
+              "title": "Close Lead S",
+              "type": "number"
+            },
+            "reopen_lag_s": {
+              "default": 0,
+              "title": "Reopen Lag S",
+              "type": "number"
+            }
+          },
+          "title": "Availability",
+          "type": "object"
+        },
+        "CrossingKind": {
+          "enum": [
+            "bridge",
+            "tunnel",
+            "at_grade"
+          ],
+          "title": "CrossingKind",
+          "type": "string"
+        },
+        "Provenance": {
+          "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+          "enum": [
+            "osm",
+            "venue_map",
+            "f1_circuits",
+            "authored",
+            "measured",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "Sourced": {
+          "description": "A value with its provenance and, where applicable, its sample count.",
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "provenance": {
+              "$ref": "#/$defs/Provenance"
+            },
+            "samples": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observations behind a MEASURED value",
+              "title": "Samples"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            }
+          },
+          "required": [
+            "value",
+            "provenance"
+          ],
+          "title": "Sourced",
+          "type": "object"
+        }
+      },
+      "description": "The dominant bottleneck mechanism at a circuit.\n\nBridges and tunnels stay open but carry far less than the at-grade crossings\nthey replace \u2014 which is exactly why they pinch when a session starts.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/CrossingKind"
+        },
+        "edge_id": {
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "throughput_per_min": {
+          "$ref": "#/$defs/Sourced"
+        },
+        "availability": {
+          "$ref": "#/$defs/Availability"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "edge_id",
+        "throughput_per_min"
+      ],
+      "title": "Crossing",
+      "type": "object"
+    },
+    "Edge": {
+      "$defs": {
+        "Provenance": {
+          "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+          "enum": [
+            "osm",
+            "venue_map",
+            "f1_circuits",
+            "authored",
+            "measured",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "Sourced": {
+          "description": "A value with its provenance and, where applicable, its sample count.",
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "provenance": {
+              "$ref": "#/$defs/Provenance"
+            },
+            "samples": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observations behind a MEASURED value",
+              "title": "Samples"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            }
+          },
+          "required": [
+            "value",
+            "provenance"
+          ],
+          "title": "Sourced",
+          "type": "object"
+        }
+      },
+      "description": "A walkable connection.\n\nwidth_m matters more than it looks: flow rate is per metre of width, so the\nLOS band cannot be computed without it.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "destination": {
+          "title": "Destination",
+          "type": "string"
+        },
+        "length_m": {
+          "exclusiveMinimum": 0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "width_m": {
+          "$ref": "#/$defs/Sourced",
+          "description": "required \u2014 LOS flow is per metre of width"
+        },
+        "gradient": {
+          "default": 0.0,
+          "description": "rise over run; affects walking speed",
+          "title": "Gradient",
+          "type": "number"
+        },
+        "bidirectional": {
+          "default": true,
+          "title": "Bidirectional",
+          "type": "boolean"
+        },
+        "free_speed_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observed where available, else the standards prior"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "destination",
+        "length_m",
+        "width_m"
+      ],
+      "title": "Edge",
+      "type": "object"
+    },
+    "EventProfile": {
+      "$defs": {
+        "Session": {
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "description": "practice | qualifying | sprint | race | support | ceremony",
+              "title": "Kind",
+              "type": "string"
+            },
+            "start": {
+              "description": "ISO 8601",
+              "title": "Start",
+              "type": "string"
+            },
+            "end": {
+              "title": "End",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "start",
+            "end"
+          ],
+          "title": "Session",
+          "type": "object"
+        }
+      },
+      "description": "This weekend's timetable. Changes every event; the circuit does not.\n\nThe chequered flag is the largest crowd-movement trigger of the day, so this\nfeeds the predictor directly, not just the display.",
+      "properties": {
+        "circuit_id": {
+          "title": "Circuit Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/Session"
+          },
+          "title": "Sessions",
+          "type": "array"
+        },
+        "gates_open": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gates Open"
+        }
+      },
+      "required": [
+        "circuit_id",
+        "name"
+      ],
+      "title": "EventProfile",
+      "type": "object"
+    },
+    "SafetyConstraints": {
+      "description": "Hard rules the agent cannot override.",
+      "properties": {
+        "never_route_through": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Never Route Through",
+          "type": "array"
+        },
+        "emergency_exits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Emergency Exits",
+          "type": "array"
+        },
+        "accessible_routes": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Accessible Routes",
+          "type": "array"
+        }
+      },
+      "title": "SafetyConstraints",
+      "type": "object"
+    },
+    "Session": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "description": "practice | qualifying | sprint | race | support | ceremony",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "description": "ISO 8601",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "start",
+        "end"
+      ],
+      "title": "Session",
+      "type": "object"
+    },
+    "Sourced": {
+      "$defs": {
+        "Provenance": {
+          "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+          "enum": [
+            "osm",
+            "venue_map",
+            "f1_circuits",
+            "authored",
+            "measured",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observations behind a MEASURED value",
+          "title": "Samples"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "value",
+        "provenance"
+      ],
+      "title": "Sourced",
+      "type": "object"
+    },
+    "Zone": {
+      "$defs": {
+        "Position": {
+          "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and\nat the device's location adapter (plan.md section 10).",
+          "properties": {
+            "x": {
+              "description": "metres east of venue origin",
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "description": "metres north of venue origin",
+              "title": "Y",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "title": "Position",
+          "type": "object"
+        },
+        "Provenance": {
+          "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+          "enum": [
+            "osm",
+            "venue_map",
+            "f1_circuits",
+            "authored",
+            "measured",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "Sourced": {
+          "description": "A value with its provenance and, where applicable, its sample count.",
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "number"
+            },
+            "provenance": {
+              "$ref": "#/$defs/Provenance"
+            },
+            "samples": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "observations behind a MEASURED value",
+              "title": "Samples"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            }
+          },
+          "required": [
+            "value",
+            "provenance"
+          ],
+          "title": "Sourced",
+          "type": "object"
+        },
+        "ZoneKind": {
+          "enum": [
+            "gate",
+            "concourse",
+            "crossing",
+            "viewing",
+            "amenity",
+            "parking",
+            "exit"
+          ],
+          "title": "ZoneKind",
+          "type": "string"
+        }
+      },
+      "description": "A named place. Imported from OSM tags where possible.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ZoneKind"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "human-readable; the app uses this",
+          "title": "Name"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sourced"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "osm_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Osm Id"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "position"
+      ],
+      "title": "Zone",
+      "type": "object"
+    }
+  }
+}

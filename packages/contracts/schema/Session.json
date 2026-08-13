@@ -1,0 +1,30 @@
+{
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "description": "practice | qualifying | sprint | race | support | ceremony",
+      "title": "Kind",
+      "type": "string"
+    },
+    "start": {
+      "description": "ISO 8601",
+      "title": "Start",
+      "type": "string"
+    },
+    "end": {
+      "title": "End",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "start",
+    "end"
+  ],
+  "title": "Session",
+  "type": "object"
+}

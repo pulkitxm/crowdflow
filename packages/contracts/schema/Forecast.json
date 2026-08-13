@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "LOSBand": {
+      "description": "Operational density band. Always rendered with its word and its number.",
+      "enum": [
+        "nominal",
+        "building",
+        "critical"
+      ],
+      "title": "LOSBand",
+      "type": "string"
+    }
+  },
+  "description": "Where congestion will be, when, and why.\n\nThe headline is time_to_threshold_s, not the current value. \"2:47 until\ncapacity\" drives a decision; \"87% full\" does not.",
+  "properties": {
+    "zone_id": {
+      "title": "Zone Id",
+      "type": "string"
+    },
+    "issued_at": {
+      "title": "Issued At",
+      "type": "number"
+    },
+    "horizon_s": {
+      "description": "how far ahead this forecast looks",
+      "exclusiveMinimum": 0,
+      "title": "Horizon S",
+      "type": "number"
+    },
+    "target_band": {
+      "$ref": "#/$defs/LOSBand",
+      "description": "the band predicted to be crossed"
+    },
+    "probability": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Probability",
+      "type": "number"
+    },
+    "time_to_threshold_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None when the threshold is not projected to be crossed",
+      "title": "Time To Threshold S"
+    },
+    "projected_peak_flow": {
+      "description": "ped/m/min at the projected peak",
+      "minimum": 0,
+      "title": "Projected Peak Flow",
+      "type": "number"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "model_id": {
+      "description": "which model produced this; baseline is a valid answer",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "causes": {
+      "description": "human-readable drivers, ordered by contribution",
+      "items": {
+        "type": "string"
+      },
+      "title": "Causes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "zone_id",
+    "issued_at",
+    "horizon_s",
+    "target_band",
+    "probability",
+    "projected_peak_flow",
+    "confidence",
+    "model_id"
+  ],
+  "title": "Forecast",
+  "type": "object"
+}

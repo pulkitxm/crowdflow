@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "Availability": {
+      "description": "When an edge exists at all (D5).\n\n`blocked: bool` cannot express \"open until quali, then closed for sixty\nminutes\". At-grade crossings close whenever cars are running, which makes\nrouting time-dependent: a path is valid only if each edge is still open when\nthe walker would actually reach it.",
+      "properties": {
+        "always_open": {
+          "default": true,
+          "title": "Always Open",
+          "type": "boolean"
+        },
+        "open_when": {
+          "description": "session states",
+          "items": {
+            "type": "string"
+          },
+          "title": "Open When",
+          "type": "array"
+        },
+        "closed_when": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Closed When",
+          "type": "array"
+        },
+        "close_lead_s": {
+          "default": 0,
+          "description": "closes this long before cars run",
+          "title": "Close Lead S",
+          "type": "number"
+        },
+        "reopen_lag_s": {
+          "default": 0,
+          "title": "Reopen Lag S",
+          "type": "number"
+        }
+      },
+      "title": "Availability",
+      "type": "object"
+    },
+    "CrossingKind": {
+      "enum": [
+        "bridge",
+        "tunnel",
+        "at_grade"
+      ],
+      "title": "CrossingKind",
+      "type": "string"
+    },
+    "Provenance": {
+      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "Sourced": {
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "observations behind a MEASURED value",
+          "title": "Samples"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "value",
+        "provenance"
+      ],
+      "title": "Sourced",
+      "type": "object"
+    }
+  },
+  "description": "The dominant bottleneck mechanism at a circuit.\n\nBridges and tunnels stay open but carry far less than the at-grade crossings\nthey replace \u2014 which is exactly why they pinch when a session starts.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/CrossingKind"
+    },
+    "edge_id": {
+      "title": "Edge Id",
+      "type": "string"
+    },
+    "throughput_per_min": {
+      "$ref": "#/$defs/Sourced"
+    },
+    "availability": {
+      "$ref": "#/$defs/Availability"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "edge_id",
+    "throughput_per_min"
+  ],
+  "title": "Crossing",
+  "type": "object"
+}

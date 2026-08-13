@@ -1,0 +1,282 @@
+# Generated from the 2026 Jolpica calendar joined to the f1-circuits geometry
+# dataset by nearest bbox centre. Regenerate; do not hand-edit.
+#   calendar : https://api.jolpi.ca/ergast/f1/2026/races.json
+#   geometry : https://github.com/bacinger/f1-circuits
+season: 2026
+circuits:
+  - id: albert_park
+    round: 1
+    date: 2026-03-08
+    name: Albert Park Circuit
+    locality: Melbourne
+    country: Australia
+    geometry_source: au-1953          # circuits/au-1953.geojson
+    track_length_m: 5278
+    altitude_m: 10
+    origin: { lat: -37.853926, lon: 144.962138 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1446], y: [0, 1760] }
+    status: not_started
+  - id: shanghai
+    round: 2
+    date: 2026-03-15
+    name: Shanghai International Circuit
+    locality: Shanghai
+    country: China
+    geometry_source: cn-2004          # circuits/cn-2004.geojson
+    track_length_m: 5451
+    altitude_m: 14
+    origin: { lat: 31.335826, lon: 121.214959 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1226], y: [0, 1068] }
+    status: not_started
+  - id: suzuka
+    round: 3
+    date: 2026-03-29
+    name: Suzuka International Racing Course
+    locality: Suzuka
+    country: Japan
+    geometry_source: jp-1962          # circuits/jp-1962.geojson
+    track_length_m: 5807
+    altitude_m: 60
+    origin: { lat: 34.838956, lon: 136.521928 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1964], y: [0, 1041] }
+    status: not_started
+  - id: miami
+    round: 4
+    date: 2026-05-03
+    name: Miami International Autodrome
+    locality: Miami
+    country: USA
+    geometry_source: us-2022          # circuits/us-2022.geojson
+    track_length_m: 5412
+    altitude_m: 1
+    origin: { lat: 25.955221, lon: -80.244783 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1503], y: [0, 594] }
+    status: not_started
+  - id: villeneuve
+    round: 5
+    date: 2026-05-24
+    name: Circuit Gilles-Villeneuve
+    locality: Montreal
+    country: Canada
+    geometry_source: ca-1978          # circuits/ca-1978.geojson
+    track_length_m: 4361
+    altitude_m: 13
+    origin: { lat: 45.49706, lon: -73.52994 }   # bbox SW corner
+    track_bounds_m: { x: [0, 623], y: [0, 1906] }
+    status: not_started
+  - id: monaco
+    round: 6
+    date: 2026-06-07
+    name: Circuit de Monaco
+    locality: Monte Carlo
+    country: Monaco
+    geometry_source: mc-1929          # circuits/mc-1929.geojson
+    track_length_m: 3337
+    altitude_m: 47
+    origin: { lat: 43.732362, lon: 7.421216 }   # bbox SW corner
+    track_bounds_m: { x: [0, 736], y: [0, 968] }
+    status: not_started
+  - id: catalunya
+    round: 7
+    date: 2026-06-14
+    name: Circuit de Barcelona-Catalunya
+    locality: Barcelona
+    country: Spain
+    geometry_source: es-1991          # circuits/es-1991.geojson
+    track_length_m: 4655
+    altitude_m: 165
+    origin: { lat: 41.564187, lon: 2.252134 }   # bbox SW corner
+    track_bounds_m: { x: [0, 961], y: [0, 1168] }
+    status: not_started
+  - id: red_bull_ring
+    round: 8
+    date: 2026-06-28
+    name: Red Bull Ring
+    locality: Spielberg
+    country: Austria
+    geometry_source: at-1969          # circuits/at-1969.geojson
+    track_length_m: 4318
+    altitude_m: 721
+    origin: { lat: 47.219284, lon: 14.754069 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1253], y: [0, 786] }
+    status: not_started
+  - id: silverstone
+    round: 9
+    date: 2026-07-05
+    name: Silverstone Circuit
+    locality: Silverstone
+    country: UK
+    geometry_source: gb-1948          # circuits/gb-1948.geojson
+    track_length_m: 5891
+    altitude_m: 196
+    origin: { lat: 52.063513, lon: -1.024286 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1028], y: [0, 1705] }
+    status: seed
+  - id: spa
+    round: 10
+    date: 2026-07-19
+    name: Circuit de Spa-Francorchamps
+    locality: Spa
+    country: Belgium
+    geometry_source: be-1925          # circuits/be-1925.geojson
+    track_length_m: 7004
+    altitude_m: 413
+    origin: { lat: 50.427678, lon: 5.959602 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1273], y: [0, 2050] }
+    status: not_started
+  - id: hungaroring
+    round: 11
+    date: 2026-07-26
+    name: Hungaroring
+    locality: Budapest
+    country: Hungary
+    geometry_source: hu-1986          # circuits/hu-1986.geojson
+    track_length_m: 4381
+    altitude_m: 239
+    origin: { lat: 47.577571, lon: 19.242326 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1072], y: [0, 1206] }
+    status: not_started
+  - id: zandvoort
+    round: 12
+    date: 2026-08-23
+    name: Circuit Zandvoort
+    locality: Zandvoort
+    country: Netherlands
+    geometry_source: nl-1948          # circuits/nl-1948.geojson
+    track_length_m: 4259
+    altitude_m: 3
+    origin: { lat: 52.384363, lon: 4.538742 }   # bbox SW corner
+    track_bounds_m: { x: [0, 973], y: [0, 824] }
+    status: not_started
+  - id: monza
+    round: 13
+    date: 2026-09-06
+    name: Autodromo Nazionale Monza
+    locality: Monza
+    country: Italy
+    geometry_source: it-1922          # circuits/it-1922.geojson
+    track_length_m: 5793
+    altitude_m: 142
+    origin: { lat: 45.611858, lon: 9.280697 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1258], y: [0, 2157] }
+    status: not_started
+  - id: madring
+    round: 14
+    date: 2026-09-13
+    name: Circuito de Madring
+    locality: Madrid
+    country: Spain
+    geometry_source: es-2026          # circuits/es-2026.geojson
+    track_length_m: 5474
+    altitude_m: 646
+    origin: { lat: 40.464278, lon: -3.62534 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1131], y: [0, 1809] }
+    status: not_started
+  - id: baku
+    round: 15
+    date: 2026-09-26
+    name: Baku City Circuit
+    locality: Baku
+    country: Azerbaijan
+    geometry_source: az-2016          # circuits/az-2016.geojson
+    track_length_m: 6003
+    altitude_m: -25
+    origin: { lat: 40.362639, lon: 49.830927 }   # bbox SW corner
+    track_bounds_m: { x: [0, 2058], y: [0, 1494] }
+    status: not_started
+  - id: sepang
+    round: 16
+    date: 2026-10-04
+    name: Sepang International Circuit
+    locality: Kuala Lumpur
+    country: Malaysia
+    geometry_source: my-1999          # circuits/my-1999.geojson
+    track_length_m: 5543
+    altitude_m: 39
+    origin: { lat: 2.756603, lon: 101.732582 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1162], y: [0, 945] }
+    status: not_started
+  - id: marina_bay
+    round: 17
+    date: 2026-10-11
+    name: Marina Bay Street Circuit
+    locality: Marina Bay
+    country: Singapore
+    geometry_source: sg-2008          # circuits/sg-2008.geojson
+    track_length_m: 4928
+    altitude_m: 18
+    origin: { lat: 1.286566, lon: 103.851563 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1431], y: [0, 921] }
+    status: not_started
+  - id: americas
+    round: 18
+    date: 2026-10-25
+    name: Circuit of the Americas
+    locality: Austin
+    country: USA
+    geometry_source: us-2012          # circuits/us-2012.geojson
+    track_length_m: 5514
+    altitude_m: 130
+    origin: { lat: 30.130031, lon: -97.643463 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1830], y: [0, 1042] }
+    status: not_started
+  - id: rodriguez
+    round: 19
+    date: 2026-11-01
+    name: Autódromo Hermanos Rodríguez
+    locality: Mexico City
+    country: Mexico
+    geometry_source: mx-1962          # circuits/mx-1962.geojson
+    track_length_m: 4304
+    altitude_m: 2232
+    origin: { lat: 19.397044, lon: -99.09685 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1444], y: [0, 1036] }
+    status: not_started
+  - id: interlagos
+    round: 20
+    date: 2026-11-08
+    name: Autódromo José Carlos Pace - Interlagos
+    locality: São Paulo
+    country: Brazil
+    geometry_source: br-1940          # circuits/br-1940.geojson
+    track_length_m: 4309
+    altitude_m: 765
+    origin: { lat: -23.706404, lon: -46.700536 }   # bbox SW corner
+    track_bounds_m: { x: [0, 663], y: [0, 1042] }
+    status: not_started
+  - id: vegas
+    round: 21
+    date: 2026-11-22
+    name: Las Vegas Street Circuit
+    locality: Las Vegas
+    country: USA
+    geometry_source: us-2023          # circuits/us-2023.geojson
+    track_length_m: 6201
+    altitude_m: 610
+    origin: { lat: 36.107928, lon: -115.173181 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1176], y: [0, 1947] }
+    status: not_started
+  - id: losail
+    round: 22
+    date: 2026-11-29
+    name: Losail International Circuit
+    locality: Lusail
+    country: Qatar
+    geometry_source: qa-2004          # circuits/qa-2004.geojson
+    track_length_m: 5380
+    altitude_m: 5
+    origin: { lat: 25.483835, lon: 51.447494 }   # bbox SW corner
+    track_bounds_m: { x: [0, 1252], y: [0, 1468] }
+    status: not_started
+  - id: yas_marina
+    round: 23
+    date: 2026-12-06
+    name: Yas Marina Circuit
+    locality: Abu Dhabi
+    country: UAE
+    geometry_source: ae-2009          # circuits/ae-2009.geojson
+    track_length_m: 5281
+    altitude_m: 9
+    origin: { lat: 24.463158, lon: 54.601568 }   # bbox SW corner
+    track_bounds_m: { x: [0, 809], y: [0, 1713] }
+    status: not_started

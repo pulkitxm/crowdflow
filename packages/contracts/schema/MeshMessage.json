@@ -1,0 +1,77 @@
+{
+  "$defs": {
+    "MeshClass": {
+      "description": "Traffic class, which selects the routing protocol.\n\nFlooding everything is epidemic routing: highest delivery, but buffer\nexhaustion and battery drain, which is fatal for phones in pockets.\nSee plan/methods.md section 5.",
+      "enum": [
+        "state",
+        "uplink",
+        "urgent"
+      ],
+      "title": "MeshClass",
+      "type": "string"
+    },
+    "MeshMessageType": {
+      "enum": [
+        "hello",
+        "peer_discovery",
+        "state_update",
+        "zone_update",
+        "trace_fragment",
+        "route_update",
+        "alert",
+        "reroute",
+        "ack",
+        "heartbeat",
+        "sync"
+      ],
+      "title": "MeshMessageType",
+      "type": "string"
+    }
+  },
+  "description": "Envelope for anything crossing the mesh.\n\nsequence prevents duplicate processing; ttl stops packets travelling forever.\nBoth are enforced at every hop, not just at the destination.",
+  "properties": {
+    "type": {
+      "$ref": "#/$defs/MeshMessageType"
+    },
+    "traffic_class": {
+      "$ref": "#/$defs/MeshClass"
+    },
+    "source": {
+      "description": "rotating node pseudonym of the originator",
+      "title": "Source",
+      "type": "string"
+    },
+    "sequence": {
+      "description": "per-source monotonic; used for dedupe",
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "ttl": {
+      "description": "hops remaining",
+      "maximum": 8,
+      "minimum": 0,
+      "title": "Ttl",
+      "type": "integer"
+    },
+    "timestamp": {
+      "title": "Timestamp",
+      "type": "number"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    }
+  },
+  "required": [
+    "type",
+    "traffic_class",
+    "source",
+    "sequence",
+    "ttl",
+    "timestamp"
+  ],
+  "title": "MeshMessage",
+  "type": "object"
+}

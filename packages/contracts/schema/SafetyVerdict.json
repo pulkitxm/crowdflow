@@ -1,0 +1,47 @@
+{
+  "$defs": {
+    "SafetyOutcome": {
+      "enum": [
+        "approved",
+        "rejected",
+        "modified"
+      ],
+      "title": "SafetyOutcome",
+      "type": "string"
+    }
+  },
+  "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+  "properties": {
+    "command_id": {
+      "title": "Command Id",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/SafetyOutcome"
+    },
+    "reason": {
+      "description": "stated even on approval; rejections are explained",
+      "title": "Reason",
+      "type": "string"
+    },
+    "violated_constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Violated Constraints",
+      "type": "array"
+    },
+    "emergency_mode": {
+      "default": false,
+      "title": "Emergency Mode",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "command_id",
+    "outcome",
+    "reason"
+  ],
+  "title": "SafetyVerdict",
+  "type": "object"
+}

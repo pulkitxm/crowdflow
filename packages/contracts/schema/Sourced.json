@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "Provenance": {
+      "description": "Where a value came from. Never decorative \u2014 routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    }
+  },
+  "description": "A value with its provenance and, where applicable, its sample count.",
+  "properties": {
+    "value": {
+      "title": "Value",
+      "type": "number"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "samples": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "observations behind a MEASURED value",
+      "title": "Samples"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    }
+  },
+  "required": [
+    "value",
+    "provenance"
+  ],
+  "title": "Sourced",
+  "type": "object"
+}
