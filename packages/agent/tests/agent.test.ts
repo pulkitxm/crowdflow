@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CircuitPack, VenueState } from '@crowdflow/contracts';
 import { SafetyEngine, VenueGraph } from '@crowdflow/core';
-import { CrowdOpsAgent, DEFAULT_ANTHROPIC_MODEL, FakeModelClient, Toolbox, toAnthropic } from '../src/index.js';
+import { CrowdOpsAgent, DEFAULT_ANTHROPIC_MODEL, DEFAULT_THINKING_BUDGET_TOKENS, FakeModelClient, Toolbox, toAnthropic } from '../src/index.js';
 
 const sourced = { value: 2, provenance: 'measured' as const, samples: 64 };
 const pack: CircuitPack = {
@@ -34,7 +34,7 @@ describe('TypeScript Crowd Ops Agent', () => {
   });
 
   it('uses a currently supported Anthropic model family and permits explicit configuration', () => {
-    expect(DEFAULT_ANTHROPIC_MODEL).toMatch(/^claude-/);
+    expect(DEFAULT_ANTHROPIC_MODEL).toMatch(/^claude-/); expect(DEFAULT_THINKING_BUDGET_TOKENS).toBeGreaterThanOrEqual(1024);
   });
 
   it('offers no dispatch tool', () => {

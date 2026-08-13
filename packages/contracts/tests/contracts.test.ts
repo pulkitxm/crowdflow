@@ -18,11 +18,13 @@ import {
   ASSUMED_ORPHAN_ZONE_LENGTH_M,
   ASSUMED_ORPHAN_ZONE_WIDTH_M,
   ASSUMED_SKEW_WINDOW_S,
+  ASSUMED_DEMO_POPULATION,
+  ASSUMED_ANTHROPIC_THINKING_BUDGET_TOKENS,
 } from '../src/index.js';
 
 describe('load-bearing contract conclusions', () => {
   it('registers every non-standard fallback used by core', () => {
-    expect(ASSUMED_ORPHAN_ZONE_LENGTH_M).toBe(25); expect(ASSUMED_ORPHAN_ZONE_WIDTH_M).toBe(2); expect(ASSUMED_SKEW_WINDOW_S).toBe(300);
+    expect(ASSUMED_ORPHAN_ZONE_LENGTH_M).toBe(25); expect(ASSUMED_ORPHAN_ZONE_WIDTH_M).toBe(2); expect(ASSUMED_SKEW_WINDOW_S).toBe(300); expect(ASSUMED_DEMO_POPULATION).toBe(2500); expect(ASSUMED_ANTHROPIC_THINKING_BUDGET_TOKENS).toBe(4000);
   });
 
   it('classifies zones on density and exposes the unreachable flow boundary', () => {

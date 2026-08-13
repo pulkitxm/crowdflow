@@ -1,8 +1,9 @@
+import { ASSUMED_DEMO_POPULATION } from '@crowdflow/contracts';
 import { arrival, egress, type Scenario } from '@crowdflow/core';
 import type { LoadedCircuit } from './packs.js';
 import type { ScenarioOption } from './wire.js';
 
-export const ASSUMED_DEMO_POPULATION = 2500;
+export { ASSUMED_DEMO_POPULATION };
 export function defaultExit(circuit: LoadedCircuit): string | null { const parks = Object.values(circuit.pack.zones ?? {}).filter((zone) => zone.kind === 'parking'); return parks.sort((a, b) => circuit.graph.reachable(b.id).size - circuit.graph.reachable(a.id).size || a.id.localeCompare(b.id))[0]?.id ?? null; }
 export function standsReaching(circuit: LoadedCircuit, destination: string): string[] { const component = circuit.graph.reachable(destination); return Object.values(circuit.pack.zones ?? {}).filter((zone) => zone.kind === 'viewing' && component.has(zone.id)).map((zone) => zone.id).sort(); }
 export function defaultGate(circuit: LoadedCircuit, stand: string): string | null { const component = circuit.graph.reachable(stand); return Object.values(circuit.pack.zones ?? {}).filter((zone) => zone.kind === 'gate' && component.has(zone.id)).sort((a, b) => circuit.graph.neighbours(b.id).length - circuit.graph.neighbours(a.id).length || a.id.localeCompare(b.id))[0]?.id ?? null; }
