@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Silverstone Walk",
+    "slug": "crowdflow-spectator",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "crowdflow",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.crowdflow.spectator"
+    },
+    "android": {
+      "package": "co.crowdflow.spectator",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-status-bar"]
+  }
+}
