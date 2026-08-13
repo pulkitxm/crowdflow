@@ -13,7 +13,7 @@
  * row and it is large — but paging 1,800 rows of dashes past an operator every
  * second would bury the forty that matter.
  */
-import type { TickEnvelope } from "@wire";
+import type { TickEnvelope } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, fixed, integer, signed } from "../format";
 import type { Sort, SortKey, ZoneRow } from "../model";

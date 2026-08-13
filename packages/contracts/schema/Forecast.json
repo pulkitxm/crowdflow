@@ -1,5 +1,71 @@
 {
+  "$ref": "#/$defs/Forecast",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Forecast": {
+      "additionalProperties": false,
+      "description": "Where congestion will be, when, and why.\n\nThe headline is time_to_threshold_s, not the current value. \"2:47 until capacity\" drives a decision; \"87% full\" does not.",
+      "properties": {
+        "actionable": {
+          "description": "Served judgement: clients must not duplicate these thresholds.",
+          "type": "boolean"
+        },
+        "causes": {
+          "description": "human-readable drivers, ordered by contribution",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "horizon_s": {
+          "description": "how far ahead this forecast looks",
+          "type": "number"
+        },
+        "issued_at": {
+          "type": "number"
+        },
+        "model_id": {
+          "description": "which model produced this; baseline is a valid answer",
+          "type": "string"
+        },
+        "probability": {
+          "type": "number"
+        },
+        "projected_peak_density_persons_m2": {
+          "description": "persons/m2 at the projected peak; bands are classified on density",
+          "type": "number"
+        },
+        "target_band": {
+          "$ref": "#/$defs/LOSBand",
+          "description": "the band predicted to be crossed"
+        },
+        "time_to_threshold_s": {
+          "description": "None when the threshold is not projected to be crossed",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "zone_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "zone_id",
+        "issued_at",
+        "horizon_s",
+        "target_band",
+        "probability",
+        "projected_peak_density_persons_m2",
+        "confidence",
+        "model_id",
+        "actionable"
+      ],
+      "type": "object"
+    },
     "LOSBand": {
       "description": "Operational density band. Always rendered with its word and its number.",
       "enum": [
@@ -7,92 +73,7 @@
         "building",
         "critical"
       ],
-      "title": "LOSBand",
       "type": "string"
     }
-  },
-  "description": "Where congestion will be, when, and why.\n\nThe headline is time_to_threshold_s, not the current value. \"2:47 until\ncapacity\" drives a decision; \"87% full\" does not.",
-  "properties": {
-    "zone_id": {
-      "title": "Zone Id",
-      "type": "string"
-    },
-    "issued_at": {
-      "title": "Issued At",
-      "type": "number"
-    },
-    "horizon_s": {
-      "description": "how far ahead this forecast looks",
-      "exclusiveMinimum": 0,
-      "title": "Horizon S",
-      "type": "number"
-    },
-    "target_band": {
-      "$ref": "#/$defs/LOSBand",
-      "description": "the band predicted to be crossed"
-    },
-    "probability": {
-      "maximum": 1,
-      "minimum": 0,
-      "title": "Probability",
-      "type": "number"
-    },
-    "time_to_threshold_s": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "None when the threshold is not projected to be crossed",
-      "title": "Time To Threshold S"
-    },
-    "projected_peak_density_persons_m2": {
-      "description": "persons/m2 at the projected peak; bands are classified on density",
-      "minimum": 0,
-      "title": "Projected Peak Density Persons M2",
-      "type": "number"
-    },
-    "confidence": {
-      "maximum": 1,
-      "minimum": 0,
-      "title": "Confidence",
-      "type": "number"
-    },
-    "model_id": {
-      "description": "which model produced this; baseline is a valid answer",
-      "title": "Model Id",
-      "type": "string"
-    },
-    "causes": {
-      "description": "human-readable drivers, ordered by contribution",
-      "items": {
-        "type": "string"
-      },
-      "title": "Causes",
-      "type": "array"
-    },
-    "actionable": {
-      "description": "Served judgement: clients must not duplicate these thresholds.",
-      "readOnly": true,
-      "title": "Actionable",
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "zone_id",
-    "issued_at",
-    "horizon_s",
-    "target_band",
-    "probability",
-    "projected_peak_density_persons_m2",
-    "confidence",
-    "model_id",
-    "actionable"
-  ],
-  "title": "Forecast",
-  "type": "object"
+  }
 }

@@ -1,12 +1,12 @@
 package com.crowdflow.mesh
 
 /**
- * The wire types. These mirror the Pydantic contracts in
- * `packages/contracts/src/crowdflow_contracts/telemetry.py`, which are the single
+ * The native wire types. These mirror the authored TypeScript contracts in
+ * `packages/contracts/src/types.ts`, which are the single
  * source of truth — if the two disagree, this file is wrong.
  *
  * Deliberately dumb data classes. Nothing here decides anything; the routing
- * decisions live in `crowdflow_core.mesh` where they can be tested against a
+ * decisions live in `@crowdflow/core` where they can be tested against a
  * simulated crowd rather than against whatever handsets happen to be in the room.
  */
 

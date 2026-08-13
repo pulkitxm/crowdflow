@@ -15,7 +15,7 @@
  * horizon it looked over. A blank prediction panel and a quiet venue look
  * identical, and only one of them is good news.
  */
-import type { TickEnvelope } from "@wire";
+import type { TickEnvelope } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, countdown, fixed, percent } from "../format";
 import { BAND_WORD } from "../model";

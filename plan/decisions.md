@@ -9,11 +9,13 @@ them. Each records what would make it worth revisiting.
 
 **Status:** accepted
 
-**Context.** Three runtimes — Python backend, TypeScript dashboard, React Native app — all
-exchanging the same telemetry and command payloads.
+**Context.** The Node backend, TypeScript dashboard, React Native app and native Android
+service all exchange the same telemetry and command payloads.
 
-**Decision.** One repository. Contracts authored once in Pydantic, exported to JSON Schema,
-generated into TypeScript. Generated files are committed.
+**Decision.** One npm-workspace repository. Contracts are authored once in TypeScript and
+consumed directly by all JavaScript runtimes; deterministic Node codegen exports committed
+JSON Schema for non-TypeScript boundaries. Kotlin remains only for the Android foreground
+mesh service.
 
 **Rationale.** A monorepo that only co-locates folders buys nothing. The real win is that the
 app and backend cannot silently drift on the telemetry schema — the failure mode that surfaces
@@ -21,9 +23,11 @@ around hour 30 as data that validates on one side and not the other. Codegen mak
 review diff instead of a debugging session.
 
 **Consequences.** `packages/contracts` is P0 and blocks every other package. A schema change
-means regenerate and commit.
+means regenerate and commit JSON Schema. `npm ci`, Vitest and `tsc` are the only repository
+install/test path; there is no parallel language runtime to drift.
 
-**Revisit if.** Only one runtime survives, in which case codegen is ceremony.
+**Revisit if.** A non-TypeScript service becomes authoritative, in which case schema ownership
+must move deliberately rather than being duplicated.
 
 ---
 

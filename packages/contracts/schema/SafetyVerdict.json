@@ -1,4 +1,6 @@
 {
+  "$ref": "#/$defs/SafetyVerdict",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "SafetyOutcome": {
       "enum": [
@@ -6,49 +8,43 @@
         "rejected",
         "modified"
       ],
-      "title": "SafetyOutcome",
-      "type": "string"
-    }
-  },
-  "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
-  "properties": {
-    "command_id": {
-      "title": "Command Id",
       "type": "string"
     },
-    "outcome": {
-      "$ref": "#/$defs/SafetyOutcome"
-    },
-    "reason": {
-      "description": "stated even on approval; rejections are explained",
-      "title": "Reason",
-      "type": "string"
-    },
-    "violated_constraints": {
-      "items": {
-        "type": "string"
+    "SafetyVerdict": {
+      "additionalProperties": false,
+      "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or forbidden edge, never intentionally exceed capacity, never route away from emergency exits during evacuation (plan.md section 34).",
+      "properties": {
+        "command_id": {
+          "type": "string"
+        },
+        "dispatchable": {
+          "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a correction; it does not contain that corrected command. Dispatching the original in that state would act on the version safety changed. A corrected command must be issued separately and reviewed in full.",
+          "type": "boolean"
+        },
+        "emergency_mode": {
+          "type": "boolean"
+        },
+        "outcome": {
+          "$ref": "#/$defs/SafetyOutcome"
+        },
+        "reason": {
+          "description": "stated even on approval; rejections are explained",
+          "type": "string"
+        },
+        "violated_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
       },
-      "title": "Violated Constraints",
-      "type": "array"
-    },
-    "emergency_mode": {
-      "default": false,
-      "title": "Emergency Mode",
-      "type": "boolean"
-    },
-    "dispatchable": {
-      "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
-      "readOnly": true,
-      "title": "Dispatchable",
-      "type": "boolean"
+      "required": [
+        "command_id",
+        "outcome",
+        "reason",
+        "dispatchable"
+      ],
+      "type": "object"
     }
-  },
-  "required": [
-    "command_id",
-    "outcome",
-    "reason",
-    "dispatchable"
-  ],
-  "title": "SafetyVerdict",
-  "type": "object"
+  }
 }

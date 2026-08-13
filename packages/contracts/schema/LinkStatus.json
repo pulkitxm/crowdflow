@@ -1,26 +1,28 @@
 {
-  "description": "Freshness and reachability, stated rather than hidden.",
-  "properties": {
-    "online": {
-      "title": "Online",
-      "type": "boolean"
-    },
-    "mesh_peers": {
-      "minimum": 0,
-      "title": "Mesh Peers",
-      "type": "integer"
-    },
-    "updated_at": {
-      "description": "unix seconds of the newest observation behind the route",
-      "title": "Updated At",
-      "type": "number"
+  "$ref": "#/$defs/LinkStatus",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "LinkStatus": {
+      "additionalProperties": false,
+      "description": "Freshness and reachability, stated rather than hidden.",
+      "properties": {
+        "mesh_peers": {
+          "type": "number"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "updated_at": {
+          "description": "unix seconds of the newest observation behind the route",
+          "type": "number"
+        }
+      },
+      "required": [
+        "online",
+        "mesh_peers",
+        "updated_at"
+      ],
+      "type": "object"
     }
-  },
-  "required": [
-    "online",
-    "mesh_peers",
-    "updated_at"
-  ],
-  "title": "LinkStatus",
-  "type": "object"
+  }
 }

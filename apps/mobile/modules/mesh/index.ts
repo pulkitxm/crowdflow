@@ -12,8 +12,8 @@
  * race almost every phone is in a pocket with the screen off. `start()` asks the
  * service to run; it does not become the thing that runs.
  *
- * Types mirror `packages/contracts` — the Pydantic models there are the source
- * of truth and this file follows them.
+ * Types mirror the authored `@crowdflow/contracts` workspace; Kotlin contains
+ * only the native wire representation required by the screen-off service.
  */
 
 export type MeshTrafficClass = "state" | "uplink" | "urgent";
@@ -54,7 +54,16 @@ export interface MeshStatus {
   online: boolean;
 }
 
+import { requireNativeModule } from 'expo-modules-core';
+import type { EventSubscription } from 'expo-modules-core';
+
+interface MeshEvents extends Record<string, (...args: any[]) => void> {
+  onPeersChanged: (event: { peers: MeshPeer[] }) => void;
+  onMessage: (message: MeshMessage) => void;
+}
+
 export interface MeshModule {
+  addListener<EventName extends keyof MeshEvents>(eventName: EventName, listener: MeshEvents[EventName]): EventSubscription;
   start(): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<MeshStatus>;
@@ -64,3 +73,46 @@ export interface MeshModule {
   addPeerListener(listener: (peers: MeshPeer[]) => void): () => void;
   addMessageListener(listener: (message: MeshMessage) => void): () => void;
 }
+
+const native: MeshModule | null =
+  typeof document === 'undefined' ? requireNativeModule<MeshModule>('Mesh') : null;
+
+function nativeMesh(): MeshModule {
+  if (native === null) {
+    throw new Error('The mesh requires an Android development build; it is unavailable on web.');
+  }
+  return native;
+}
+
+/** Typed adapter over Expo's event subscriptions. */
+export const Mesh = {
+  start: () => nativeMesh().start(),
+  stop: () => nativeMesh().stop(),
+  getStatus: () => nativeMesh().getStatus(),
+  getNearbyNodes: () => nativeMesh().getNearbyNodes(),
+  send: (nodeId: string, message: MeshMessage) => nativeMesh().send(nodeId, message),
+  broadcast: (message: MeshMessage) => nativeMesh().broadcast(message),
+  addPeerListener(listener: (peers: MeshPeer[]) => void): () => void {
+    const subscription: EventSubscription = nativeMesh().addListener(
+      'onPeersChanged',
+      ({ peers }: { peers: MeshPeer[] }) => listener(peers),
+    );
+    return () => subscription.remove();
+  },
+  addMessageListener(listener: (message: MeshMessage) => void): () => void {
+    const subscription: EventSubscription = nativeMesh().addListener('onMessage', listener);
+    return () => subscription.remove();
+  },
+} satisfies Pick<
+  MeshModule,
+  | 'start'
+  | 'stop'
+  | 'getStatus'
+  | 'getNearbyNodes'
+  | 'send'
+  | 'broadcast'
+  | 'addPeerListener'
+  | 'addMessageListener'
+>;
+
+export default Mesh;

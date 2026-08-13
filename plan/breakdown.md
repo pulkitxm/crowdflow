@@ -44,11 +44,11 @@ contracts is Track P and it gates everything.**
 
 | # | Subpart | Contents | Depends on |
 |---|---|---|---|
-| P1 | Monorepo skeleton | `packages/`, `apps/`, `circuits/`, `events/`, `scenarios/`; uv + pnpm workspaces | — |
-| P2 | Contracts | `CrowdNode`, `ZoneState`, `Forecast`, `InterventionCandidate`, `RerouteCommand`, `MeshMessage` as Pydantic | P1 |
-| P3 | Codegen | Pydantic → JSON Schema → TypeScript; generated files committed | P2 |
-| P4 | Core package shell | `packages/core` with module stubs and the no-I/O rule enforced | P1 |
-| P5 | CLI shell | `typer` entry point; `sim`, `state`, `predict`, `eval`, `circuit` command groups | P4 |
+| P1 | Monorepo skeleton | `packages/`, `apps/`, `circuits/`, `events/`, `scenarios/`; npm workspaces + one lockfile | — |
+| P2 | Contracts | Authored TypeScript `CrowdNode`, `ZoneState`, `Forecast`, `InterventionCandidate`, `RerouteCommand`, `MeshMessage` | P1 |
+| P3 | Codegen | TypeScript → deterministic JSON Schema; generated schemas committed and byte-checked | P2 |
+| P4 | Core package shell | strict TypeScript `packages/core` with the no-I/O rule enforced | P1 |
+| P5 | CLI shell | Node entry point; `sim`, `mesh`, `refine`, `circuit` command groups | P4 |
 
 *Done when:* simulator output and a hand-written fake phone payload both validate against the
 same models, and the core cannot tell them apart.
@@ -59,7 +59,7 @@ same models, and the core cannot tell them apart.
 |---|---|---|---|
 | A1 | `CircuitPack` schema | The seven pack files, schema-validated on load | P2 |
 | A2 | Local coordinate frame | x/y venue frame, lat-lon adapter, point→zone lookup | A1 |
-| A3 | Graph builder | NetworkX graph from pack; distances, travel times, edge capacity | A1, A2 |
+| A3 | Graph builder | Pure TypeScript graph from pack; distances, travel times, edge capacity | A1, A2 |
 | A4 | Time-gated edges | Availability windows, session-state graph rebuild | A3, J4 |
 | A5 | Pack validator | `circuit validate` — orphan zones, unreachable exits, bad capacities | A1 |
 | A6 | Renderer | SVG/GeoJSON export the dashboard and app both draw | A2, A3 |

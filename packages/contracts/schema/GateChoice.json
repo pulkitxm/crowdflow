@@ -1,5 +1,40 @@
 {
+  "$ref": "#/$defs/GateChoice",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "GateChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "walk_s": {
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
+        },
+        "zone_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "zone_id",
+        "name",
+        "walk_s",
+        "way_ahead"
+      ],
+      "type": "object"
+    },
     "WayAhead": {
       "enum": [
         "nominal",
@@ -7,51 +42,7 @@
         "critical",
         "unknown"
       ],
-      "title": "WayAhead",
       "type": "string"
     }
-  },
-  "properties": {
-    "zone_id": {
-      "title": "Zone Id",
-      "type": "string"
-    },
-    "name": {
-      "title": "Name",
-      "type": "string"
-    },
-    "walk_s": {
-      "minimum": 0,
-      "title": "Walk S",
-      "type": "number"
-    },
-    "way_ahead": {
-      "$ref": "#/$defs/WayAhead"
-    },
-    "note": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Note"
-    },
-    "selected": {
-      "default": false,
-      "title": "Selected",
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "zone_id",
-    "name",
-    "walk_s",
-    "way_ahead"
-  ],
-  "title": "GateChoice",
-  "type": "object"
+  }
 }

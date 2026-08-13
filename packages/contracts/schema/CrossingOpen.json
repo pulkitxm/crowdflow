@@ -1,27 +1,27 @@
 {
-  "properties": {
-    "open": {
-      "const": true,
-      "title": "Open",
-      "type": "boolean"
-    },
-    "closes_at": {
-      "anyOf": [
-        {
-          "type": "number"
+  "$ref": "#/$defs/CrossingOpen",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CrossingOpen": {
+      "additionalProperties": false,
+      "properties": {
+        "closes_at": {
+          "description": "absolute unix seconds; None when no closing time is known",
+          "type": [
+            "number",
+            "null"
+          ]
         },
-        {
-          "type": "null"
+        "open": {
+          "const": true,
+          "type": "boolean"
         }
+      },
+      "required": [
+        "open",
+        "closes_at"
       ],
-      "description": "absolute unix seconds; None when no closing time is known",
-      "title": "Closes At"
+      "type": "object"
     }
-  },
-  "required": [
-    "open",
-    "closes_at"
-  ],
-  "title": "CrossingOpen",
-  "type": "object"
+  }
 }

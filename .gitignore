@@ -1,12 +1,6 @@
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-.ruff_cache/
 node_modules/
 dist/
 .DS_Store
-uv.lock
 circuits/*/raw/
 circuits/_geometry/
 mockups/

@@ -11,15 +11,15 @@ import kotlinx.coroutines.sync.withLock
 /**
  * An in-memory [MeshNetwork] that talks to nobody.
  *
- * This is a stub on purpose, and the purpose is worth stating plainly: writing a
+ * This transport is intentionally in-memory: writing a
  * real Wi-Fi Aware implementation before the routing logic has been measured
  * would be building the expensive half first. The protocol comparison in
- * `crowdflow_core.mesh` — delivery ratio, hop count and copies-per-message for
+ * `@crowdflow/core` — delivery ratio, hop count and copies-per-message for
  * each of the three traffic classes — runs today with no devices at all, and it
  * is what decides whether any of this deserves a radio. When it does, a real
  * implementation slots in behind the same interface and nothing above it changes.
  *
- * What the stub is genuinely useful for:
+ * What it is genuinely useful for:
  *
  *  - wiring the app up end to end without a second handset in the room
  *  - proving that the layers above never learned which transport won: everything
@@ -39,7 +39,7 @@ class StubMeshNetwork : MeshNetwork {
 
     /** (source, sequence) seen before. Enforced here so that the rule has a
      *  reference implementation the real transport can be tested against. */
-    private val seen = LinkedHashSet<String>()
+    private val seen = LinkedHashMap<String, Long>()
 
     /** Everything this stub was asked to transmit, for assertions in tests. */
     val sent = mutableListOf<Pair<String, MeshMessage>>()
@@ -47,6 +47,7 @@ class StubMeshNetwork : MeshNetwork {
     private var running = false
 
     override val isRunning: Boolean get() = running
+    override val isOnline: Boolean get() = false
 
     /** Stands in for the foreground service starting. */
     fun start() { running = true }
@@ -91,7 +92,10 @@ class StubMeshNetwork : MeshNetwork {
         mutex.withLock {
             // Dedupe first: a duplicate costs nothing further whatever its TTL,
             // and refusing it here is the point of checking at every hop.
-            if (!seen.add(message.key)) throw MeshError.Duplicate(message.key)
+            expireSeen(message.timestampMs)
+            if (seen.putIfAbsent(message.key, message.timestampMs) != null) {
+                throw MeshError.Duplicate(message.key)
+            }
             // Then TTL, and the hop is spent before the bytes leave.
             if (message.expired) throw MeshError.Expired()
             sent += nodeId to message.hop()
@@ -100,11 +104,22 @@ class StubMeshNetwork : MeshNetwork {
 
     override fun incoming(): Flow<MeshMessage> = received.asSharedFlow()
 
+    private fun expireSeen(nowMs: Long) {
+        val retentionMs = DEDUPE_RETENTION_MS
+        seen.entries.removeAll { (_, seenAt) -> nowMs - seenAt > retentionMs }
+    }
+
     private fun requireRunning() {
         if (!running) throw MeshError.NotStarted()
     }
 
     private fun requirePeer(nodeId: String) {
         if (peers.value.none { it.nodeId == nodeId }) throw MeshError.PeerGone(nodeId)
+    }
+
+    companion object {
+        /** MESH_TTL_MAX * ASSUMED_HOP_LATENCY_S from the shared standards.
+         * Kept native because dedupe must survive while JS is suspended. */
+        private const val DEDUPE_RETENTION_MS = 40_000L
     }
 }

@@ -4,9 +4,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "jsx": "react-jsx",
-    "paths": {
-      "@contracts": ["../../packages/contracts/ts/index.ts"]
-    }
+    "types": ["node", "react"]
   },
-  "include": ["index.js", "App.tsx", "src/**/*.ts", "src/**/*.tsx", "../../packages/contracts/ts/index.ts"]
+  "include": ["index.js", "App.tsx", "src/**/*.ts", "src/**/*.tsx", "modules/**/*.ts"]
 }

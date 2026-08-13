@@ -18,8 +18,8 @@
  * `standards.band_for_density`; this file only decides which word goes beside
  * which number.
  */
-import type { LOSBand, ZoneKind, ZoneState } from "@contracts";
-import type { TickEnvelope, VenueGeometry } from "@wire";
+import type { LOSBand, ZoneKind, ZoneState } from "@crowdflow/contracts";
+import type { TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { NO_VALUE, age, fixed, integer } from "./format";
 
 export type Visibility = "observed" | "silent" | "unknown";

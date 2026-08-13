@@ -1,31 +1,34 @@
 {
-  "description": "Hard rules the agent cannot override.",
-  "properties": {
-    "never_route_through": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Never Route Through",
-      "type": "array"
-    },
-    "emergency_exits": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Emergency Exits",
-      "type": "array"
-    },
-    "accessible_routes": {
-      "items": {
-        "items": {
-          "type": "string"
+  "$ref": "#/$defs/SafetyConstraints",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "SafetyConstraints": {
+      "additionalProperties": false,
+      "description": "Hard rules the agent cannot override.",
+      "properties": {
+        "accessible_routes": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
         },
-        "type": "array"
+        "emergency_exits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "never_route_through": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
       },
-      "title": "Accessible Routes",
-      "type": "array"
+      "type": "object"
     }
-  },
-  "title": "SafetyConstraints",
-  "type": "object"
+  }
 }

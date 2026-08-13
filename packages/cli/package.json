@@ -1,0 +1,25 @@
+{
+  "name": "@crowdflow/cli",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./ingest": "./src/ingest.ts"
+  },
+  "bin": {
+    "crowdflow": "./src/main.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@crowdflow/contracts": "0.2.0",
+    "@crowdflow/core": "0.2.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.10"
+  }
+}

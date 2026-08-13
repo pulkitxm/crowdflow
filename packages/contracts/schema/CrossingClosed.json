@@ -1,27 +1,28 @@
 {
-  "properties": {
-    "open": {
-      "const": false,
-      "title": "Open",
-      "type": "boolean"
-    },
-    "opens_at": {
-      "anyOf": [
-        {
-          "type": "number"
+  "$ref": "#/$defs/CrossingClosed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CrossingClosed": {
+      "additionalProperties": false,
+      "description": "Authored CrowdFlow wire contracts. Runtime derivations live beside them.",
+      "properties": {
+        "open": {
+          "const": false,
+          "type": "boolean"
         },
-        {
-          "type": "null"
+        "opens_at": {
+          "description": "absolute unix seconds; None when no reopening time is known",
+          "type": [
+            "number",
+            "null"
+          ]
         }
+      },
+      "required": [
+        "open",
+        "opens_at"
       ],
-      "description": "absolute unix seconds; None when no reopening time is known",
-      "title": "Opens At"
+      "type": "object"
     }
-  },
-  "required": [
-    "open",
-    "opens_at"
-  ],
-  "title": "CrossingClosed",
-  "type": "object"
+  }
 }

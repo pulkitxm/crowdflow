@@ -27,7 +27,7 @@ Everything else is detail. Get these two right and the parts stay swappable.
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
          packages/cli   packages/api   packages/agent
-          (typer)        (fastapi)      (tool layer)
+           (Node)          (Node)        (tool layer)
 ```
 
 The CLI is not a scaffold to be replaced by the API. Both are permanent, equal adapters.
@@ -70,10 +70,10 @@ MeshNetwork
 vmax/
 │
 ├── packages/
-│   ├── contracts/        schemas + codegen        [P0 — blocks everything]
-│   ├── core/             the engines (pure)
-│   ├── cli/              typer adapter
-│   ├── api/              fastapi adapter
+│   ├── contracts/        authored TS + JSON Schema [P0 — blocks everything]
+│   ├── core/             the engines (pure TypeScript)
+│   ├── cli/              Node adapter
+│   ├── api/              Node HTTP/WebSocket adapter
 │   └── agent/            crowd ops agent + tools
 │
 ├── apps/
@@ -94,7 +94,7 @@ vmax/
 
 | Path | Owns | Must not contain |
 |---|---|---|
-| `packages/contracts` | Pydantic models, JSON Schema export, generated TS types | Business logic |
+| `packages/contracts` | Authored TypeScript contracts, runtime conclusions, generated JSON Schema | Business logic |
 | `packages/core` | Venue graph, simulator, state, prediction, intervention, routing, safety | I/O, transport, LLM calls |
 | `packages/cli` | Command surface, arg parsing, output formatting | Engine logic |
 | `packages/api` | WebSocket/REST handlers, the tick loop, broadcast | Engine logic |
@@ -110,20 +110,16 @@ The last two matter: **a circuit or scenario that needs code to load is a broken
 
 ## 3. Contracts and codegen
 
-Python is the source of truth; TypeScript is generated. This is the monorepo's actual payoff.
+TypeScript is the source of truth for every runtime. JSON Schema is the generated,
+machine-readable artefact.
 
 ```
-   packages/contracts/schemas/*.py        (Pydantic — authored here)
+   packages/contracts/src/types.ts        (TypeScript — authored here)
                  │
-                 ▼  export
-   packages/contracts/schema/*.json       (JSON Schema — generated)
+                 ├──────────────► core · api · agent · dashboard · mobile
                  │
-                 ▼  generate
-   packages/contracts/ts/*.ts             (TypeScript — generated, never edited)
-                 │
-        ┌────────┴────────┐
-        ▼                 ▼
-   apps/dashboard     apps/mobile
+                 ▼  deterministic Node codegen
+   packages/contracts/schema/*.json       (JSON Schema — generated + committed)
 ```
 
 Six contracts:
@@ -207,11 +203,11 @@ app must remain useful with no backend at all.
 
 | Concern | Choice | Note |
 |---|---|---|
-| Python env | `uv` | Workspace across the five packages |
-| JS/TS | `pnpm` workspaces | Dashboard, mobile, generated types |
-| Build orchestration | none | Turborepo is overkill at this scale |
-| CLI | `typer` | |
-| Graph | `networkx` | |
+| Runtime/package manager | Node 24 + `npm` workspaces | One lockfile across packages and apps |
+| Language | strict TypeScript | Contracts, core, CLI, API, agent and both app surfaces |
+| Build orchestration | npm scripts + Make targets | Turborepo is overkill at this scale |
+| CLI | Node + `tsx` | |
+| Graph | local pure TypeScript implementation | No runtime framework dependency |
 | Mobile | Expo dev client | **Not Expo Go** — native module required |
 
 **Expo build discipline:** every native change requires a rebuild; JS changes are instant.

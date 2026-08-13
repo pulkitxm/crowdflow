@@ -7,27 +7,20 @@
  * nothing, which is exactly the class of quiet failure this product exists to
  * eliminate.
  *
- * Contract types resolve to the *generated* files in packages/. They are
- * type-only imports, so nothing crosses the bundle boundary at runtime; the
- * alias exists so a stale schema is a compile error rather than a wrong number
- * on a wall.
+ * Contract and wire types resolve through npm workspaces. They are type-only
+ * imports, so nothing crosses the bundle boundary at runtime and there is no
+ * generated alias that can drift from the server.
  */
 import { defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-/** Where `crowdflow-api` listens by default (see packages/api __main__.py). */
+/** Where the Node API listens by default (see packages/api/src/main.ts). */
 const API = process.env.CROWDFLOW_API ?? "http://127.0.0.1:8099";
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
-  resolve: {
-    alias: {
-      "@contracts": `${repoRoot}packages/contracts/ts/index.ts`,
-      "@wire": `${repoRoot}packages/api/ts/index.ts`,
-    },
-  },
   server: {
     port: 5199,
     strictPort: true,

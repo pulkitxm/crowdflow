@@ -1,14 +1,55 @@
 {
+  "$ref": "#/$defs/MeshMessage",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "MeshClass": {
-      "description": "Traffic class, which selects the routing protocol.\n\nFlooding everything is epidemic routing: highest delivery, but buffer\nexhaustion and battery drain, which is fatal for phones in pockets.\nSee plan/methods.md section 5. The UPLINK recommendation was deliberately\nrevised after measurement: PRoPHET bought only 0.6 percentage points of\ndelivery for about 3.1x the radio traffic, so both loss-tolerant classes now\nuse the bounded policy until encounter predictability proves a material gain.",
+      "description": "Traffic class, which selects the routing protocol.\n\nFlooding everything is epidemic routing: highest delivery, but buffer exhaustion and battery drain, which is fatal for phones in pockets. See plan/methods.md section 5. The UPLINK recommendation was deliberately revised after measurement: PRoPHET bought only 0.6 percentage points of delivery for about 3.1x the radio traffic, so both loss-tolerant classes now use the bounded policy until encounter predictability proves a material gain.",
       "enum": [
         "state",
         "uplink",
         "urgent"
       ],
-      "title": "MeshClass",
       "type": "string"
+    },
+    "MeshMessage": {
+      "additionalProperties": false,
+      "description": "Envelope for anything crossing the mesh.\n\nsequence prevents duplicate processing; ttl stops packets travelling forever. Both are enforced at every hop, not just at the destination.",
+      "properties": {
+        "payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "sequence": {
+          "description": "per-source monotonic; used for dedupe",
+          "type": "number"
+        },
+        "source": {
+          "description": "rotating node pseudonym of the originator",
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "number"
+        },
+        "traffic_class": {
+          "$ref": "#/$defs/MeshClass"
+        },
+        "ttl": {
+          "description": "hops remaining",
+          "type": "number"
+        },
+        "type": {
+          "$ref": "#/$defs/MeshMessageType"
+        }
+      },
+      "required": [
+        "type",
+        "traffic_class",
+        "source",
+        "sequence",
+        "ttl",
+        "timestamp"
+      ],
+      "type": "object"
     },
     "MeshMessageType": {
       "enum": [
@@ -24,54 +65,7 @@
         "heartbeat",
         "sync"
       ],
-      "title": "MeshMessageType",
       "type": "string"
     }
-  },
-  "description": "Envelope for anything crossing the mesh.\n\nsequence prevents duplicate processing; ttl stops packets travelling forever.\nBoth are enforced at every hop, not just at the destination.",
-  "properties": {
-    "type": {
-      "$ref": "#/$defs/MeshMessageType"
-    },
-    "traffic_class": {
-      "$ref": "#/$defs/MeshClass"
-    },
-    "source": {
-      "description": "rotating node pseudonym of the originator",
-      "title": "Source",
-      "type": "string"
-    },
-    "sequence": {
-      "description": "per-source monotonic; used for dedupe",
-      "minimum": 0,
-      "title": "Sequence",
-      "type": "integer"
-    },
-    "ttl": {
-      "description": "hops remaining",
-      "maximum": 8,
-      "minimum": 0,
-      "title": "Ttl",
-      "type": "integer"
-    },
-    "timestamp": {
-      "title": "Timestamp",
-      "type": "number"
-    },
-    "payload": {
-      "additionalProperties": true,
-      "title": "Payload",
-      "type": "object"
-    }
-  },
-  "required": [
-    "type",
-    "traffic_class",
-    "source",
-    "sequence",
-    "ttl",
-    "timestamp"
-  ],
-  "title": "MeshMessage",
-  "type": "object"
+  }
 }

@@ -1,5 +1,5 @@
 /**
- * The spectator feed is authored in Pydantic, not in this app.
+ * The spectator feed is authored in the contracts workspace, not in this app.
  *
  * The phone receives conclusions — landmarks, walking seconds, the density band
  * already selected by the state engine, crossing times and a safety-reviewed
@@ -18,9 +18,9 @@ export type {
   SpectatorView,
   Step,
   WayAhead,
-} from '@contracts';
+} from '@crowdflow/contracts';
 
-import type { SpectatorView } from '@contracts';
+import type { SpectatorView } from '@crowdflow/contracts';
 
-/** The six states of a race day, derived from the generated discriminated union. */
+/** The six states of a race day, derived from the authored discriminated union. */
 export type ViewKind = SpectatorView['kind'];

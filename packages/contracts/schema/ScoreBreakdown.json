@@ -1,40 +1,39 @@
 {
-  "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components\nis an assertion; with them it is an argument.",
-  "properties": {
-    "congestion_reduction": {
-      "title": "Congestion Reduction",
-      "type": "number"
-    },
-    "walk_time_cost": {
-      "title": "Walk Time Cost",
-      "type": "number"
-    },
-    "capacity_headroom": {
-      "title": "Capacity Headroom",
-      "type": "number"
-    },
-    "safety_margin": {
-      "title": "Safety Margin",
-      "type": "number"
-    },
-    "fairness": {
-      "title": "Fairness",
-      "type": "number"
-    },
-    "total": {
-      "readOnly": true,
-      "title": "Total",
-      "type": "number"
+  "$ref": "#/$defs/ScoreBreakdown",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ScoreBreakdown": {
+      "additionalProperties": false,
+      "description": "Why a candidate scored what it did.\n\nShown to the operator. An intervention recommendation without its components is an assertion; with them it is an argument.",
+      "properties": {
+        "capacity_headroom": {
+          "type": "number"
+        },
+        "congestion_reduction": {
+          "type": "number"
+        },
+        "fairness": {
+          "type": "number"
+        },
+        "safety_margin": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "walk_time_cost": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "congestion_reduction",
+        "walk_time_cost",
+        "capacity_headroom",
+        "safety_margin",
+        "fairness",
+        "total"
+      ],
+      "type": "object"
     }
-  },
-  "required": [
-    "congestion_reduction",
-    "walk_time_cost",
-    "capacity_headroom",
-    "safety_margin",
-    "fairness",
-    "total"
-  ],
-  "title": "ScoreBreakdown",
-  "type": "object"
+  }
 }

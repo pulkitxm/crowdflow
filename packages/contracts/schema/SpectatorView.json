@@ -1,28 +1,28 @@
 {
+  "$ref": "#/$defs/SpectatorView",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "AheadView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
-          "type": "number"
+        "kind": {
+          "const": "ahead",
+          "type": "string"
         },
         "link": {
           "$ref": "#/$defs/LinkStatus"
         },
-        "route": {
-          "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "ahead",
-          "title": "Kind",
-          "type": "string"
-        },
-        "step_id": {
-          "title": "Step Id",
-          "type": "string"
+        "now": {
+          "type": "number"
         },
         "offer": {
           "$ref": "#/$defs/RerouteOffer"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "step_id": {
+          "type": "string"
         }
       },
       "required": [
@@ -33,36 +33,32 @@
         "step_id",
         "offer"
       ],
-      "title": "AheadView",
       "type": "object"
     },
     "ArrivalView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
-          "type": "number"
-        },
-        "link": {
-          "$ref": "#/$defs/LinkStatus"
-        },
-        "route": {
-          "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "arrival",
-          "title": "Kind",
-          "type": "string"
-        },
         "gates": {
           "items": {
             "$ref": "#/$defs/GateChoice"
           },
-          "title": "Gates",
           "type": "array"
         },
-        "note": {
-          "title": "Note",
+        "kind": {
+          "const": "arrival",
           "type": "string"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "note": {
+          "type": "string"
+        },
+        "now": {
+          "type": "number"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
         }
       },
       "required": [
@@ -73,130 +69,98 @@
         "gates",
         "note"
       ],
-      "title": "ArrivalView",
       "type": "object"
     },
     "CrossingClosed": {
+      "additionalProperties": false,
+      "description": "Authored CrowdFlow wire contracts. Runtime derivations live beside them.",
       "properties": {
         "open": {
           "const": false,
-          "title": "Open",
           "type": "boolean"
         },
         "opens_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
           "description": "absolute unix seconds; None when no reopening time is known",
-          "title": "Opens At"
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
         "open",
         "opens_at"
       ],
-      "title": "CrossingClosed",
       "type": "object"
     },
     "CrossingNotice": {
+      "additionalProperties": false,
       "description": "A timetable fact a spectator cannot infer by looking at the crossing.",
       "properties": {
         "name": {
-          "title": "Name",
           "type": "string"
         },
         "state": {
-          "discriminator": {
-            "mapping": {
-              "False": "#/$defs/CrossingClosed",
-              "True": "#/$defs/CrossingOpen"
-            },
-            "propertyName": "open"
-          },
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/CrossingOpen"
             },
             {
               "$ref": "#/$defs/CrossingClosed"
             }
-          ],
-          "title": "State"
+          ]
         }
       },
       "required": [
         "name",
         "state"
       ],
-      "title": "CrossingNotice",
       "type": "object"
     },
     "CrossingOpen": {
+      "additionalProperties": false,
       "properties": {
+        "closes_at": {
+          "description": "absolute unix seconds; None when no closing time is known",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "open": {
           "const": true,
-          "title": "Open",
           "type": "boolean"
-        },
-        "closes_at": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "absolute unix seconds; None when no closing time is known",
-          "title": "Closes At"
         }
       },
       "required": [
         "open",
         "closes_at"
       ],
-      "title": "CrossingOpen",
       "type": "object"
     },
     "GateChoice": {
+      "additionalProperties": false,
       "properties": {
-        "zone_id": {
-          "title": "Zone Id",
+        "name": {
           "type": "string"
         },
-        "name": {
-          "title": "Name",
-          "type": "string"
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selected": {
+          "type": "boolean"
         },
         "walk_s": {
-          "minimum": 0,
-          "title": "Walk S",
           "type": "number"
         },
         "way_ahead": {
           "$ref": "#/$defs/WayAhead"
         },
-        "note": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Note"
-        },
-        "selected": {
-          "default": false,
-          "title": "Selected",
-          "type": "boolean"
+        "zone_id": {
+          "type": "string"
         }
       },
       "required": [
@@ -205,44 +169,38 @@
         "walk_s",
         "way_ahead"
       ],
-      "title": "GateChoice",
       "type": "object"
     },
     "HoldView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
-          "type": "number"
+        "because": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "hold",
+          "type": "string"
         },
         "link": {
           "$ref": "#/$defs/LinkStatus"
         },
-        "route": {
-          "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "hold",
-          "title": "Kind",
-          "type": "string"
+        "now": {
+          "type": "number"
         },
         "options": {
           "items": {
             "$ref": "#/$defs/LeaveOption"
           },
-          "title": "Options",
           "type": "array"
         },
         "recommended_id": {
-          "title": "Recommended Id",
           "type": "string"
         },
-        "headline": {
-          "title": "Headline",
-          "type": "string"
-        },
-        "because": {
-          "title": "Because",
-          "type": "string"
+        "route": {
+          "$ref": "#/$defs/Route"
         }
       },
       "required": [
@@ -255,44 +213,33 @@
         "headline",
         "because"
       ],
-      "title": "HoldView",
       "type": "object"
     },
     "LeaveOption": {
+      "additionalProperties": false,
       "properties": {
         "id": {
-          "title": "Id",
           "type": "string"
         },
         "label": {
-          "title": "Label",
+          "type": "string"
+        },
+        "recommendation_note": {
+          "description": "engine-authored reason this option is recommended; absent otherwise",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spent": {
           "type": "string"
         },
         "total_s": {
           "description": "door-to-car seconds, including any wait",
-          "minimum": 0,
-          "title": "Total S",
           "type": "number"
         },
         "way_ahead": {
           "$ref": "#/$defs/WayAhead"
-        },
-        "spent": {
-          "title": "Spent",
-          "type": "string"
-        },
-        "recommendation_note": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "engine-authored reason this option is recommended; absent otherwise",
-          "title": "Recommendation Note"
         }
       },
       "required": [
@@ -302,24 +249,20 @@
         "way_ahead",
         "spent"
       ],
-      "title": "LeaveOption",
       "type": "object"
     },
     "LinkStatus": {
+      "additionalProperties": false,
       "description": "Freshness and reachability, stated rather than hidden.",
       "properties": {
-        "online": {
-          "title": "Online",
-          "type": "boolean"
-        },
         "mesh_peers": {
-          "minimum": 0,
-          "title": "Mesh Peers",
-          "type": "integer"
+          "type": "number"
+        },
+        "online": {
+          "type": "boolean"
         },
         "updated_at": {
           "description": "unix seconds of the newest observation behind the route",
-          "title": "Updated At",
           "type": "number"
         }
       },
@@ -328,25 +271,23 @@
         "mesh_peers",
         "updated_at"
       ],
-      "title": "LinkStatus",
       "type": "object"
     },
     "OfflineView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
-          "type": "number"
+        "kind": {
+          "const": "offline",
+          "type": "string"
         },
         "link": {
           "$ref": "#/$defs/LinkStatus"
         },
+        "now": {
+          "type": "number"
+        },
         "route": {
           "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "offline",
-          "title": "Kind",
-          "type": "string"
         }
       },
       "required": [
@@ -355,62 +296,50 @@
         "route",
         "kind"
       ],
-      "title": "OfflineView",
       "type": "object"
     },
     "RerouteCommand": {
-      "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and\nletting each device compute its own path scales, and works offline\n(plan.md section 33).",
+      "additionalProperties": false,
+      "description": "What actually goes over the mesh.\n\nDeliberately NOT a per-person route. Broadcasting avoid/prefer sets and letting each device compute its own path scales, and works offline (plan.md section 33).",
       "properties": {
-        "command_id": {
-          "title": "Command Id",
-          "type": "string"
-        },
-        "issued_at": {
-          "title": "Issued At",
-          "type": "number"
-        },
-        "expires_at": {
-          "description": "commands must expire; stale routing is harmful",
-          "title": "Expires At",
-          "type": "number"
-        },
-        "source_zone": {
-          "title": "Source Zone",
-          "type": "string"
-        },
-        "destination_zone": {
-          "title": "Destination Zone",
-          "type": "string"
-        },
         "avoid": {
           "items": {
             "type": "string"
           },
-          "title": "Avoid",
           "type": "array"
+        },
+        "command_id": {
+          "type": "string"
+        },
+        "destination_zone": {
+          "type": "string"
+        },
+        "expected_cost_s": {
+          "description": "honest added walking time, stated before the user accepts",
+          "type": "number"
+        },
+        "expires_at": {
+          "description": "commands must expire; stale routing is harmful",
+          "type": "number"
+        },
+        "issued_at": {
+          "type": "number"
         },
         "prefer": {
           "items": {
             "type": "string"
           },
-          "title": "Prefer",
           "type": "array"
-        },
-        "target_fraction": {
-          "description": "share of affected walkers this should reach",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Target Fraction",
-          "type": "number"
         },
         "reason": {
           "description": "plain language, surfaced in the app",
-          "title": "Reason",
           "type": "string"
         },
-        "expected_cost_s": {
-          "description": "honest added walking time, stated before the user accepts",
-          "title": "Expected Cost S",
+        "source_zone": {
+          "type": "string"
+        },
+        "target_fraction": {
+          "description": "share of affected walkers this should reach",
           "type": "number"
         }
       },
@@ -424,20 +353,20 @@
         "reason",
         "expected_cost_s"
       ],
-      "title": "RerouteCommand",
       "type": "object"
     },
     "RerouteOffer": {
+      "additionalProperties": false,
       "description": "A proposed alternative and the safety verdict that gates its display.",
       "properties": {
         "command": {
           "$ref": "#/$defs/RerouteCommand"
         },
-        "verdict": {
-          "$ref": "#/$defs/SafetyVerdict"
-        },
         "instead": {
           "$ref": "#/$defs/Route"
+        },
+        "verdict": {
+          "$ref": "#/$defs/SafetyVerdict"
         }
       },
       "required": [
@@ -445,36 +374,32 @@
         "verdict",
         "instead"
       ],
-      "title": "RerouteOffer",
       "type": "object"
     },
     "ReroutedView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
+        "added_s": {
           "type": "number"
-        },
-        "link": {
-          "$ref": "#/$defs/LinkStatus"
-        },
-        "route": {
-          "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "rerouted",
-          "title": "Kind",
-          "type": "string"
         },
         "instead_of": {
           "$ref": "#/$defs/Route"
         },
-        "added_s": {
-          "title": "Added S",
+        "kind": {
+          "const": "rerouted",
+          "type": "string"
+        },
+        "link": {
+          "$ref": "#/$defs/LinkStatus"
+        },
+        "now": {
           "type": "number"
         },
         "reason": {
-          "title": "Reason",
           "type": "string"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
         }
       },
       "required": [
@@ -486,35 +411,29 @@
         "added_s",
         "reason"
       ],
-      "title": "ReroutedView",
       "type": "object"
     },
     "Route": {
+      "additionalProperties": false,
       "description": "Where the spectator is, where they are going and the walk between them.",
       "properties": {
-        "id": {
-          "title": "Id",
-          "type": "string"
-        },
         "from": {
-          "title": "From",
           "type": "string"
         },
-        "to": {
-          "title": "To",
+        "id": {
           "type": "string"
         },
         "steps": {
           "items": {
             "$ref": "#/$defs/Step"
           },
-          "title": "Steps",
           "type": "array"
+        },
+        "to": {
+          "type": "string"
         },
         "total_walk_s": {
           "description": "door-to-door seconds from routing, including waits; never summed on the phone",
-          "minimum": 0,
-          "title": "Total Walk S",
           "type": "number"
         }
       },
@@ -525,7 +444,6 @@
         "steps",
         "total_walk_s"
       ],
-      "title": "Route",
       "type": "object"
     },
     "SafetyOutcome": {
@@ -534,41 +452,34 @@
         "rejected",
         "modified"
       ],
-      "title": "SafetyOutcome",
       "type": "string"
     },
     "SafetyVerdict": {
-      "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or\nforbidden edge, never intentionally exceed capacity, never route away from\nemergency exits during evacuation (plan.md section 34).",
+      "additionalProperties": false,
+      "description": "The gate every action passes through.\n\nHard constraints the AI cannot override: never route through a blocked or forbidden edge, never intentionally exceed capacity, never route away from emergency exits during evacuation (plan.md section 34).",
       "properties": {
         "command_id": {
-          "title": "Command Id",
           "type": "string"
+        },
+        "dispatchable": {
+          "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a correction; it does not contain that corrected command. Dispatching the original in that state would act on the version safety changed. A corrected command must be issued separately and reviewed in full.",
+          "type": "boolean"
+        },
+        "emergency_mode": {
+          "type": "boolean"
         },
         "outcome": {
           "$ref": "#/$defs/SafetyOutcome"
         },
         "reason": {
           "description": "stated even on approval; rejections are explained",
-          "title": "Reason",
           "type": "string"
         },
         "violated_constraints": {
           "items": {
             "type": "string"
           },
-          "title": "Violated Constraints",
           "type": "array"
-        },
-        "emergency_mode": {
-          "default": false,
-          "title": "Emergency Mode",
-          "type": "boolean"
-        },
-        "dispatchable": {
-          "description": "Only the exact command reviewed as APPROVED may leave the gate.\n\n``MODIFIED`` describes a rejected proposal for which safety can suggest a\ncorrection; it does not contain that corrected command. Dispatching the\noriginal in that state would act on the version safety changed. A\ncorrected command must be issued separately and reviewed in full.",
-          "readOnly": true,
-          "title": "Dispatchable",
-          "type": "boolean"
         }
       },
       "required": [
@@ -577,30 +488,35 @@
         "reason",
         "dispatchable"
       ],
-      "title": "SafetyVerdict",
       "type": "object"
     },
+    "SpectatorView": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArrivalView"
+        },
+        {
+          "$ref": "#/$defs/WalkView"
+        },
+        {
+          "$ref": "#/$defs/AheadView"
+        },
+        {
+          "$ref": "#/$defs/ReroutedView"
+        },
+        {
+          "$ref": "#/$defs/OfflineView"
+        },
+        {
+          "$ref": "#/$defs/HoldView"
+        }
+      ],
+      "description": "One of the six screen states for a race day."
+    },
     "Step": {
+      "additionalProperties": false,
       "description": "One already-priced leg of a route.",
       "properties": {
-        "id": {
-          "title": "Id",
-          "type": "string"
-        },
-        "to": {
-          "description": "human-readable landmark from the circuit pack",
-          "title": "To",
-          "type": "string"
-        },
-        "walk_s": {
-          "description": "walking seconds computed by the routing engine",
-          "minimum": 0,
-          "title": "Walk S",
-          "type": "number"
-        },
-        "way_ahead": {
-          "$ref": "#/$defs/WayAhead"
-        },
         "crossing": {
           "anyOf": [
             {
@@ -609,8 +525,21 @@
             {
               "type": "null"
             }
-          ],
-          "default": null
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "to": {
+          "description": "human-readable landmark from the circuit pack",
+          "type": "string"
+        },
+        "walk_s": {
+          "description": "walking seconds computed by the routing engine",
+          "type": "number"
+        },
+        "way_ahead": {
+          "$ref": "#/$defs/WayAhead"
         }
       },
       "required": [
@@ -619,25 +548,23 @@
         "walk_s",
         "way_ahead"
       ],
-      "title": "Step",
       "type": "object"
     },
     "WalkView": {
+      "additionalProperties": false,
       "properties": {
-        "now": {
-          "title": "Now",
-          "type": "number"
+        "kind": {
+          "const": "walk",
+          "type": "string"
         },
         "link": {
           "$ref": "#/$defs/LinkStatus"
         },
+        "now": {
+          "type": "number"
+        },
         "route": {
           "$ref": "#/$defs/Route"
-        },
-        "kind": {
-          "const": "walk",
-          "title": "Kind",
-          "type": "string"
         }
       },
       "required": [
@@ -646,7 +573,6 @@
         "route",
         "kind"
       ],
-      "title": "WalkView",
       "type": "object"
     },
     "WayAhead": {
@@ -656,41 +582,7 @@
         "critical",
         "unknown"
       ],
-      "title": "WayAhead",
       "type": "string"
     }
-  },
-  "description": "One of the six screen states for a race day.",
-  "discriminator": {
-    "mapping": {
-      "ahead": "#/$defs/AheadView",
-      "arrival": "#/$defs/ArrivalView",
-      "hold": "#/$defs/HoldView",
-      "offline": "#/$defs/OfflineView",
-      "rerouted": "#/$defs/ReroutedView",
-      "walk": "#/$defs/WalkView"
-    },
-    "propertyName": "kind"
-  },
-  "oneOf": [
-    {
-      "$ref": "#/$defs/ArrivalView"
-    },
-    {
-      "$ref": "#/$defs/WalkView"
-    },
-    {
-      "$ref": "#/$defs/AheadView"
-    },
-    {
-      "$ref": "#/$defs/ReroutedView"
-    },
-    {
-      "$ref": "#/$defs/OfflineView"
-    },
-    {
-      "$ref": "#/$defs/HoldView"
-    }
-  ],
-  "title": "SpectatorView"
+  }
 }
