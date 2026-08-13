@@ -10,15 +10,17 @@ Two things routing must refuse to do, both of which look fine on a static map:
   * route through an edge that is closed, or will have closed by the time the
     walker arrives (D5 — the ETA gate)
   * route over geometry it does not trust (D6 — provenance)
+
+Static routes are cached. See `route` for why that is safe and where it stops.
 """
 
 from __future__ import annotations
 
 import heapq
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
-from crowdflow_contracts import CircuitPack, LOSBand, ZoneState
+from crowdflow_contracts import CircuitPack, FREE_FLOW_SPEED_MS, LOSBand, ZoneState
 
 from ..state.flow import MIN_SPEED_MS
 
@@ -33,6 +35,18 @@ graph with no path at all is worse than a bad path."""
 UNTRUSTED_WIDTH_PENALTY = 1.15
 """Small tax on edges whose width is assumed. Their band is provisional, so their
 cost estimate is too; prefer corroborated geometry where the choice is close."""
+
+AVOID_PENALTY = 25.0
+"""Multiplier on an edge touching a zone the operator asked walkers to avoid.
+ASSUMED. Large enough that any plausible detour wins, finite because an advisory
+is not a closure: if avoiding a zone would strand someone, they still get a path
+through it. Compare CRITICAL_WEIGHT, which is the same argument for a measured
+condition rather than an instruction."""
+
+PREFER_DISCOUNT = 0.6
+"""Multiplier on an edge the operator asked walkers to prefer. ASSUMED. A
+discount rather than a rewrite: preferring a route must be able to lose to a
+much shorter alternative, or an advisory becomes a diversion nobody chose."""
 
 
 @dataclass
@@ -61,13 +75,26 @@ class VenueGraph:
         self.session_state = session_state
         self._adj: dict[str, list[tuple[str, str]]] = {}
         self._closed: set[str] = set()
+        self._route_cache: dict[
+            tuple[str, str, frozenset[str], frozenset[str]], RouteResult
+        ] = {}
+        self.cache_hits = 0
+        self.cache_misses = 0
         self.rebuild(session_state)
 
     # -- structure ---------------------------------------------------------
 
     def rebuild(self, session_state: str | None) -> None:
-        """Recompute which edges exist at all, given the session state (D5)."""
+        """Recompute which edges exist at all, given the session state (D5).
+
+        Drops the route cache. A cached path computed while a crossing was open
+        is not merely stale after it shuts — it routes people at a closed
+        crossing, which is the exact failure the ETA gate exists to prevent.
+        Invalidation lives here, in the one method that can change the edge set,
+        so it cannot be forgotten at a call site.
+        """
         self.session_state = session_state
+        self._route_cache.clear()
         self._closed = set()
         for crossing in self.pack.crossings.values():
             if not crossing.availability.is_open_during(session_state):
@@ -106,7 +133,7 @@ class VenueGraph:
             speed = max(MIN_SPEED_MS, state.mean_speed_ms)
             band = state.band
         else:
-            speed = e.free_speed_ms.value if e.free_speed_ms else 1.34
+            speed = e.free_speed_ms.value if e.free_speed_ms else FREE_FLOW_SPEED_MS
 
         travel = e.length_m / speed
         cost = travel
@@ -117,7 +144,7 @@ class VenueGraph:
         if not e.width_m.is_trustworthy:
             cost *= UNTRUSTED_WIDTH_PENALTY
         if avoid and (e.source in avoid or e.destination in avoid):
-            cost *= 25.0
+            cost *= AVOID_PENALTY
         return cost, travel
 
     # -- search ------------------------------------------------------------
@@ -127,7 +154,8 @@ class VenueGraph:
         if not za or not zb:
             return 0.0
         d = math.dist((za.position.x, za.position.y), (zb.position.x, zb.position.y))
-        return d / 1.34  # optimistic: free-flow walk, so A* stays admissible
+        # Optimistic: free-flow walk on the straight line, so A* stays admissible.
+        return d / FREE_FLOW_SPEED_MS
 
     def route(
         self,
@@ -145,7 +173,56 @@ class VenueGraph:
         that edge closes. A path is rejected if the walker would arrive at an
         edge after it shuts: routing someone toward a crossing that closes before
         they get there manufactures the queue it was trying to prevent.
+
+        **Memoised, but only where the answer is a pure function of the graph.**
+        Six thousand simulated agents share on the order of tens of distinct
+        (origin, destination, avoid, prefer) requests, and the intervention
+        engine forks the whole world once per candidate — so the same handful of
+        searches over a 1,875-node graph was being repeated tens of thousands of
+        times per decision. Forks share this graph, so they share the cache.
+
+        Two boundaries keep the memo honest, and both are load-bearing:
+
+          * `states` is the per-tick density field. It changes every tick, so a
+            cached cost would be a cost from a crowd that has since moved. A
+            call that passes states is never cached and never served from cache.
+          * `crossing_deadlines` makes the answer depend on when the walker
+            leaves, which is not in the key. Same treatment.
+
+        Invalidation on structural change lives in `rebuild`.
         """
+        if states is not None or crossing_deadlines:
+            return self._search(
+                origin, destination, states, avoid, prefer, crossing_deadlines
+            )
+
+        key = (origin, destination, frozenset(avoid or ()), frozenset(prefer or ()))
+        cached = self._route_cache.get(key)
+        if cached is None:
+            self.cache_misses += 1
+            cached = self._search(origin, destination, None, avoid, prefer, None)
+            self._route_cache[key] = cached
+        else:
+            self.cache_hits += 1
+        # Hand back a copy: callers own their path list, and one that mutated it
+        # would corrupt every later hit rather than fail visibly.
+        return replace(cached, path=list(cached.path))
+
+    @property
+    def route_cache_size(self) -> int:
+        return len(self._route_cache)
+
+    def _search(
+        self,
+        origin: str,
+        destination: str,
+        states: dict[str, ZoneState] | None,
+        avoid: set[str] | None,
+        prefer: set[str] | None,
+        crossing_deadlines: dict[str, float] | None,
+    ) -> RouteResult:
+        """The A* itself. Pure in its arguments — which is what makes `route`
+        cacheable, and why the cache wrapper is separate from the search."""
         if origin not in self.pack.zones:
             return RouteResult(rejected_reason=f"unknown origin {origin!r}")
         if destination not in self.pack.zones:
@@ -176,7 +253,7 @@ class VenueGraph:
                     continue
                 cost, travel = self.edge_cost(eid, states, avoid)
                 if eid in prefer or nxt in prefer:
-                    cost *= 0.6
+                    cost *= PREFER_DISCOUNT
 
                 arrive = elapsed[node] + travel
                 if eid in deadlines and arrive > deadlines[eid]:
