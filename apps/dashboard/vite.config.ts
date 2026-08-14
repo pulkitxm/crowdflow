@@ -7,7 +7,7 @@
  * nothing, which is exactly the class of quiet failure this product exists to
  * eliminate.
  *
- * Contract and wire types resolve through npm workspaces. They are type-only
+ * Contract and wire types resolve through Bun workspaces. They are type-only
  * imports, so nothing crosses the bundle boundary at runtime and there is no
  * generated alias that can drift from the server.
  */
@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-/** Where the Node API listens by default (see packages/api/src/main.ts). */
+/** Where the Bun API listens by default (see packages/api/src/main.ts). */
 const API = process.env.CROWDFLOW_API ?? "http://127.0.0.1:8099";
 
 export default defineConfig({

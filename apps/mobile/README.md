@@ -4,11 +4,11 @@ Expo (React Native) app for the person walking around the circuit. It renders in
 a phone frame on desktop so the whole race day can be reviewed in a browser.
 
 ```
-npm install          # from apps/mobile
-npm run web          # desktop: phone frame + a rail of the six states
-npm run ios          # or android; the switcher becomes a bar along the bottom
-npm test             # vitest cases over feed, copy and token behaviour
-npm run typecheck
+bun install          # from the repository root
+bun run web          # desktop: phone frame + a rail of the six states
+bun run ios          # or android; the switcher becomes a bar along the bottom
+bun run test         # vitest cases over feed, copy and token behaviour
+bun run typecheck
 ```
 
 ## The one job

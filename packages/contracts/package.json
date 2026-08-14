@@ -8,14 +8,13 @@
     "./standards": "./src/standards.ts"
   },
   "scripts": {
-    "codegen": "node --import tsx scripts/generate.ts",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "codegen": "bun scripts/generate.ts",
+    "test": "bunx --bun vitest run",
+    "typecheck": "bunx --bun tsc --noEmit"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
     "ts-json-schema-generator": "^2.9.0",
-    "tsx": "^4.23.0",
     "typescript": "^6.0.0",
     "vitest": "^4.1.10"
   }

@@ -5,11 +5,11 @@
   "description": "Operator console. Dense, complete, read from three metres.",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "dev": "bunx --bun vite",
+    "build": "bunx --bun tsc --noEmit && bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
+    "typecheck": "bunx --bun tsc --noEmit",
+    "test": "bunx --bun vitest run"
   },
   "dependencies": {
     "@crowdflow/api": "0.2.0",

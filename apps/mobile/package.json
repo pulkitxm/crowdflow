@@ -4,12 +4,12 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "web": "expo start --web",
-    "ios": "expo start --ios",
-    "android": "expo start --android",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "start": "bunx --bun expo start",
+    "web": "bunx --bun expo start --web",
+    "ios": "bunx --bun expo start --ios",
+    "android": "bunx --bun expo start --android",
+    "typecheck": "bunx --bun tsc --noEmit",
+    "test": "bunx --bun vitest run"
   },
   "dependencies": {
     "@crowdflow/contracts": "0.2.0",

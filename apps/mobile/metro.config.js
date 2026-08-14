@@ -1,4 +1,4 @@
-// CrowdFlow packages are npm workspaces outside Expo's project root. Metro must
+// CrowdFlow packages are Bun workspaces outside Expo's project root. Metro must
 // watch the repository root so the authored TypeScript contract package and its
 // changes are visible during development.
 const path = require('path');

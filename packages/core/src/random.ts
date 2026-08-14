@@ -1,4 +1,4 @@
-/** Stable MT19937 stream. Kept as a project implementation so seed 42 remains reproducible across Node releases. */
+/** Stable MT19937 stream. Kept as a project implementation so seed 42 remains reproducible across Bun releases. */
 export class Random {
   private mt = new Uint32Array(624);
   private index = 624;

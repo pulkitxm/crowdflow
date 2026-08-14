@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
 import { CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_SPEED_MS, JAM_DENSITY_PERSONS_M2, LOS_A_MAX, LOS_B_MAX, LOS_C_MAX, LOS_D_MAX, LOS_E_MAX, MEASURED_NOT_ASSUMED } from '@crowdflow/contracts';
 import { capacityFlow } from '@crowdflow/core';
@@ -22,9 +23,11 @@ export class CrowdFlowServer {
   private circuits = new Map<string, LoadedCircuit>();
   readonly server = createServer((request, response) => void this.handle(request, response));
   readonly sockets = new WebSocketServer({ noServer: true });
+  private upgrades = new Set<Duplex>();
   constructor(readonly root: string) {
     this.server.on('upgrade', (request, socket, head) => {
       if (new URL(request.url ?? '/', 'http://localhost').pathname !== '/ws') { socket.destroy(); return; }
+      this.upgrades.add(socket); socket.once('close', () => this.upgrades.delete(socket));
       this.sockets.handleUpgrade(request, socket, head, (client) => this.sockets.emit('connection', client, request));
     });
     this.sockets.on('connection', (socket) => {
@@ -38,7 +41,17 @@ export class CrowdFlowServer {
     });
   }
   listen(port = 8099, host = '127.0.0.1'): Promise<void> { return new Promise((resolve) => this.server.listen(port, host, resolve)); }
-  close(): Promise<void> { this.session?.stop(); for (const socket of this.sockets.clients) socket.close(); return new Promise((resolve) => this.server.close(() => resolve())); }
+  close(): Promise<void> {
+    this.session?.stop();
+    for (const socket of this.sockets.clients) socket.terminate();
+    for (const socket of this.upgrades) socket.destroy();
+    this.sockets.close();
+    // Bun's Node-compatible HTTP server can leave its close callback pending
+    // after an upgraded WebSocket closes; the destroyed sockets will still let
+    // the server drain, so do not block shutdown on that callback.
+    if ('Bun' in globalThis) { this.server.close(); return Promise.resolve(); }
+    return new Promise((resolve, reject) => this.server.close((error) => error ? reject(error) : resolve()));
+  }
 
   startSession(request: SessionRequest = {}): ScenarioSession {
     const circuit = this.load(request.circuit_id ?? 'silverstone');

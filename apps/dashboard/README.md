@@ -59,5 +59,5 @@ on `ZoneState.band`. Whether a forecast is actionable arrives as
 displays numbers; it does not compare them.
 
 **Payload types are authored once.** The console imports `@crowdflow/contracts`
-and `@crowdflow/api/wire` directly from npm workspaces. JSON Schema is generated
+and `@crowdflow/api/wire` directly from Bun workspaces. JSON Schema is generated
 from those TypeScript definitions and byte-for-byte checked by `make codegen`.
