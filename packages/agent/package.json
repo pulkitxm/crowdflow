@@ -7,8 +7,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "test": "bunx --bun vitest run",
+    "typecheck": "bunx --bun tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

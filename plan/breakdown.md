@@ -44,11 +44,11 @@ contracts is Track P and it gates everything.**
 
 | # | Subpart | Contents | Depends on |
 |---|---|---|---|
-| P1 | Monorepo skeleton | `packages/`, `apps/`, `circuits/`, `events/`, `scenarios/`; npm workspaces + one lockfile | — |
+| P1 | Monorepo skeleton | `packages/`, `apps/`, `circuits/`, `events/`, `scenarios/`; Bun workspaces + one lockfile | — |
 | P2 | Contracts | Authored TypeScript `CrowdNode`, `ZoneState`, `Forecast`, `InterventionCandidate`, `RerouteCommand`, `MeshMessage` | P1 |
 | P3 | Codegen | TypeScript → deterministic JSON Schema; generated schemas committed and byte-checked | P2 |
 | P4 | Core package shell | strict TypeScript `packages/core` with the no-I/O rule enforced | P1 |
-| P5 | CLI shell | Node entry point; `sim`, `mesh`, `refine`, `circuit` command groups | P4 |
+| P5 | CLI shell | Bun entry point; `sim`, `mesh`, `refine`, `circuit` command groups | P4 |
 
 *Done when:* simulator output and a hand-written fake phone payload both validate against the
 same models, and the core cannot tell them apart.

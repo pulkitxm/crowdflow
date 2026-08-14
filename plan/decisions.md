@@ -9,11 +9,11 @@ them. Each records what would make it worth revisiting.
 
 **Status:** accepted
 
-**Context.** The Node backend, TypeScript dashboard, React Native app and native Android
+**Context.** The Bun backend, TypeScript dashboard, React Native app and native Android
 service all exchange the same telemetry and command payloads.
 
-**Decision.** One npm-workspace repository. Contracts are authored once in TypeScript and
-consumed directly by all JavaScript runtimes; deterministic Node codegen exports committed
+**Decision.** One Bun-workspace repository. Contracts are authored once in TypeScript and
+consumed directly by all JavaScript runtimes; deterministic Bun codegen exports committed
 JSON Schema for non-TypeScript boundaries. Kotlin remains only for the Android foreground
 mesh service.
 
@@ -23,7 +23,7 @@ around hour 30 as data that validates on one side and not the other. Codegen mak
 review diff instead of a debugging session.
 
 **Consequences.** `packages/contracts` is P0 and blocks every other package. A schema change
-means regenerate and commit JSON Schema. `npm ci`, Vitest and `tsc` are the only repository
+means regenerate and commit JSON Schema. `bun install --frozen-lockfile`, Vitest and `tsc` are the only repository
 install/test path; there is no parallel language runtime to drift.
 
 **Revisit if.** A non-TypeScript service becomes authoritative, in which case schema ownership

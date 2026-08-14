@@ -1479,11 +1479,11 @@ The implemented runtime is deliberately one language and one package graph:
 ```
 Backend
 │
-├── Node 24 + strict TypeScript
+├── Bun 1.3 + strict TypeScript
 ├── native HTTP + WebSockets
 ├── pure local venue graph and simulation engines
 ├── authored TypeScript contracts + generated JSON Schema
-└── npm workspaces / one lockfile
+└── Bun workspaces / one lockfile
 ```
 
 A database and Redis remain optional until measured persistence/load requires them.
@@ -1495,7 +1495,7 @@ Phone
  ↓
 WebSocket
  ↓
-Node API
+Bun API
  ↓
 Redis Streams
  ↓
@@ -2182,11 +2182,11 @@ SQLite / MMKV
 
 Backend
 ───────
-Node 24 + strict TypeScript
+Bun 1.3 + strict TypeScript
 native HTTP + WebSockets
 pure local graph/simulation engines
-Node CLI over the same core library
-npm workspaces + one lockfile
+Bun CLI over the same core library
+Bun workspaces + one lockfile
 
 
 Prediction
@@ -2624,7 +2624,7 @@ For the hackathon, the final demo should tell one complete story: 500 simulated 
 Five decisions were taken after the vision above was written. Each is recorded with full
 context in [`decisions.md`](./decisions.md); this is the summary.
 
-**D1 — npm/TypeScript monorepo with generated JSON Schema.** One repository, and the payoff
+**D1 — Bun/TypeScript monorepo with generated JSON Schema.** One repository, and the payoff
 is specifically that the §1 contracts are authored once in TypeScript and imported directly by
 all JavaScript runtimes. Deterministic codegen emits committed JSON Schema for non-TypeScript
 boundaries. Without this authority a monorepo is just folders; with it, app and backend cannot

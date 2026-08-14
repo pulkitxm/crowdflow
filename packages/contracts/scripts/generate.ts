@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --import tsx
+#!/usr/bin/env bun
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

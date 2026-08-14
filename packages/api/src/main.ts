@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --import tsx
+#!/usr/bin/env bun
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { CrowdFlowServer } from './app.js';

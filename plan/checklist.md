@@ -5,7 +5,7 @@ cutover. Ordering and rationale remain in [`build-plan.md`](./build-plan.md).
 
 ## Runtime and contracts ✅
 
-- [x] Node 24 + one root npm workspace/lockfile
+- [x] Bun 1.3 + one root workspace/lockfile
 - [x] strict TypeScript runtime for contracts, core, CLI, API and agent
 - [x] authored TypeScript wire contracts consumed directly by both apps
 - [x] deterministic TypeScript → JSON Schema generation with byte-for-byte drift tests
@@ -60,7 +60,7 @@ cutover. Ordering and rationale remain in [`build-plan.md`](./build-plan.md).
 - [ ] measured live-event participation, capacity, radio range and hop latency
 - [ ] official second deep circuit pack; importer is generic but only Silverstone is committed
 - [ ] current Expo/React Native/Metro advisories (18: 7 moderate, 11 high); no patched compatible
-      dependency chain is published, and npm's suggested fix is an incompatible downgrade
+      dependency chain is published, and the package manager's suggested fix is an incompatible downgrade
 
 ## Standing invariants
 

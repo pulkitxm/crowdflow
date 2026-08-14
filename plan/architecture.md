@@ -27,7 +27,7 @@ Everything else is detail. Get these two right and the parts stay swappable.
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
          packages/cli   packages/api   packages/agent
-           (Node)          (Node)        (tool layer)
+           (Bun)           (Bun)         (tool layer)
 ```
 
 The CLI is not a scaffold to be replaced by the API. Both are permanent, equal adapters.
@@ -72,8 +72,8 @@ vmax/
 ├── packages/
 │   ├── contracts/        authored TS + JSON Schema [P0 — blocks everything]
 │   ├── core/             the engines (pure TypeScript)
-│   ├── cli/              Node adapter
-│   ├── api/              Node HTTP/WebSocket adapter
+│   ├── cli/              Bun adapter
+│   ├── api/              Bun HTTP/WebSocket adapter
 │   └── agent/            crowd ops agent + tools
 │
 ├── apps/
@@ -118,7 +118,7 @@ machine-readable artefact.
                  │
                  ├──────────────► core · api · agent · dashboard · mobile
                  │
-                 ▼  deterministic Node codegen
+                 ▼  deterministic Bun codegen
    packages/contracts/schema/*.json       (JSON Schema — generated + committed)
 ```
 
@@ -203,10 +203,10 @@ app must remain useful with no backend at all.
 
 | Concern | Choice | Note |
 |---|---|---|
-| Runtime/package manager | Node 24 + `npm` workspaces | One lockfile across packages and apps |
+| Runtime/package manager | Bun 1.3 + workspaces | One lockfile across packages and apps |
 | Language | strict TypeScript | Contracts, core, CLI, API, agent and both app surfaces |
-| Build orchestration | npm scripts + Make targets | Turborepo is overkill at this scale |
-| CLI | Node + `tsx` | |
+| Build orchestration | Bun scripts + Make targets | Turborepo is overkill at this scale |
+| CLI | Bun | |
 | Graph | local pure TypeScript implementation | No runtime framework dependency |
 | Mobile | Expo dev client | **Not Expo Go** — native module required |
 
