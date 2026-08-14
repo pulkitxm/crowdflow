@@ -26,14 +26,14 @@ console:
 	@echo "UI   http://127.0.0.1:$(UI_PORT)"
 	@trap 'kill 0' EXIT INT TERM; \
 	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED) & \
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --bun --filter crowdflow-dashboard dev -- --port $(UI_PORT) & \
+	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT) & \
 	wait
 
 api:
 	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED)
 
 dashboard:
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --bun --filter crowdflow-dashboard dev -- --port $(UI_PORT)
+	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT)
 
 test: typecheck
 	bun run test

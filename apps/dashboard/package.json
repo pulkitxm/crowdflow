@@ -5,9 +5,9 @@
   "description": "Operator console. Dense, complete, read from three metres.",
   "type": "module",
   "scripts": {
-    "dev": "bunx --bun vite",
-    "build": "bunx --bun tsc --noEmit && bunx --bun vite build",
-    "preview": "bunx --bun vite preview",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
     "typecheck": "bunx --bun tsc --noEmit",
     "test": "bunx --bun vitest run"
   },
