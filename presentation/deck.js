@@ -1,0 +1,18 @@
+Reveal.initialize({
+  hash: true,
+  controls: true,
+  controlsTutorial: false,
+  progress: true,
+  slideNumber: "c/t",
+  showSlideNumber: "speaker",
+  transition: "fade",
+  transitionSpeed: "fast",
+  backgroundTransition: "fade",
+  center: false,
+  width: 1600,
+  height: 900,
+  margin: 0.035,
+  minScale: 0.15,
+  maxScale: 2,
+  plugins: [RevealNotes],
+});

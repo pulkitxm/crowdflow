@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080b10" />
+    <meta
+      name="description"
+      content="CrowdFlow predicts where crowds will get stuck and safely reroutes people before the bottleneck forms."
+    />
+    <meta property="og:title" content="CrowdFlow — Move the crowd before it becomes a crisis" />
+    <meta
+      property="og:description"
+      content="A predictive crowd-management platform for Grand Prix circuits and complex venues."
+    />
+    <meta property="og:image" content="https://vmax.pulkit.page/assets/live-map.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vmax.pulkit.page/" />
+    <title>CrowdFlow — Hackathon pitch</title>
+    <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="vendor/reveal/reveal.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#deck">Skip to presentation</a>
+    <div class="reveal" id="deck">
+      <div class="slides">
+        <section class="hero" data-background-color="#080b10">
+          <div class="eyebrow"><span class="signal"></span> Crowd intelligence, before the crush</div>
+          <div class="hero-grid">
+            <div>
+              <div class="brand-lockup" role="img" aria-label="CrowdFlow">
+                <img src="assets/mark.svg" alt="" />
+                <span>CROWDFLOW</span>
+              </div>
+              <h1>Move the crowd<br /><em>before</em> it becomes<br />a crisis.</h1>
+              <p class="lede">
+                Predictive crowd management for Grand Prix circuits—turning live movement into
+                safe, timely reroutes.
+              </p>
+            </div>
+            <div class="hero-viz" aria-hidden="true">
+              <div class="track track-a"></div>
+              <div class="track track-b"></div>
+              <div class="track track-c"></div>
+              <span class="node n1"></span><span class="node n2"></span>
+              <span class="node n3 hot"></span><span class="node n4"></span>
+              <span class="node n5"></span><span class="node n6 hot"></span>
+              <div class="forecast-card glass">
+                <span>FORECAST · 15 MIN</span>
+                <strong>Gate 3 pressure rising</strong>
+                <small>Reroute 20% via Village East</small>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer"><span>HACKATHON PITCH</span><span>vmax.pulkit.page</span></div>
+          <aside class="notes" role="note">
+            Crowds are usually managed in the present tense. We built CrowdFlow to operate in
+            the future tense: predict the bottleneck, test an intervention, and move people
+            before pressure becomes danger.
+          </aside>
+        </section>
+
+        <section data-background-color="#0b0e14">
+          <div class="eyebrow">01 · The problem</div>
+          <h2>Operations see the crowd.<br />They rarely see <em>what happens next.</em></h2>
+          <div class="problem-flow">
+            <article class="problem-card">
+              <span class="step-num">01</span>
+              <div class="problem-icon">◌</div>
+              <h3>Signals arrive fragmented</h3>
+              <p>Cameras, gates, Wi-Fi and staff reports tell different pieces of the story.</p>
+            </article>
+            <div class="flow-arrow">→</div>
+            <article class="problem-card">
+              <span class="step-num">02</span>
+              <div class="problem-icon warning">△</div>
+              <h3>Pressure compounds</h3>
+              <p>A normal queue can become a critical bottleneck before the whole venue sees it.</p>
+            </article>
+            <div class="flow-arrow">→</div>
+            <article class="problem-card">
+              <span class="step-num">03</span>
+              <div class="problem-icon danger">!</div>
+              <h3>Response arrives late</h3>
+              <p>Generic announcements react to symptoms—not the movement causing them.</p>
+            </article>
+          </div>
+          <blockquote>“By the time congestion is obvious, your options are already shrinking.”</blockquote>
+          <aside class="notes" role="note">
+            The data exists, but it arrives as isolated feeds. Humans then have to infer what
+            will happen and choose an action under pressure. That gap is the product opportunity.
+          </aside>
+        </section>
+
+        <section data-background-color="#080b10">
+          <div class="eyebrow">02 · The closed loop</div>
+          <h2>From scattered signals to one<br /><em>safe, testable decision.</em></h2>
+          <div class="loop" role="img" aria-label="Observe, understand, predict, simulate, redirect, verify">
+            <div class="loop-step active"><span>01</span><strong>Observe</strong><small>anonymous signals</small></div>
+            <div class="loop-link">→</div>
+            <div class="loop-step"><span>02</span><strong>Understand</strong><small>live crowd state</small></div>
+            <div class="loop-link">→</div>
+            <div class="loop-step"><span>03</span><strong>Predict</strong><small>pressure ahead</small></div>
+            <div class="loop-link">→</div>
+            <div class="loop-step accent"><span>04</span><strong>Simulate</strong><small>counterfactuals</small></div>
+            <div class="loop-link">→</div>
+            <div class="loop-step"><span>05</span><strong>Redirect</strong><small>safe route</small></div>
+            <div class="loop-link">↺</div>
+            <div class="loop-step"><span>06</span><strong>Verify</strong><small>measure impact</small></div>
+          </div>
+          <div class="decision-strip glass">
+            <span class="decision-label">CROWDFLOW DECISION</span>
+            <strong>Move 20% of Gate 3 arrivals via Village East</strong>
+            <span class="safety-chip">✓ SAFETY REVIEWED</span>
+          </div>
+          <p class="center muted">The system does not just detect crowds. It tests what to do next.</p>
+          <aside class="notes" role="note">
+            CrowdFlow fuses observations into state, predicts risk, simulates several diversion
+            levels, routes the chosen intervention through a mandatory safety review, and then
+            watches whether it worked. That feedback loop is the product.
+          </aside>
+        </section>
+
+        <section class="proof" data-background-color="#f2f0e9">
+          <div class="eyebrow dark">03 · Reproducible proof</div>
+          <div class="proof-layout">
+            <div>
+              <h2>Same crowd.<br />Same seed.<br /><em>One intervention.</em></h2>
+              <p class="ink-muted">
+                A/B simulation at Silverstone: 6,000 spectators, 700 ticks, seed 42. Only the
+                intervention changes between arms.
+              </p>
+              <div class="gate-pass"><span>✓</span> PROOF GATE PASSED</div>
+            </div>
+            <div class="metrics-grid">
+              <article class="metric-card coral">
+                <strong data-count="34.7" data-prefix="−" data-suffix="%">−34.7%</strong>
+                <span>critical zone-seconds</span>
+              </article>
+              <article class="metric-card teal">
+                <strong data-count="13.2" data-prefix="−" data-suffix="%">−13.2%</strong>
+                <span>people queued at peak</span>
+              </article>
+              <article class="metric-card blue">
+                <strong data-count="22.2" data-prefix="−" data-suffix="%">−22.2%</strong>
+                <span>simultaneous critical zones</span>
+              </article>
+              <article class="metric-card neutral">
+                <strong data-count="0" data-prefix="+" data-suffix="s">+0s</strong>
+                <span>mean walk-time penalty</span>
+              </article>
+            </div>
+          </div>
+          <p class="source-line">VERIFIED ON MAIN · `crowdflow sim ab silverstone --count 6000 --ticks 700 --seed 42`</p>
+          <aside class="notes" role="note">
+            This is not a slideware metric. Both arms run the real deterministic simulator with
+            the same seed. The intervention reduced exposure and queues without increasing mean
+            walk time. That gives us a falsifiable baseline for every pilot.
+          </aside>
+        </section>
+
+        <section class="screen-slide" data-background-color="#080b10">
+          <div class="screen-copy">
+            <div class="eyebrow">04 · Control-room experience</div>
+            <h2>See the whole venue.<br /><em>Focus on what matters.</em></h2>
+            <div class="screen-points">
+              <span><b>01</b> Density becomes a live heat layer</span>
+              <span><b>02</b> Bottlenecks rank by operational risk</span>
+              <span><b>03</b> Confidence stays visible—not implied</span>
+            </div>
+          </div>
+          <figure class="product-shot wide-shot">
+            <img src="assets/live-map.png" alt="CrowdFlow control-room prototype showing a Silverstone crowd heatmap" />
+            <figcaption>OPERATOR EXPERIENCE PROTOTYPE · SIMULATED CROWD DATA</figcaption>
+          </figure>
+          <aside class="notes" role="note">
+            The operator does not need another feed. They need a shared operating picture. This
+            prototype shows the intended experience; the main branch also contains a smaller live
+            dashboard connected to the real API over WebSocket.
+          </aside>
+        </section>
+
+        <section data-background-color="#0b0e14">
+          <div class="eyebrow">05 · Decision engine</div>
+          <h2>Every recommendation earns<br />its way onto the map.</h2>
+          <div class="decision-layout">
+            <figure class="product-shot route-shot">
+              <img src="assets/routing.png" alt="CrowdFlow route comparison prototype" />
+            </figure>
+            <div class="decision-stack">
+              <article><span>01</span><div><strong>Forecast</strong><small>Where will pressure exceed a safe band?</small></div></article>
+              <article class="fragment fade-up"><span>02</span><div><strong>Compare</strong><small>Test 10%, 20%, 30% and 40% diversions.</small></div></article>
+              <article class="fragment fade-up"><span>03</span><div><strong>Constrain</strong><small>Respect closures, route cost and command TTL.</small></div></article>
+              <article class="fragment fade-up safety"><span>04</span><div><strong>Safety veto</strong><small>Nothing dispatches without an explicit verdict.</small></div></article>
+              <article class="fragment fade-up"><span>05</span><div><strong>Measure</strong><small>Feed the outcome back into the next tick.</small></div></article>
+            </div>
+          </div>
+          <aside class="notes" role="note">
+            CrowdFlow computes the forecast and route deterministically. It evaluates multiple
+            diversion fractions and every command expires after five minutes. Most importantly,
+            safety is not a disclaimer: it is a mandatory code path with veto power.
+          </aside>
+        </section>
+
+        <section data-background-color="#080b10">
+          <div class="eyebrow">06 · Last-mile guidance</div>
+          <div class="split-title">
+            <h2>A control-room decision<br />only works if it <em>moves people.</em></h2>
+            <p>Turn an operational intervention into a small, timely instruction on the spectator’s phone.</p>
+          </div>
+          <div class="spectator-layout">
+            <figure class="product-shot spectator-shot">
+              <img src="assets/spectator.png" alt="CrowdFlow spectator guidance prototype" />
+            </figure>
+            <div class="phone-card">
+              <div class="phone-top"><span>11:30</span><span>● LIVE</span></div>
+              <small>QUIETER ROUTE</small>
+              <h3>Gate 3 → Village East</h3>
+              <strong>12 min</strong>
+              <div class="mini-route"><i>1</i><span></span><i>2</i><span></span><i>3</i></div>
+              <p>A safer path is open. Leave via Village East to avoid the Gate 3 surge.</p>
+              <button type="button">Start guidance →</button>
+            </div>
+          </div>
+          <aside class="notes" role="note">
+            Instead of announcing “Gate 3 is busy” to everyone, we can give the right group a
+            specific alternative at the right moment. The mobile app already renders live routed
+            spectator views from the API; the phone sensing and real radio transport come next.
+          </aside>
+        </section>
+
+        <section data-background-color="#0b0e14">
+          <div class="eyebrow">07 · Resilient by design</div>
+          <h2>The network can disappear.<br />The guidance <em>shouldn’t.</em></h2>
+          <div class="resilience-grid">
+            <article class="resilience-card">
+              <div class="mesh-visual" aria-hidden="true">
+                <span class="m1"></span><span class="m2"></span><span class="m3"></span>
+                <span class="m4"></span><span class="m5"></span><span class="m6"></span>
+                <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l5"></i>
+              </div>
+              <h3>Store, carry, forward</h3>
+              <p>Compact reroutes can relay between nearby phones over the companion mesh.</p>
+              <span class="status-chip next">TRANSPORT · NEXT</span>
+            </article>
+            <article class="resilience-card">
+              <div class="privacy-mark" aria-hidden="true">◎<span></span></div>
+              <h3>Privacy at the edge</h3>
+              <p>On-device location noise and anonymous crowd nodes keep identity out of the loop.</p>
+              <span class="status-chip built">PRIVACY ENGINE · BUILT</span>
+            </article>
+            <article class="resilience-card">
+              <div class="offline-mark" aria-hidden="true">↯</div>
+              <h3>Useful while offline</h3>
+              <p>Phones retain the latest venue pack and route locally until connectivity returns.</p>
+              <span class="status-chip next">HANDSET WIRING · NEXT</span>
+            </article>
+          </div>
+          <p class="center muted">Honest status: the mesh protocol is simulated; the native radio implementation is not yet connected.</p>
+          <aside class="notes" role="note">
+            A safety product cannot assume perfect connectivity. We have tested the privacy,
+            relay and fan-in logic in simulation. The native Android interface and service exist,
+            but the production Wi-Fi and Bluetooth transport is the next engineering milestone.
+          </aside>
+        </section>
+
+        <section data-background-color="#080b10">
+          <div class="eyebrow">08 · Why we can win</div>
+          <h2>Not a chatbot on a map.<br /><em>A verifiable crowd engine.</em></h2>
+          <div class="architecture">
+            <div class="arch-source">
+              <span>CAMERAS</span><span>TURNSTILES</span><span>WI-FI</span><span>OPTED-IN PHONES</span>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="core-box">
+              <small>DETERMINISTIC CORE</small>
+              <div><span>STATE</span><b>→</b><span>PREDICT</span><b>→</b><span>SIMULATE</span><b>→</b><span>ROUTE</span></div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-output">
+              <article><strong>Operator</strong><small>live decisions + confidence</small></article>
+              <article class="safety-output"><strong>Safety review</strong><small>mandatory veto seam</small></article>
+              <article><strong>Spectator</strong><small>small, actionable guidance</small></article>
+            </div>
+          </div>
+          <div class="moat-strip">
+            <span><b>1,875</b> Silverstone zones</span>
+            <span><b>2,404</b> graph edges</span>
+            <span><b>23</b> 2026 circuits indexed</span>
+            <span><b>141</b> passing tests</span>
+          </div>
+          <aside class="notes" role="note">
+            The core does not depend on an LLM. It is a reproducible engine over a venue graph,
+            with confidence and safety represented in contracts. AI can explain or propose, but
+            it cannot bypass the safety review or directly dispatch a route.
+          </aside>
+        </section>
+
+        <section data-background-color="#f2f0e9" class="market-slide">
+          <div class="eyebrow dark">09 · Beachhead and expansion</div>
+          <h2>Start where crowd movement is<br /><em>high-stakes and highly structured.</em></h2>
+          <div class="market-road">
+            <article class="current">
+              <span>01 · BEACHHEAD</span>
+              <h3>Grand Prix circuits</h3>
+              <p>Known geometry, scheduled surges, repeatable race weekends, premium operations.</p>
+              <strong>23 circuits indexed</strong>
+            </article>
+            <div class="road-line"></div>
+            <article>
+              <span>02 · EXPAND</span>
+              <h3>Stadiums + festivals</h3>
+              <p>The same arrival, interval and exit pressure—on a new venue pack.</p>
+            </article>
+            <div class="road-line"></div>
+            <article>
+              <span>03 · PLATFORM</span>
+              <h3>Transit + public realm</h3>
+              <p>Continuous flow orchestration across connected complex venues.</p>
+            </article>
+          </div>
+          <div class="model-line">
+            <span>GO-TO-MARKET HYPOTHESIS</span>
+            <strong>Paid pilot → annual venue license → multi-venue network</strong>
+          </div>
+          <aside class="notes" role="note">
+            We start with circuits because event schedules and geometry create a tractable,
+            repeatable wedge. The venue pack is data, not custom code, so the engine can expand
+            into stadiums, festivals and transit environments after calibration.
+          </aside>
+        </section>
+
+        <section data-background-color="#0b0e14">
+          <div class="eyebrow">10 · Built now / next</div>
+          <h2>We know exactly what is real—<br />and what the pilot must prove.</h2>
+          <div class="now-next">
+            <div class="now-column">
+              <span class="column-label">RUNNING TODAY</span>
+              <ul>
+                <li><b>✓</b><span>Seeded crowd simulation + A/B gate</span></li>
+                <li><b>✓</b><span>Prediction, intervention, routing + safety</span></li>
+                <li><b>✓</b><span>Bun API + live WebSocket dashboard</span></li>
+                <li><b>✓</b><span>Spectator route feed + six mobile states</span></li>
+                <li><b>✓</b><span>Silverstone venue graph + circuit importer</span></li>
+              </ul>
+            </div>
+            <div class="next-column">
+              <span class="column-label">PILOT MILESTONES</span>
+              <ol>
+                <li><b>01</b><span>Connect one real venue signal</span></li>
+                <li><b>02</b><span>Calibrate widths, crossings + constraints</span></li>
+                <li><b>03</b><span>Wire phone sensing + native mesh radios</span></li>
+                <li><b>04</b><span>Run a shadow-mode event</span></li>
+                <li><b>05</b><span>Measure predicted vs. observed impact</span></li>
+              </ol>
+            </div>
+          </div>
+          <aside class="notes" role="note">
+            The core loop is real. The biggest gaps are also clear: real sensor ingestion, measured
+            venue constraints, and connected phone radios. We propose a shadow-mode pilot before
+            any live intervention, measuring accuracy and operational usefulness.
+          </aside>
+        </section>
+
+        <section class="final-slide" data-background-color="#edff46">
+          <div class="final-mark"><img src="assets/mark-dark.svg" alt="" /></div>
+          <div class="eyebrow dark">The ask</div>
+          <h2>Give us one circuit.<br />One event.<br /><em>One chance to see ahead.</em></h2>
+          <div class="pilot-box">
+            <div><span>1</span><small>venue pack</small></div>
+            <div><span>1</span><small>live signal</small></div>
+            <div><span>1</span><small>shadow-mode session</small></div>
+            <strong>→ A measured pilot, not a promise.</strong>
+          </div>
+          <div class="final-links">
+            <a href="https://vmax.pulkit.page">vmax.pulkit.page</a>
+            <a href="https://github.com/pulkitxm/vmax">github.com/pulkitxm/vmax</a>
+          </div>
+          <p class="closing">CROWDFLOW · SAFER MOVEMENT, IN REAL TIME</p>
+          <aside class="notes" role="note">
+            We are asking for a venue partner and one real signal so we can run CrowdFlow in
+            shadow mode: no live control, just predictions compared with reality. One event can
+            tell us how quickly crowd operations can move from reaction to foresight.
+          </aside>
+        </section>
+      </div>
+    </div>
+
+    <div class="deck-hint" aria-hidden="true">← → NAVIGATE · S SPEAKER VIEW · O OVERVIEW</div>
+    <script src="vendor/reveal/reveal.js"></script>
+    <script src="vendor/reveal/notes.js"></script>
+    <script src="deck.js"></script>
+  </body>
+</html>
