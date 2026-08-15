@@ -8,6 +8,7 @@ Reveal.initialize({
   transition: "fade",
   transitionSpeed: "fast",
   backgroundTransition: "fade",
+  defaultTiming: 31,
   center: false,
   width: 1600,
   height: 900,
