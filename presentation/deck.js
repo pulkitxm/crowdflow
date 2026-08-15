@@ -1,6 +1,7 @@
 function updateRaceProgress(animate = true) {
-  const totalSlides = Reveal.getTotalSlides();
-  const currentSlide = Reveal.getSlidePastCount();
+  const appendixSlides = document.querySelectorAll(".slides section[data-appendix]").length;
+  const totalSlides = Reveal.getTotalSlides() - appendixSlides;
+  const currentSlide = Math.min(Reveal.getSlidePastCount(), totalSlides - 1);
   const progress = totalSlides > 1 ? currentSlide / (totalSlides - 1) : 0;
   const car = document.querySelector(".race-progress-car");
   const carWidth = car ? car.getBoundingClientRect().width : 0;
