@@ -19,7 +19,9 @@ Slide content animations start automatically. One right-arrow press always advan
 to the next slide; no extra clicks are required to reveal steps or bullets.
 
 The ten-slide judging path is timed for **4:45**, leaving 15 seconds of safety inside the
-five-minute presentation limit. Per-slide timing is built into Reveal's speaker view. See
+five-minute presentation limit. Slide 11 is an appendix sources page: it carries the provenance of
+every figure, standard and dataset used in the deck, is marked `data-appendix` so the race-progress
+car still finishes on the closing slide, and is meant for Q&A rather than the timed run. Per-slide timing is built into Reveal's speaker view. See
 [`RUN_OF_SHOW.md`](./RUN_OF_SHOW.md) for the talk track, online-round checklist, rubric map,
 and two-minute Q&A bank. The exact four-person script and handoffs are in
 [`SPEAKER_NOTES.md`](./SPEAKER_NOTES.md).

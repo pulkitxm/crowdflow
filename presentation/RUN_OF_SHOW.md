@@ -31,6 +31,9 @@ Open the speaker view with `S`; its timer reads each slide's `data-timing` value
 If behind by more than 15 seconds, describe slide 6 in one sentence while its steps appear.
 Never cut the proof slide or the final ask.
 
+Slide 11 is an appendix sources page and sits outside the 4:45 path. Do not present it; open it
+in Q&A if a judge asks where a number, standard or dataset came from.
+
 ## Judging rubric map
 
 | Criterion | Best evidence in the deck |
@@ -55,6 +58,11 @@ it cannot compute or dispatch routes and cannot bypass the safety veto.
 **Why should we trust the 34.7% result?**  
 It comes from a seeded A/B run with 6,000 spectators and 700 ticks. Both arms are identical except
 for one intervention, and anyone can rerun the command from the slide.
+
+**Where do your numbers and standards come from?**  
+Slide 11 lists them: the commands on `main` behind every operational figure, Fruin's level of
+service for the crowd bands, Jolpica/OpenF1/f1-circuits/OpenStreetMap for event and venue data, and
+the privacy, mesh and map-inference papers behind the method.
 
 **How do you protect privacy?**  
 The contract uses anonymous crowd nodes and the built privacy engine applies planar-Laplace noise
