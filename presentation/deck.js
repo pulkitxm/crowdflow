@@ -2,8 +2,9 @@ function updateRaceProgress(animate = true) {
   const totalSlides = Reveal.getTotalSlides();
   const currentSlide = Reveal.getSlidePastCount();
   const progress = totalSlides > 1 ? currentSlide / (totalSlides - 1) : 0;
-  const travel = Math.max(0, window.innerWidth - 108) * progress;
   const car = document.querySelector(".race-progress-car");
+  const carWidth = car ? car.getBoundingClientRect().width : 0;
+  const travel = Math.max(0, window.innerWidth - 74 - carWidth) * progress;
   if (!animate && car) car.style.transition = "none";
   document.documentElement.style.setProperty("--race-progress", `${travel.toFixed(1)}px`);
   if (!animate && car) {

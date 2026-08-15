@@ -541,20 +541,16 @@ body {
 .race-progress-finish { position: absolute; right: 0; bottom: 2px; width: 22px; height: 22px; border: 1px solid rgba(255,255,255,.7); background: conic-gradient(#fff 25%, #111318 0 50%, #fff 0 75%, #111318 0) 0 0 / 10px 10px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 78%); }
 .race-progress-car {
   position: absolute;
-  bottom: 7px;
+  bottom: 0;
   left: 0;
-  width: 70px;
-  height: auto;
+  width: 170px;
+  height: 42px;
+  object-fit: contain;
+  object-position: center bottom;
   filter: drop-shadow(0 5px 6px rgba(0,0,0,.58));
   transform: translateX(var(--race-progress));
   transition: transform .5s cubic-bezier(.2,.8,.2,1);
 }
-.race-car-wing,
-.race-car-body,
-.race-car-nose { fill: var(--acid); stroke: #080b10; stroke-width: 1.5; stroke-linejoin: round; }
-.race-car-wheel { fill: #05070a; stroke: #747d88; stroke-width: 1; }
-.race-car-cockpit { fill: #111318; stroke: #c9d0d7; stroke-width: 1; }
-.race-car-stripe { fill: var(--coral); }
 
 @media print {
   .skip-link { display: none; }
