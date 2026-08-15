@@ -18,7 +18,7 @@ from Chromium to export a PDF.
 Slide content animations start automatically. One right-arrow press always advances directly
 to the next slide; no extra clicks are required to reveal steps or bullets.
 
-The nine-slide judging path is timed for **4:38**, leaving 22 seconds of safety inside the
+The ten-slide judging path is timed for **4:45**, leaving 15 seconds of safety inside the
 five-minute presentation limit. Per-slide timing is built into Reveal's speaker view. See
 [`RUN_OF_SHOW.md`](./RUN_OF_SHOW.md) for the talk track, online-round checklist, rubric map,
 and two-minute Q&A bank. The exact four-person script and handoffs are in
@@ -30,10 +30,11 @@ and two-minute Q&A bank. The exact four-person script and handoffs are in
 No application source, package, plan, or repository-root file is included in the published
 site.
 
-The deck vendors Reveal.js so the presentation does not rely on a runtime CDN. It uses no raster
-screenshots: the circuit wall, Silverstone outline and venue graph are SVG vectors generated from
-the actual circuit and graph sources on `main`. Claims on the proof slide come from the seeded,
-reproducible A/B gate on `main`.
+The deck vendors Reveal.js so the presentation does not rely on a runtime CDN. The circuit wall,
+Silverstone outline, venue graph and moving race car are code-native SVG/CSS graphics generated
+from the actual circuit and graph sources on `main`. The only raster assets are the four locally
+stored GitHub collaborator profile pictures requested for the team slide. Claims on the proof slide
+come from the seeded, reproducible A/B gate on `main`.
 
 ## Circuit graphics
 

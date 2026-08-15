@@ -1,13 +1,12 @@
 # VMAX four-person speaker notes
 
-Target finish: **4:38**. The moderator allows five minutes for the presentation and two minutes
+Target finish: **4:45**. The moderator allows five minutes for the presentation and two minutes
 for Q&A. Keep every camera on, join only when called, and make sure all four speakers are present
 before entering the meeting.
 
-Replace `Speaker 1` through `Speaker 4` with your names before rehearsal. Each person owns one
-continuous block, so there are only three handoffs.
+Each person owns one continuous block, so there are only three handoffs.
 
-## Speaker 1: promise and problem
+## Pulkit: promise and problem
 
 **Slides 1 and 2 · 0:00 to 0:43**
 
@@ -25,9 +24,9 @@ Press right once.
 normal queue can compound before the whole team sees the pattern. By the time congestion is
 obvious, the safest options are already disappearing. VMAX closes that decision gap.”
 
-Handoff: “Speaker 2 will show how the loop works and the result we can reproduce.”
+Handoff: “Naman will show how the loop works and the result we can reproduce.”
 
-## Speaker 2: product loop and proof
+## Naman Dadhich: product loop and proof
 
 **Slides 3 and 4 · 0:43 to 1:48**
 
@@ -47,13 +46,13 @@ Only the intervention changed. The result was 34.7 percent less critical exposur
 fewer simultaneous critical zones and a 13.2 percent lower peak queue, with zero seconds added to
 mean walk time. The command at the bottom lets anyone reproduce the test.”
 
-Handoff: “Speaker 3 will show how this scales across the race calendar and into race control.”
+Handoff: “Ayush will show how this scales across the race calendar and into race control.”
 
-## Speaker 3: circuits and decision engine
+## Ayush Goyal: circuits and decision engine
 
-**Slides 5 and 6 · 1:48 to 2:58**
+**Slides 5 and 6 · 1:48 to 2:53**
 
-### Slide 5 · Circuit programme · 30 seconds
+### Slide 5 · Circuit programme · 25 seconds
 
 “These are not decorative track icons. They are the actual vector outlines referenced by the 2026
 circuit index in our main branch. Silverstone is our complete live venue pack today. The importer
@@ -70,11 +69,11 @@ diversion levels, enforce closures and route costs, require an explicit safety v
 the outcome. The live dashboard adds confidence, coverage and race-control telemetry so operators
 can see what the system knows and what it does not.”
 
-Handoff: “Speaker 4 will close with the technical boundary, what is live, and our pilot ask.”
+Handoff: “Manas will close with the technical boundary, what is live, and our pilot ask.”
 
-## Speaker 4: technical edge, completeness and ask
+## Manas Thakur: technical edge, completeness and ask
 
-**Slides 7 through 9 · 2:58 to 4:38**
+**Slides 7 through 10 · 2:53 to 4:45**
 
 ### Slide 7 · Technical edge · 45 seconds
 
@@ -82,7 +81,7 @@ Handoff: “Speaker 4 will close with the technical boundary, what is live, and 
 prediction, counterfactual simulation and routing. A mandatory safety seam can veto every command.
 AI may explain evidence or propose an option, but it cannot dispatch a route or bypass that verdict.
 Privacy noise is applied at the edge, and the offline mesh policy is already exercised in simulation.
-The repository currently passes 141 tests.”
+The repository currently passes 154 tests.”
 
 Press right once.
 
@@ -96,7 +95,14 @@ reality safely.”
 
 Press right once.
 
-### Slide 9 · Ask · 20 seconds
+### Slide 9 · Team · 12 seconds
+
+“We are Pulkit, Naman, Ayush and Manas. Together we built the simulation, safety loop, dashboard
+and venue experience behind VMAX. Four builders working as one pit wall.”
+
+Press right once.
+
+### Slide 10 · Ask · 20 seconds
 
 “Our ask is deliberately small: one circuit, one live signal and one shadow-mode session. We do
 not need control of the venue. We need the chance to measure whether VMAX can help race
@@ -106,10 +112,10 @@ Stop. Smile. Do not add a second closing line.
 
 ## Q&A ownership
 
-- **Speaker 1:** problem, user need and originality.
-- **Speaker 2:** simulator, proof command and the 34.7 percent result.
-- **Speaker 3:** circuit geometry, dashboard and operator workflow.
-- **Speaker 4:** architecture, safety, privacy, limitations and pilot plan.
+- **Pulkit:** problem, user need and originality.
+- **Naman:** simulator, proof command and the 34.7 percent result.
+- **Ayush:** circuit geometry, dashboard and operator workflow.
+- **Manas:** architecture, safety, privacy, limitations and pilot plan.
 
 The owner answers first in one sentence, then gives one supporting fact. At the moderator's
 six-minute reminder, finish the current answer in one sentence and thank the judges.
@@ -117,7 +123,7 @@ six-minute reminder, finish the current answer in one sentence and thank the jud
 ## Final rehearsal checklist
 
 - One right-arrow press per slide. Do not click to reveal bullets; all staged motion is automatic.
-- Speaker 2 has the exact proof command ready in an unshared window.
-- Speaker 3 has the live dashboard ready in a separate tab only if a judge asks.
+- Naman has the exact proof command ready in an unshared window.
+- Ayush has the live dashboard ready in a separate tab only if a judge asks.
 - Each handoff names the next speaker once. The next speaker begins immediately.
 - No one narrates every label on screen. Explain the claim and let the graphics carry the detail.
