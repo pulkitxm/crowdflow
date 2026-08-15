@@ -884,7 +884,7 @@ const MeshScene: React.FC<{ duration: number }> = ({ duration }) => {
     { x: 325, y: 390, label: "6E21" },
     { x: 650, y: 500, label: "B8A5" },
   ];
-  const links = [
+  const links: [number, number][] = [
     [0, 1],
     [1, 2],
     [0, 3],
