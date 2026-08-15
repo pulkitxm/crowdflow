@@ -3,6 +3,7 @@ Reveal.initialize({
   controls: true,
   controlsTutorial: false,
   progress: true,
+  fragments: false,
   slideNumber: "c/t",
   showSlideNumber: "speaker",
   transition: "fade",
