@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">VMAX hackathon pitch</title>
+  <desc id="desc">VMAX predicts crowd pressure and tests safe reroutes for Grand Prix circuits.</desc>
+  <defs>
+    <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
+      <path d="M46 0H0V46" fill="none" stroke="#ffffff" stroke-opacity=".035"/>
+    </pattern>
+    <radialGradient id="glow">
+      <stop stop-color="#edff46" stop-opacity=".17"/>
+      <stop offset="1" stop-color="#edff46" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#080b10"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect x="22" y="16" width="1156" height="5" fill="#ff4e46"/>
+  <circle cx="958" cy="326" r="280" fill="url(#glow)"/>
+  <circle cx="958" cy="326" r="217" fill="none" stroke="#ffffff" stroke-opacity=".08"/>
+  <circle cx="958" cy="326" r="142" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-dasharray="5 7"/>
+  <image href="mark.svg" x="68" y="67" width="42" height="42"/>
+  <text x="126" y="98" fill="#f5f6f2" font-family="Arial, sans-serif" font-size="27" font-weight="800" letter-spacing="2">VMAX</text>
+  <text x="68" y="154" fill="#edff46" font-family="monospace" font-size="14" font-weight="700" letter-spacing="3">RACE CONTROL / CROWD INTELLIGENCE</text>
+  <text x="68" y="258" fill="#f5f6f2" font-family="Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-4">
+    <tspan x="68" dy="0">MOVE THE CROWD</tspan>
+    <tspan x="68" dy="75" fill="#edff46">BEFORE</tspan><tspan fill="#f5f6f2"> THE CRISIS.</tspan>
+  </text>
+  <text x="70" y="398" fill="#9da6b2" font-family="Arial, sans-serif" font-size="25">Predict. Simulate. Reroute. Verify.</text>
+  <g transform="translate(774 172) scale(.42)">
+    <image href="circuits/silverstone.svg" width="800" height="520"/>
+  </g>
+  <text x="900" y="145" fill="#ff4e46" font-family="monospace" font-size="13" font-weight="700" letter-spacing="2">SILVERSTONE / ACTUAL GEOMETRY</text>
+  <g transform="translate(68 489)">
+    <path d="M0 0H592L610 18V77H0Z" fill="#11161f" stroke="#303946"/>
+    <text x="22" y="31" fill="#ff4e46" font-family="monospace" font-size="23" font-weight="800">−34.7%</text>
+    <text x="139" y="30" fill="#f5f6f2" font-family="monospace" font-size="12" font-weight="700" letter-spacing="1.4">CRITICAL EXPOSURE</text>
+    <text x="22" y="57" fill="#3de0b3" font-family="monospace" font-size="18" font-weight="800">+0s</text>
+    <text x="93" y="56" fill="#9da6b2" font-family="monospace" font-size="11" font-weight="700" letter-spacing="1.2">MEAN WALK-TIME PENALTY</text>
+  </g>
+  <text x="962" y="566" text-anchor="middle" fill="#f5f6f2" font-family="monospace" font-size="16" font-weight="700" letter-spacing="1.5">vmax.pulkit.page</text>
+</svg>

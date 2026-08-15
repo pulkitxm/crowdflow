@@ -6,46 +6,59 @@
     <meta name="theme-color" content="#080b10" />
     <meta
       name="description"
-      content="CrowdFlow predicts where crowds will get stuck and safely reroutes people before the bottleneck forms."
+      content="VMAX predicts where crowds will get stuck and safely reroutes people before the bottleneck forms."
     />
-    <meta property="og:title" content="CrowdFlow — Move the crowd before it becomes a crisis" />
+    <meta property="og:title" content="VMAX: Move the crowd before it becomes a crisis" />
     <meta
       property="og:description"
       content="A predictive crowd-management platform for Grand Prix circuits and complex venues."
     />
-    <meta property="og:image" content="https://vmax.pulkit.page/assets/live-map.png" />
+    <meta property="og:image" content="https://vmax.pulkit.page/assets/og.png?v=f1-20260815" />
+    <meta property="og:image:secure_url" content="https://vmax.pulkit.page/assets/og.png?v=f1-20260815" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VMAX race-control pitch with Silverstone circuit geometry" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vmax.pulkit.page/" />
-    <title>CrowdFlow — Hackathon pitch</title>
-    <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="VMAX: Move the crowd before it becomes a crisis" />
+    <meta name="twitter:description" content="Predictive crowd management for Grand Prix circuits." />
+    <meta name="twitter:image" content="https://vmax.pulkit.page/assets/og.png?v=f1-20260815" />
+    <title>VMAX | Hackathon pitch</title>
+    <link rel="icon" href="assets/mark.svg?v=f1-20260815" type="image/svg+xml" />
     <link rel="stylesheet" href="vendor/reveal/reveal.css" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=f1-20260815" />
   </head>
   <body>
     <a class="skip-link" href="#deck">Skip to presentation</a>
     <div class="reveal" id="deck">
       <div class="slides">
         <section class="hero" data-background-color="#080b10" data-timing="18">
-          <div class="eyebrow"><span class="signal"></span> Crowd intelligence, before the crush</div>
+          <div class="eyebrow">Race control / crowd intelligence</div>
           <div class="hero-grid">
             <div>
-              <div class="brand-lockup" role="img" aria-label="CrowdFlow">
-                <img src="assets/mark.svg" alt="" />
-                <span>CROWDFLOW</span>
+              <div class="brand-lockup" role="img" aria-label="VMAX">
+                <img src="assets/mark.svg?v=f1-20260815" alt="" />
+                <span>VMAX</span>
               </div>
               <h1>Move the crowd<br /><em>before</em> it becomes<br />a crisis.</h1>
               <p class="lede">
-                Predictive crowd management for Grand Prix circuits—turning live movement into
-                safe, timely reroutes.
+                Predict pressure. Test a reroute. Move before the crush.
               </p>
             </div>
-            <div class="hero-viz" aria-hidden="true">
-              <div class="track track-a"></div>
-              <div class="track track-b"></div>
-              <div class="track track-c"></div>
-              <span class="node n1"></span><span class="node n2"></span>
-              <span class="node n3 hot"></span><span class="node n4"></span>
-              <span class="node n5"></span><span class="node n6 hot"></span>
+            <div class="hero-viz">
+              <object
+                class="hero-circuit"
+                data="assets/circuits/silverstone.svg?v=f1-20260815"
+                type="image/svg+xml"
+                aria-label="Actual Silverstone Circuit outline"
+              ></object>
+              <div class="track-label">
+                <span>ROUND 09 / GREAT BRITAIN</span>
+                <strong>SILVERSTONE</strong>
+                <small>ACTUAL CIRCUIT GEOMETRY</small>
+              </div>
               <div class="forecast-card glass">
                 <span>FORECAST · 15 MIN</span>
                 <strong>Gate 3 pressure rising</strong>
@@ -53,9 +66,8 @@
               </div>
             </div>
           </div>
-          <div class="slide-footer"><span>5-MINUTE HACKATHON PITCH</span><span>vmax.pulkit.page</span></div>
           <aside class="notes" role="note">
-            Crowds are usually managed in the present tense. We built CrowdFlow to operate in
+            Crowds are usually managed in the present tense. We built VMAX to operate in
             the future tense: predict the bottleneck, test an intervention, and move people
             before pressure becomes danger.
           </aside>
@@ -69,24 +81,24 @@
               <span class="step-num">01</span>
               <div class="problem-icon">◌</div>
               <h3>Signals arrive fragmented</h3>
-              <p>Cameras, gates, Wi-Fi and staff reports tell different pieces of the story.</p>
+              <p>Cameras, gates and staff disagree.</p>
             </article>
             <div class="flow-arrow">→</div>
             <article class="problem-card">
               <span class="step-num">02</span>
               <div class="problem-icon warning">△</div>
               <h3>Pressure compounds</h3>
-              <p>A normal queue can become a critical bottleneck before the whole venue sees it.</p>
+              <p>A normal queue turns critical.</p>
             </article>
             <div class="flow-arrow">→</div>
             <article class="problem-card">
               <span class="step-num">03</span>
               <div class="problem-icon danger">!</div>
               <h3>Response arrives late</h3>
-              <p>Generic announcements react to symptoms—not the movement causing them.</p>
+              <p>The response arrives too late.</p>
             </article>
           </div>
-          <blockquote>“By the time congestion is obvious, your options are already shrinking.”</blockquote>
+          <blockquote>Visible congestion means fewer safe options.</blockquote>
           <aside class="notes" role="note">
             The data exists, but it arrives as isolated feeds. Humans then have to infer what
             will happen and choose an action under pressure. That gap is the product opportunity.
@@ -110,13 +122,13 @@
             <div class="loop-step"><span>06</span><strong>Verify</strong><small>measure impact</small></div>
           </div>
           <div class="decision-strip glass">
-            <span class="decision-label">CROWDFLOW DECISION</span>
+            <span class="decision-label">VMAX DECISION</span>
             <strong>Move 20% of Gate 3 arrivals via Village East</strong>
             <span class="safety-chip">✓ SAFETY REVIEWED</span>
           </div>
           <p class="center muted">The system does not just detect crowds. It tests what to do next.</p>
           <aside class="notes" role="note">
-            CrowdFlow fuses observations into state, predicts risk, simulates several diversion
+            VMAX fuses observations into state, predicts risk, simulates several diversion
             levels, routes the chosen intervention through a mandatory safety review, and then
             watches whether it worked. That feedback loop is the product.
           </aside>
@@ -127,29 +139,26 @@
           <div class="proof-layout">
             <div>
               <h2>Same crowd.<br />Same seed.<br /><em>One intervention.</em></h2>
-              <p class="ink-muted">
-                A/B simulation at Silverstone: 6,000 spectators, 700 ticks, seed 42. Only the
-                intervention changes between arms.
-              </p>
+              <p class="ink-muted">6,000 people · 700 ticks · seed 42 · one changed variable</p>
               <div class="gate-pass"><span>✓</span> PROOF GATE PASSED</div>
             </div>
-            <div class="metrics-grid">
-              <article class="metric-card coral">
-                <strong data-count="34.7" data-prefix="−" data-suffix="%">−34.7%</strong>
-                <span>critical zone-seconds</span>
-              </article>
-              <article class="metric-card teal">
-                <strong data-count="13.2" data-prefix="−" data-suffix="%">−13.2%</strong>
-                <span>people queued at peak</span>
-              </article>
-              <article class="metric-card blue">
+            <div class="podium" aria-label="Simulation result podium">
+              <article class="podium-place p2">
                 <strong data-count="22.2" data-prefix="−" data-suffix="%">−22.2%</strong>
-                <span>simultaneous critical zones</span>
+                <span>critical zones</span>
+                <div><b>P2</b><small>02</small></div>
               </article>
-              <article class="metric-card neutral">
-                <strong data-count="0" data-prefix="+" data-suffix="s">+0s</strong>
-                <span>mean walk-time penalty</span>
+              <article class="podium-place p1">
+                <strong data-count="34.7" data-prefix="−" data-suffix="%">−34.7%</strong>
+                <span>critical exposure</span>
+                <div><b>P1</b><small>01</small></div>
               </article>
+              <article class="podium-place p3">
+                <strong data-count="13.2" data-prefix="−" data-suffix="%">−13.2%</strong>
+                <span>peak queue</span>
+                <div><b>P3</b><small>03</small></div>
+              </article>
+              <p class="podium-zero"><b>+0s</b> MEAN WALK-TIME PENALTY</p>
             </div>
           </div>
           <p class="source-line">VERIFIED ON MAIN · `crowdflow sim ab silverstone --count 6000 --ticks 700 --seed 42`</p>
@@ -160,24 +169,21 @@
           </aside>
         </section>
 
-        <section class="screen-slide" data-background-color="#080b10" data-timing="30">
-          <div class="screen-copy">
-            <div class="eyebrow">04 · Control-room experience</div>
-            <h2>See the whole venue.<br /><em>Focus on what matters.</em></h2>
-            <div class="screen-points">
-              <span><b>01</b> Density becomes a live heat layer</span>
-              <span><b>02</b> Bottlenecks rank by operational risk</span>
-              <span><b>03</b> Confidence stays visible—not implied</span>
-            </div>
+        <section class="circuit-slide" data-background-color="#080b10" data-timing="25">
+          <div class="eyebrow">04 · 2026 circuit programme</div>
+          <div class="circuit-title-row">
+            <h2>23 rounds.<br /><em>One crowd engine.</em></h2>
           </div>
-          <figure class="product-shot wide-shot">
-            <img src="assets/live-map.png" alt="CrowdFlow control-room prototype showing a Silverstone crowd heatmap" />
-            <figcaption>OPERATOR EXPERIENCE PROTOTYPE · SIMULATED CROWD DATA</figcaption>
-          </figure>
+          <object
+            class="circuit-wall"
+            data="assets/circuits/circuit-wall.svg?v=f1-20260815"
+            type="image/svg+xml"
+            aria-label="Actual vector outlines of all 23 circuits in the 2026 programme"
+          ></object>
           <aside class="notes" role="note">
-            The operator does not need another feed. They need a shared operating picture. This
-            prototype shows the intended experience; the main branch also contains a smaller live
-            dashboard connected to the real API over WebSocket.
+            These are the actual vector outlines for all 23 rounds referenced by the repository,
+            not decorative images. Silverstone is the complete venue pack today. The importer is
+            how the same engine expands to the next circuit without rewriting the core.
           </aside>
         </section>
 
@@ -185,19 +191,37 @@
           <div class="eyebrow">05 · Decision engine</div>
           <h2>Every recommendation earns<br />its way onto the map.</h2>
           <div class="decision-layout">
-            <figure class="product-shot route-shot">
-              <img src="assets/routing.png" alt="CrowdFlow route comparison prototype" />
+            <figure class="vector-track-card">
+              <div class="telemetry-head">
+                <span>R09 / SILVERSTONE</span><span class="live-dot">LIVE MODEL</span>
+              </div>
+              <object
+                class="decision-circuit"
+                data="assets/circuits/silverstone-venue.svg?v=f1-20260815"
+                type="image/svg+xml"
+                aria-label="Actual Silverstone venue graph with 1,875 zones and 2,404 edges"
+              ></object>
+              <div class="dashboard-kpis" aria-hidden="true">
+                <span><small>ZONES</small><b>1,875</b></span>
+                <span><small>EDGES</small><b>2,404</b></span>
+                <span><small>DEVICES</small><b>69</b></span>
+                <span class="forecast-kpi"><small>TIME TO EVENT</small><b>T−00:36</b></span>
+              </div>
+              <span class="hotspot hs-1"><b>G3</b><small>+18%</small></span>
+              <span class="hotspot hs-2"><b>V</b><small>OPEN</small></span>
+              <span class="hotspot hs-3"><b>B</b><small>SAFE</small></span>
+              <figcaption>LIVE DASHBOARD MODEL / ACTUAL VENUE GRAPH / SIMULATED TELEMETRY</figcaption>
             </figure>
             <div class="decision-stack">
-              <article><span>01</span><div><strong>Forecast</strong><small>Where will pressure exceed a safe band?</small></div></article>
-              <article class="fragment fade-up"><span>02</span><div><strong>Compare</strong><small>Test 10%, 20%, 30% and 40% diversions.</small></div></article>
-              <article class="fragment fade-up"><span>03</span><div><strong>Constrain</strong><small>Respect closures, route cost and command TTL.</small></div></article>
-              <article class="fragment fade-up safety"><span>04</span><div><strong>Safety veto</strong><small>Nothing dispatches without an explicit verdict.</small></div></article>
-              <article class="fragment fade-up"><span>05</span><div><strong>Measure</strong><small>Feed the outcome back into the next tick.</small></div></article>
+              <article class="autoplay-step step-1"><span>01</span><div><strong>Forecast</strong><small>See pressure early</small></div></article>
+              <article class="autoplay-step step-2"><span>02</span><div><strong>Compare</strong><small>Test diversion levels</small></div></article>
+              <article class="autoplay-step step-3"><span>03</span><div><strong>Constrain</strong><small>Respect venue rules</small></div></article>
+              <article class="autoplay-step step-4 safety"><span>04</span><div><strong>Safety veto</strong><small>Review before dispatch</small></div></article>
+              <article class="autoplay-step step-5"><span>05</span><div><strong>Measure</strong><small>Learn from the outcome</small></div></article>
             </div>
           </div>
           <aside class="notes" role="note">
-            CrowdFlow computes the forecast and route deterministically. It evaluates multiple
+            VMAX computes the forecast and route deterministically. It evaluates multiple
             diversion fractions and every command expires after five minutes. Most importantly,
             safety is not a disclaimer: it is a mandatory code path with veto power.
           </aside>
@@ -217,16 +241,16 @@
             </div>
             <div class="arch-arrow">↓</div>
             <div class="arch-output">
-              <article><strong>Operator</strong><small>live decisions + confidence</small></article>
-              <article class="safety-output"><strong>Safety review</strong><small>mandatory veto seam</small></article>
-              <article><strong>Spectator</strong><small>small, actionable guidance</small></article>
+              <article><strong>Operator</strong><small>decision + confidence</small></article>
+              <article class="safety-output"><strong>Safety review</strong><small>mandatory veto</small></article>
+              <article><strong>Spectator</strong><small>one clear action</small></article>
             </div>
           </div>
           <div class="moat-strip">
             <span><b>SAFETY</b> mandatory veto</span>
             <span><b>PRIVACY</b> on-device noise</span>
             <span><b>MESH</b> protocol simulated</span>
-            <span><b>141</b> passing tests</span>
+            <span><b>154</b> passing tests</span>
           </div>
           <aside class="notes" role="note">
             The core does not depend on an LLM. It is a reproducible engine over a venue graph,
@@ -238,26 +262,26 @@
 
         <section data-background-color="#0b0e14" data-timing="35">
           <div class="eyebrow">07 · Completeness + functionality</div>
-          <h2>We know exactly what is real—<br />and what the pilot must prove.</h2>
+          <h2>We know exactly what is real.<br />And what the pilot must prove.</h2>
           <div class="now-next">
             <div class="now-column">
               <span class="column-label">RUNNING TODAY</span>
               <ul>
-                <li><b>✓</b><span>Seeded crowd simulation + A/B gate</span></li>
-                <li><b>✓</b><span>Prediction, intervention, routing + safety</span></li>
-                <li><b>✓</b><span>Bun API + live WebSocket dashboard</span></li>
-                <li><b>✓</b><span>Spectator route feed + six mobile states</span></li>
-                <li><b>✓</b><span>Silverstone venue graph + circuit importer</span></li>
+                <li><b>✓</b><span>Seeded A/B simulation</span></li>
+                <li><b>✓</b><span>Prediction + safe routing</span></li>
+                <li><b>✓</b><span>Live API + operator console</span></li>
+                <li><b>✓</b><span>Spectator route feed</span></li>
+                <li><b>✓</b><span>Silverstone venue pack</span></li>
               </ul>
             </div>
             <div class="next-column">
               <span class="column-label">PILOT MILESTONES</span>
               <ol>
-                <li><b>01</b><span>Connect one real venue signal</span></li>
-                <li><b>02</b><span>Calibrate widths, crossings + constraints</span></li>
-                <li><b>03</b><span>Wire phone sensing + native mesh radios</span></li>
-                <li><b>04</b><span>Run a shadow-mode event</span></li>
-                <li><b>05</b><span>Measure predicted vs. observed impact</span></li>
+                <li><b>01</b><span>Connect one live signal</span></li>
+                <li><b>02</b><span>Calibrate venue constraints</span></li>
+                <li><b>03</b><span>Connect native mesh radios</span></li>
+                <li><b>04</b><span>Run in shadow mode</span></li>
+                <li><b>05</b><span>Compare forecast vs. reality</span></li>
               </ol>
             </div>
           </div>
@@ -268,8 +292,59 @@
           </aside>
         </section>
 
+        <section class="team-slide" data-background-color="#080b10" data-timing="12">
+          <div class="eyebrow">08 · The team</div>
+          <div class="team-heading">
+            <h2>Four builders.<br /><em>One pit wall.</em></h2>
+            <div class="team-car" aria-hidden="true">
+              <svg viewBox="0 0 360 130" role="presentation">
+                <path class="team-car-shadow" d="M38 102h286l-30 15H66z" />
+                <path class="team-car-wing" d="M17 71h82v25H8V81zm244 0h82l9 10v15h-91z" />
+                <path class="team-car-body" d="M89 78l45-14 30-42h32l30 42 45 14-19 22H108z" />
+                <path class="team-car-nose" d="M164 15h32l12 86h-56z" />
+                <path class="team-car-cockpit" d="M163 51q17-24 34 0l-7 30h-21z" />
+                <rect class="team-car-wheel" x="68" y="48" width="48" height="30" rx="8" />
+                <rect class="team-car-wheel" x="244" y="48" width="48" height="30" rx="8" />
+                <rect class="team-car-wheel" x="77" y="95" width="43" height="25" rx="7" />
+                <rect class="team-car-wheel" x="240" y="95" width="43" height="25" rx="7" />
+                <path class="team-car-stripe" d="M174 21h12l5 74h-22z" />
+              </svg>
+            </div>
+          </div>
+          <div class="team-grid">
+            <a class="team-card" href="https://github.com/pulkitxm" target="_blank" rel="noreferrer">
+              <span class="team-number">01</span>
+              <div class="team-photo"><img src="assets/team/pulkit-photo.png" alt="Pulkit's profile picture" /></div>
+              <strong>Pulkit</strong>
+              <small>@pulkitxm</small>
+            </a>
+            <a class="team-card" href="https://github.com/namannn04" target="_blank" rel="noreferrer">
+              <span class="team-number">02</span>
+              <div class="team-photo"><img src="assets/team/naman.jpg" alt="Naman Dadhich's GitHub profile picture" /></div>
+              <strong>Naman Dadhich</strong>
+              <small>@namannn04</small>
+            </a>
+            <a class="team-card" href="https://github.com/agayushh" target="_blank" rel="noreferrer">
+              <span class="team-number">03</span>
+              <div class="team-photo"><img src="assets/team/ayush-photo.png" alt="Ayush Goyal's profile picture" /></div>
+              <strong>Ayush Goyal</strong>
+              <small>@agayushh</small>
+            </a>
+            <a class="team-card" href="https://github.com/Manas-thakur" target="_blank" rel="noreferrer">
+              <span class="team-number">04</span>
+              <div class="team-photo"><img src="assets/team/manas-photo.png" alt="Manas Thakur's profile picture" /></div>
+              <strong>Manas Thakur</strong>
+              <small>@Manas-thakur</small>
+            </a>
+          </div>
+          <aside class="notes" role="note">
+            We are Pulkit, Naman, Ayush and Manas. Together we built the simulation, safety loop,
+            dashboard and venue experience behind VMAX.
+          </aside>
+        </section>
+
         <section class="final-slide" data-background-color="#edff46" data-timing="20">
-          <div class="final-mark"><img src="assets/mark-dark.svg" alt="" /></div>
+          <div class="final-mark"><img src="assets/mark-dark.svg?v=f1-20260815" alt="" /></div>
           <div class="eyebrow dark">The ask</div>
           <h2>Give us one circuit.<br />One event.<br /><em>One chance to see ahead.</em></h2>
           <div class="pilot-box">
@@ -280,24 +355,26 @@
           </div>
           <div class="final-links">
             <a href="https://vmax.pulkit.page">vmax.pulkit.page</a>
-            <a href="https://github.com/pulkitxm/vmax">github.com/pulkitxm/vmax</a>
+            <a href="https://git.new/vmax">git.new/vmax</a>
           </div>
-          <p class="closing">CROWDFLOW · SAFER MOVEMENT, IN REAL TIME</p>
+          <p class="closing">VMAX · SAFER MOVEMENT, IN REAL TIME</p>
           <aside class="notes" role="note">
-            We are asking for a venue partner and one real signal so we can run CrowdFlow in
+            We are asking for a venue partner and one real signal so we can run VMAX in
             shadow mode: no live control, just predictions compared with reality. One event can
             tell us how quickly crowd operations can move from reaction to foresight.
           </aside>
         </section>
       </div>
-      <div class="progress-car" aria-hidden="true">
-        <img src="assets/haas-car.webp" alt="" />
-      </div>
     </div>
 
-    <div class="deck-hint" aria-hidden="true">← → NAVIGATE · S SPEAKER VIEW · O OVERVIEW</div>
+    <div class="race-progress" aria-hidden="true">
+      <div class="race-progress-track"></div>
+      <div class="race-progress-finish"></div>
+      <img class="race-progress-car" src="assets/haas-car.webp" alt="" />
+    </div>
+
     <script src="vendor/reveal/reveal.js"></script>
     <script src="vendor/reveal/notes.js"></script>
-    <script src="deck.js"></script>
+    <script src="deck.js?v=f1-20260815"></script>
   </body>
 </html>

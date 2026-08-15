@@ -1,8 +1,24 @@
+function updateRaceProgress(animate = true) {
+  const totalSlides = Reveal.getTotalSlides();
+  const currentSlide = Reveal.getSlidePastCount();
+  const progress = totalSlides > 1 ? currentSlide / (totalSlides - 1) : 0;
+  const car = document.querySelector(".race-progress-car");
+  const carWidth = car ? car.getBoundingClientRect().width : 0;
+  const travel = Math.max(0, window.innerWidth - 74 - carWidth) * progress;
+  if (!animate && car) car.style.transition = "none";
+  document.documentElement.style.setProperty("--race-progress", `${travel.toFixed(1)}px`);
+  if (!animate && car) {
+    car.getBoundingClientRect();
+    car.style.removeProperty("transition");
+  }
+}
+
 Reveal.initialize({
   hash: true,
   controls: true,
   controlsTutorial: false,
   progress: true,
+  fragments: false,
   slideNumber: "c/t",
   showSlideNumber: "speaker",
   transition: "fade",
@@ -16,18 +32,7 @@ Reveal.initialize({
   minScale: 0.15,
   maxScale: 2,
   plugins: [RevealNotes],
-});
+}).then(() => updateRaceProgress(false));
 
-const progressCar = document.querySelector('.progress-car');
-
-function placeProgressCar() {
-  const progressBar = document.querySelector('.reveal .progress');
-  if (!progressCar || !progressBar) return;
-
-  const progress = Math.max(0, Math.min(1, Reveal.getProgress()));
-  const travel = Math.max(0, progressBar.clientWidth - progressCar.offsetWidth - 12);
-  progressCar.style.transform = `translateX(${progress * travel + 6}px)`;
-  requestAnimationFrame(placeProgressCar);
-}
-
-Reveal.on('ready', placeProgressCar);
+Reveal.on("slidechanged", () => updateRaceProgress(true));
+window.addEventListener("resize", () => updateRaceProgress(false));
