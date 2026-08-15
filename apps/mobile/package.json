@@ -9,7 +9,7 @@
     "ios": "bunx --bun expo start --ios",
     "android": "bunx --bun expo start --android",
     "typecheck": "bunx --bun tsc --noEmit",
-    "test": "bunx --bun vitest run"
+    "test": "bunx vitest run"
   },
   "dependencies": {
     "@crowdflow/contracts": "0.2.0",
