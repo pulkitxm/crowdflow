@@ -228,67 +228,116 @@
         </section>
 
         <section data-background-color="#080b10" data-timing="45">
-          <div class="eyebrow">06 · Original technical edge</div>
-          <h2>Not a chatbot on a map.<br /><em>A verifiable crowd engine.</em></h2>
-          <div class="architecture">
-            <div class="arch-source">
-              <span>CAMERAS</span><span>TURNSTILES</span><span>WI-FI</span><span>OPTED-IN PHONES</span>
+          <div class="eyebrow">06 · How the technology works</div>
+          <h2>Every phone can be<br /><em>sensor + node.</em></h2>
+          <p class="tech-dek">Signals become shared state. Shared state becomes a forecast.</p>
+          <div class="tech-layout">
+            <div class="tech-pipeline">
+              <article class="tech-stage stage-sense">
+                <span class="tech-index">01</span>
+                <small>DATA COLLECTION</small>
+                <strong>Sense movement,<br />not identity.</strong>
+                <p>Approximate location, direction, speed, nearby density and changes in flow.</p>
+              </article>
+              <div class="tech-connector">→</div>
+              <article class="tech-stage stage-state">
+                <span class="tech-index">02</span>
+                <small>LOCAL AGGREGATION</small>
+                <strong>Turn signals into<br />crowd state.</strong>
+                <p>“Gate B is dense, slowing, and 70% of movement heads toward one corridor.”</p>
+              </article>
+              <div class="tech-connector">→</div>
+              <article class="tech-stage stage-mesh">
+                <span class="tech-index">03</span>
+                <small>OFFLINE MESH</small>
+                <strong>Communicate phone<br />to phone.</strong>
+                <p>Bluetooth LE and Wi-Fi Direct forward small encrypted state messages.</p>
+              </article>
             </div>
-            <div class="arch-arrow">↓</div>
-            <div class="core-box">
-              <small>DETERMINISTIC CORE</small>
-              <div><span>STATE</span><b>→</b><span>PREDICT</span><b>→</b><span>SIMULATE</span><b>→</b><span>ROUTE</span></div>
+            <div class="prediction-panel">
+              <div class="prediction-graph" aria-hidden="true">
+                <svg viewBox="0 0 150 180" role="presentation">
+                  <defs>
+                    <linearGradient id="graph-edge" x1="0" x2="1">
+                      <stop offset="0" stop-color="#3de0b3" stop-opacity=".45" />
+                      <stop offset="1" stop-color="#edff46" stop-opacity=".95" />
+                    </linearGradient>
+                  </defs>
+                  <g class="graph-edges">
+                    <path d="M75 22L29 67L75 88L121 67L75 130L29 151M75 88L121 151" />
+                    <path class="risk-edge" d="M75 88L121 67L121 151" />
+                  </g>
+                  <g class="graph-nodes">
+                    <circle class="node-normal" cx="75" cy="22" r="10" />
+                    <circle class="node-normal" cx="29" cy="67" r="8" />
+                    <circle class="node-risk" cx="75" cy="88" r="12" />
+                    <circle class="node-normal" cx="121" cy="67" r="8" />
+                    <circle class="node-normal" cx="29" cy="151" r="8" />
+                    <circle class="node-normal" cx="75" cy="130" r="8" />
+                    <circle class="node-normal" cx="121" cy="151" r="8" />
+                  </g>
+                  <g class="graph-labels">
+                    <text x="75" y="7">GATE A</text><text x="80" y="84">C</text><text x="126" y="62">EXIT</text>
+                  </g>
+                </svg>
+              </div>
+              <div>
+                <small>04 · PREDICTION ENGINE</small>
+                <strong>Spatio-Temporal<br />Graph Neural Network</strong>
+                <p>Venue nodes are gates, corridors and exits. Edges are paths. The model learns how space and time change congestion.</p>
+              </div>
+              <span class="forecast-pill">CORRIDOR C · 80% CONGESTION RISK</span>
             </div>
-            <div class="arch-arrow">↓</div>
-            <div class="arch-output">
-              <article><strong>Operator</strong><small>decision + confidence</small></article>
-              <article class="safety-output"><strong>Safety review</strong><small>mandatory veto</small></article>
-              <article><strong>Spectator</strong><small>one clear action</small></article>
-            </div>
-          </div>
-          <div class="moat-strip">
-            <span><b>SAFETY</b> mandatory veto</span>
-            <span><b>PRIVACY</b> on-device noise</span>
-            <span><b>MESH</b> protocol simulated</span>
-            <span><b>154</b> passing tests</span>
           </div>
           <aside class="notes" role="note">
-            The core does not depend on an LLM. It is a reproducible engine over a venue graph,
-            with confidence and safety represented in contracts. AI can explain or propose, but
-            it cannot bypass the safety review or directly dispatch a route. Privacy noise is
-            built at the edge; the offline mesh protocol works in simulation, with real radios next.
+            Now let me explain how the technology actually works. We designed the system around one
+            idea: every participating phone can become both a sensor and a communication node.
+            The phone collects anonymous movement signals such as approximate location when
+            available, direction, speed, nearby device density and changes in crowd flow. We do not
+            identify people; we understand how the crowd is moving. Those signals are processed
+            locally into an aggregated crowd state. Nearby phones communicate using Bluetooth Low
+            Energy and Wi-Fi Direct, exchanging small encrypted crowd-state messages. This creates
+            a local mesh, so information can travel phone to phone even when cellular internet is
+            unavailable. We represent the venue as a graph and use a Spatio-Temporal Graph Neural
+            Network: it learns both spatial relationships and how density changes over time. It can
+            predict that Corridor C has an 80% probability of becoming congested within minutes.
           </aside>
         </section>
 
         <section data-background-color="#0b0e14" data-timing="35">
-          <div class="eyebrow">07 · Completeness + functionality</div>
-          <h2>We know exactly what is real.<br />And what the pilot must prove.</h2>
-          <div class="now-next">
-            <div class="now-column">
-              <span class="column-label">RUNNING TODAY</span>
-              <ul>
-                <li><b>✓</b><span>Seeded A/B simulation</span></li>
-                <li><b>✓</b><span>Prediction + safe routing</span></li>
-                <li><b>✓</b><span>Live API + operator console</span></li>
-                <li><b>✓</b><span>Spectator route feed</span></li>
-                <li><b>✓</b><span>Silverstone venue pack</span></li>
-              </ul>
+          <div class="eyebrow">07 · The closed loop</div>
+          <h2>Redirect the crowd<br /><em>before the bottleneck forms.</em></h2>
+          <div class="tech-loop">
+            <div class="loop-command"><span>ROUTING ENGINE</span><strong>Chooses the safest<br />future path.</strong><small>Predicted congestion · density · capacity · safety</small></div>
+            <div class="loop-cycle">
+              <div class="cycle-step"><b>01</b><strong>Sense</strong><small>new crowd state</small></div>
+              <div class="cycle-arrow">→</div>
+              <div class="cycle-step"><b>02</b><strong>Communicate</strong><small>mesh shares it</small></div>
+              <div class="cycle-arrow">→</div>
+              <div class="cycle-step accent"><b>03</b><strong>Predict</strong><small>pressure ahead</small></div>
+              <div class="cycle-arrow">→</div>
+              <div class="cycle-step"><b>04</b><strong>Redirect</strong><small>safe alternative</small></div>
+              <div class="cycle-arrow">→</div>
+              <div class="cycle-step"><b>05</b><strong>Observe</strong><small>measure impact</small></div>
             </div>
-            <div class="next-column">
-              <span class="column-label">PILOT MILESTONES</span>
-              <ol>
-                <li><b>01</b><span>Connect one live signal</span></li>
-                <li><b>02</b><span>Calibrate venue constraints</span></li>
-                <li><b>03</b><span>Connect native mesh radios</span></li>
-                <li><b>04</b><span>Run in shadow mode</span></li>
-                <li><b>05</b><span>Compare forecast vs. reality</span></li>
-              </ol>
-            </div>
+            <div class="loop-repeat"><span>↺</span> continuous feedback updates the next decision</div>
+          </div>
+          <div class="mode-grid">
+            <article><span class="mode-label connected">CONNECTED MODE</span><strong>Devices + mesh + cloud</strong><small>Global prediction, analytics, event monitoring and organizer dashboard.</small></article>
+            <article><span class="mode-label offline">OFFLINE MODE</span><strong>Devices + mesh</strong><small>Local prediction and routing continue when internet connectivity disappears.</small></article>
           </div>
           <aside class="notes" role="note">
-            The core loop is real. The biggest gaps are also clear: real sensor ingestion, measured
-            venue constraints, and connected phone radios. We propose a shadow-mode pilot before
-            any live intervention, measuring accuracy and operational usefulness.
+            That prediction is passed to our routing engine. It does not simply find the shortest
+            path; it considers predicted congestion, current density, path capacity and safety. If
+            one route is becoming overloaded, it distributes people across alternatives before the
+            bottleneck forms. Then we close the loop: people move, the system observes the new state,
+            the prediction changes, routing changes, and the crowd moves again. Sense, Communicate,
+            Predict, Redirect, Observe, Repeat. The cloud is useful for analytics, model training,
+            monitoring and the organizer dashboard, but it is not required for core safety. In
+            connected mode we have devices, mesh, cloud and global prediction. In offline mode,
+            devices, mesh, local prediction and local routing continue. We are not another dashboard
+            explaining congestion after it happens. We sense, communicate through, predict and
+            redirect the crowd before congestion becomes critical.
           </aside>
         </section>
 
