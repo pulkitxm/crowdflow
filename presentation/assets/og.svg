@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">CrowdFlow hackathon pitch</title>
-  <desc id="desc">CrowdFlow predicts crowd pressure and tests safe reroutes for Grand Prix circuits.</desc>
+  <title id="title">VMAX hackathon pitch</title>
+  <desc id="desc">VMAX predicts crowd pressure and tests safe reroutes for Grand Prix circuits.</desc>
   <defs>
     <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
       <path d="M46 0H0V46" fill="none" stroke="#ffffff" stroke-opacity=".035"/>
@@ -17,7 +17,7 @@
   <circle cx="958" cy="326" r="217" fill="none" stroke="#ffffff" stroke-opacity=".08"/>
   <circle cx="958" cy="326" r="142" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-dasharray="5 7"/>
   <image href="mark.svg" x="68" y="67" width="42" height="42"/>
-  <text x="126" y="98" fill="#f5f6f2" font-family="Arial, sans-serif" font-size="27" font-weight="800" letter-spacing="2">CROWDFLOW</text>
+  <text x="126" y="98" fill="#f5f6f2" font-family="Arial, sans-serif" font-size="27" font-weight="800" letter-spacing="2">VMAX</text>
   <text x="68" y="154" fill="#edff46" font-family="monospace" font-size="14" font-weight="700" letter-spacing="3">RACE CONTROL / CROWD INTELLIGENCE</text>
   <text x="68" y="258" fill="#f5f6f2" font-family="Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-4">
     <tspan x="68" dy="0">MOVE THE CROWD</tspan>

@@ -1,6 +1,6 @@
-# CrowdFlow hackathon pitch
+# VMAX hackathon pitch
 
-A self-contained Reveal.js deck for the CrowdFlow hackathon pitch, published at
+A self-contained Reveal.js deck for the VMAX hackathon pitch, published at
 [vmax.pulkit.page](https://vmax.pulkit.page).
 
 ## Present locally

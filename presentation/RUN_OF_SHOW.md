@@ -1,8 +1,8 @@
-# CrowdFlow online-round run of show
+# VMAX online-round run of show
 
 ## Non-negotiables
 
-- Join only when the moderator calls CrowdFlow.
+- Join only when the moderator calls VMAX.
 - Have the entire team present before joining and keep every camera on throughout.
 - Presentation limit: **5:00**. This deck targets **4:38**.
 - Q&A limit: **2:00**. Give the direct answer first, then one supporting fact.
@@ -17,7 +17,7 @@ Open the speaker view with `S`; its timer reads each slide's `data-timing` value
 
 | Time | Slide | Purpose | Say this, then move |
 |---:|---|---|---|
-| 0:00–0:18 | 1 · Promise | Hook | “Crowds are managed in the present tense. CrowdFlow operates in the future tense.” |
+| 0:00–0:18 | 1 · Promise | Hook | “Crowds are managed in the present tense. VMAX operates in the future tense.” |
 | 0:18–0:43 | 2 · Problem | Establish urgency | Signals are fragmented, pressure compounds, and generic responses arrive late. |
 | 0:43–1:13 | 3 · Closed loop | Originality | Observe, predict, simulate several interventions, safety-review one, redirect, verify. |
 | 1:13–1:48 | 4 · Proof | Functionality | Same seed and crowd; one intervention cuts critical exposure 34.7% with no mean walk penalty. |
@@ -64,7 +64,7 @@ The store-carry-forward policy, dedupe and uplink election work in simulation. T
 interface exists, but production Bluetooth/Wi-Fi transport is not connected yet.
 
 **What would a pilot prove?**  
-In shadow mode, CrowdFlow makes no live intervention. We compare predicted pressure and proposed
+In shadow mode, VMAX makes no live intervention. We compare predicted pressure and proposed
 reroutes with observed movement, then calibrate widths, crossings, constraints and confidence.
 
 ## Five-minute pre-call check

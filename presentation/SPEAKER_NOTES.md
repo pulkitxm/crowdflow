@@ -1,4 +1,4 @@
-# CrowdFlow four-person speaker notes
+# VMAX four-person speaker notes
 
 Target finish: **4:38**. The moderator allows five minutes for the presentation and two minutes
 for Q&A. Keep every camera on, join only when called, and make sure all four speakers are present
@@ -14,7 +14,7 @@ continuous block, so there are only three handoffs.
 ### Slide 1 · Promise · 18 seconds
 
 “Crowds are usually managed in the present tense. Teams see pressure after it has formed, then
-try to react. CrowdFlow operates in the future tense. It predicts where pressure will rise, tests
+try to react. VMAX operates in the future tense. It predicts where pressure will rise, tests
 a safe intervention, and helps race control move people before a bottleneck becomes a crisis.”
 
 Press right once.
@@ -23,7 +23,7 @@ Press right once.
 
 “At a Grand Prix, cameras, gates, Wi-Fi and staff reports each show only part of the venue. A
 normal queue can compound before the whole team sees the pattern. By the time congestion is
-obvious, the safest options are already disappearing. CrowdFlow closes that decision gap.”
+obvious, the safest options are already disappearing. VMAX closes that decision gap.”
 
 Handoff: “Speaker 2 will show how the loop works and the result we can reproduce.”
 
@@ -99,7 +99,7 @@ Press right once.
 ### Slide 9 · Ask · 20 seconds
 
 “Our ask is deliberately small: one circuit, one live signal and one shadow-mode session. We do
-not need control of the venue. We need the chance to measure whether CrowdFlow can help race
+not need control of the venue. We need the chance to measure whether VMAX can help race
 operations see pressure earlier and choose safer options. One measured pilot, not a promise.”
 
 Stop. Smile. Do not add a second closing line.
