@@ -413,6 +413,78 @@
             tell us how quickly crowd operations can move from reaction to foresight.
           </aside>
         </section>
+
+        <section class="sources-slide" data-background-color="#0b0e14" data-appendix="true" data-timing="10">
+          <div class="eyebrow">Appendix · Sources</div>
+          <h2>Every number in this deck<br /><em>has a receipt.</em></h2>
+          <div class="sources-grid">
+            <article class="source-col">
+              <h3>Figures on these slides</h3>
+              <ul>
+                <li>
+                  <b>−34.7% · −22.2% · −13.2% · +0s</b>
+                  <span>Seeded A/B gate on <code>main</code>: <code>crowdflow sim ab silverstone --count 6000 --ticks 700 --seed 42</code>. 6,000 spectators, 18% participation, identical seed in both arms.</span>
+                </li>
+                <li>
+                  <b>1,875 zones · 2,404 edges</b>
+                  <span><code>crowdflow circuit validate silverstone</code> over <code>circuits/silverstone/pack</code>.</span>
+                </li>
+                <li>
+                  <b>154 passing tests</b>
+                  <span><code>make test</code> across the eight workspaces.</span>
+                </li>
+                <li>
+                  <b>23 rounds · 5,891 m</b>
+                  <span><code>circuits/index.yaml</code>, generated from the 2026 calendar joined to the circuit geometry set.</span>
+                </li>
+                <li>
+                  <b>Console telemetry strip</b>
+                  <span>Device count, countdown and gate deltas are simulated, drawn over the real venue graph and labelled on the slide.</span>
+                </li>
+              </ul>
+            </article>
+            <article class="source-col">
+              <h3>Crowd-safety standards</h3>
+              <ul>
+                <li><b>Fruin, <i>Pedestrian Planning and Design</i> (1971)</b><span>Level-of-service bands, jam density ≈ 4 persons/m², free-flow speed ≈ 1.34 m/s.</span></li>
+                <li><b>G. Keith Still · gkstill.com</b><span>Fruin LOS reference and the flow-versus-density collapse used for the critical band.</span></li>
+                <li><b>iDigitalTwin service-level analysis</b><span>LOS boundaries expressed in ped/m/min (49, 82).</span></li>
+                <li><b>Greenshields fundamental diagram</b><span>Capacity flow of 80.4 ped/m/min, within 2% of Fruin's own E/F boundary.</span></li>
+                <li><b>Guide to Safety at Sports Grounds</b><span>SGSA; venue-side reference, to be re-verified against the current edition.</span></li>
+              </ul>
+            </article>
+            <article class="source-col">
+              <h3>Event and venue data</h3>
+              <ul>
+                <li><b>Jolpica-F1</b><span>Ergast-compatible calendar and session timetable, cached at build time.</span></li>
+                <li><b>OpenF1</b><span>Session state, race control and driver positions; historical feed is free, real time is paid.</span></li>
+                <li><b>bacinger/f1-circuits</b><span>Circuit outlines in GeoJSON, MIT licence, kept at <code>assets/circuits/LICENSE.md</code>.</span></li>
+                <li><b>OpenStreetMap via Overpass</b><span>Paths, barriers, gates, grandstands and car parks for the venue graph. © OpenStreetMap contributors, ODbL.</span></li>
+                <li><b>FastF1 circuit info</b><span>Corners and marshal sectors for naming only; annotation-grade, never survey data.</span></li>
+              </ul>
+            </article>
+            <article class="source-col">
+              <h3>Research behind the method</h3>
+              <ul>
+                <li><b>Geo-indistinguishability</b><span>Andrés et al., CCS 2013: on-device planar Laplace noise with a formal guarantee.</span></li>
+                <li><b>Private counting</b><span>Cardinality estimators do not preserve privacy; order-invariant estimators are differentially private; P2KMV sketch.</span></li>
+                <li><b>Population estimation</b><span>Lincoln–Petersen and Chapman capture–recapture for participation rate.</span></li>
+                <li><b>Opportunistic routing</b><span>Epidemic, PRoPHET and Spray-and-Wait comparisons behind the mesh traffic classes.</span></li>
+                <li><b>Map inference</b><span>CrowdInside, Jigsaw and the GPS map-construction survey behind trace-driven refinement.</span></li>
+              </ul>
+            </article>
+          </div>
+          <p class="source-footer">
+            Full citations live in <code>plan/standards.md</code>, <code>plan/methods.md</code> and
+            <code>plan/f1-data.md</code>. Formula One names and marks belong to their owners; this is
+            an unofficial project.
+          </p>
+          <aside class="notes" role="note">
+            Reference slide for judging and Q&amp;A, outside the timed run. Every operational figure
+            traces to a command on main, every standard to a published source, and everything
+            simulated is labelled as simulated on the slide where it appears.
+          </aside>
+        </section>
       </div>
     </div>
 

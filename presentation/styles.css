@@ -579,6 +579,22 @@ body {
 .final-links a { padding-bottom: 5px; border-bottom: 2px solid var(--ink); text-decoration: none; }
 .closing { position: absolute; bottom: 42px; left: 66px; font: 14px/1 var(--mono); letter-spacing: .15em; }
 
+/* Sources */
+.sources-slide h2 { font-size: 56px; }
+.sources-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 38px; }
+.source-col { padding: 22px 20px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.source-col:nth-child(even) { border-color: rgba(237,255,70,.28); }
+.source-col h3 { padding-bottom: 14px; border-bottom: 1px solid var(--line); color: var(--acid); font: 600 14px/1.2 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+.source-col:nth-child(even) h3 { color: var(--teal); }
+.source-col ul { padding: 0; margin: 0; list-style: none; }
+.source-col li { padding: 13px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.source-col li:first-child { border-top: 0; }
+.source-col b { display: block; margin-bottom: 5px; font-size: 15px; line-height: 1.25; }
+.source-col span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.source-col code,
+.source-footer code { color: var(--text); font: 12px/1.35 var(--mono); overflow-wrap: anywhere; }
+.source-footer { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
 /* Race progress */
 .race-progress {
   position: fixed;
