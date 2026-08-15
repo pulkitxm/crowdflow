@@ -9,7 +9,7 @@
   },
   "scripts": {
     "codegen": "bun scripts/generate.ts",
-    "test": "bunx --bun vitest run",
+    "test": "bunx vitest run",
     "typecheck": "bunx --bun tsc --noEmit"
   },
   "devDependencies": {

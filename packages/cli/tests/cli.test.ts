@@ -4,7 +4,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-function run(...args: string[]): string { return execFileSync(process.execPath, ['packages/cli/src/main.ts', ...args], { cwd: root, encoding: 'utf8' }); }
+const bun = process.env.BUN_BIN ?? 'bun';
+function run(...args: string[]): string { return execFileSync(bun, ['packages/cli/src/main.ts', ...args], { cwd: root, encoding: 'utf8' }); }
 
 describe('TypeScript headless CLI', () => {
   it('validates the seeded pack and reports authored standards', () => {

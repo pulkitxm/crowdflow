@@ -1,5 +1,5 @@
 {
-  "name": "@crowdflow/agent",
+  "name": "@crowdflow/hf",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -11,9 +11,9 @@
     "typecheck": "bunx --bun tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
     "@crowdflow/contracts": "0.2.0",
     "@crowdflow/core": "0.2.0",
+    "@huggingface/hub": "^2.15.0",
     "@huggingface/inference": "^4.13.26"
   },
   "devDependencies": {
