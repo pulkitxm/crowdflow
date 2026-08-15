@@ -33,7 +33,7 @@ site.
 The deck vendors Reveal.js so the presentation does not rely on a runtime CDN. The circuit wall,
 Silverstone outline, venue graph and moving race car are code-native SVG/CSS graphics generated
 from the actual circuit and graph sources on `main`. The only raster assets are the four locally
-stored GitHub collaborator profile pictures requested for the team slide. Claims on the proof slide
+stored profile pictures requested for the team slide. Claims on the proof slide
 come from the seeded, reproducible A/B gate on `main`.
 
 ## Circuit graphics
