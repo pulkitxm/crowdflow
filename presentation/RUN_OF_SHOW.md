@@ -1,10 +1,10 @@
-# CrowdFlow online-round run of show
+# VMAX online-round run of show
 
 ## Non-negotiables
 
-- Join only when the moderator calls CrowdFlow.
+- Join only when the moderator calls VMAX.
 - Have the entire team present before joining and keep every camera on throughout.
-- Presentation limit: **5:00**. This deck targets **4:38**.
+- Presentation limit: **5:00**. This deck targets **4:45**.
 - Q&A limit: **2:00**. Give the direct answer first, then one supporting fact.
 - The moderator may warn at 6:00 overall. At that point, finish the current answer in one
   sentence and thank the judges.
@@ -17,15 +17,16 @@ Open the speaker view with `S`; its timer reads each slide's `data-timing` value
 
 | Time | Slide | Purpose | Say this, then move |
 |---:|---|---|---|
-| 0:00–0:18 | 1 · Promise | Hook | “Crowds are managed in the present tense. CrowdFlow operates in the future tense.” |
+| 0:00–0:18 | 1 · Promise | Hook | “Crowds are managed in the present tense. VMAX operates in the future tense.” |
 | 0:18–0:43 | 2 · Problem | Establish urgency | Signals are fragmented, pressure compounds, and generic responses arrive late. |
 | 0:43–1:13 | 3 · Closed loop | Originality | Observe, predict, simulate several interventions, safety-review one, redirect, verify. |
 | 1:13–1:48 | 4 · Proof | Functionality | Same seed and crowd; one intervention cuts critical exposure 34.7% with no mean walk penalty. |
-| 1:48–2:18 | 5 · Circuit programme | Design + scale | These are the actual vector outlines for all 23 rounds. Silverstone is the complete venue pack today; the importer is the path to the next circuit. |
-| 2:18–2:58 | 6 · Decision engine | Technical depth | Forecast → compare → constrain → safety veto → measure. The five steps appear automatically over the real 1,875-zone venue graph. |
-| 2:58–3:43 | 7 · Technical edge | Originality + depth | Deterministic core, explicit confidence, mandatory veto, edge privacy; AI cannot dispatch. |
-| 3:43–4:18 | 8 · Built / next | Completeness | Name what runs today, then honestly name the three pilot gaps. Do not apologize for them. |
-| 4:18–4:38 | 9 · Ask | Close | Ask for one circuit, one signal, and one shadow-mode session. End on “measured pilot.” |
+| 1:48–2:13 | 5 · Circuit programme | Design + scale | These are the actual vector outlines for all 23 rounds. Silverstone is the complete venue pack today; the importer is the path to the next circuit. |
+| 2:13–2:53 | 6 · Decision engine | Technical depth | Forecast → compare → constrain → safety veto → measure. The five steps appear automatically over the real 1,875-zone venue graph. |
+| 2:53–3:38 | 7 · Technical edge | Originality + depth | Deterministic core, explicit confidence, mandatory veto, edge privacy; AI cannot dispatch. |
+| 3:38–4:13 | 8 · Built / next | Completeness | Name what runs today, then honestly name the three pilot gaps. Do not apologize for them. |
+| 4:13–4:25 | 9 · Team | Credibility | Introduce Pulkit, Naman, Ayush and Manas as the four builders behind the working system. |
+| 4:25–4:45 | 10 · Ask | Close | Ask for one circuit, one signal, and one shadow-mode session. End on “measured pilot.” |
 
 If behind by more than 15 seconds, describe slide 6 in one sentence while its steps appear.
 Never cut the proof slide or the final ask.
@@ -36,9 +37,9 @@ Never cut the proof slide or the final ask.
 |---|---|
 | Originality | Closed-loop counterfactual intervention; privacy-aware offline companion mesh |
 | Technical depth | Deterministic venue graph, confidence contracts, bounded commands, mandatory safety veto |
-| Presentation | One claim per slide, large proof metrics, rehearsed 4:38 path |
-| Design | Operator-first visual system and explicit spectator output |
-| Completeness + functionality | 141 passing tests, live API/WebSocket path, spectator feed, reproducible proof gate |
+| Presentation | One claim per slide, large proof metrics, rehearsed 4:45 path |
+| Design | Race-control visual system, real circuit geometry, moving car progress and explicit spectator output |
+| Completeness + functionality | 154 passing tests, live API/WebSocket path, spectator feed, reproducible proof gate |
 
 ## Two-minute Q&A bank
 
@@ -64,7 +65,7 @@ The store-carry-forward policy, dedupe and uplink election work in simulation. T
 interface exists, but production Bluetooth/Wi-Fi transport is not connected yet.
 
 **What would a pilot prove?**  
-In shadow mode, CrowdFlow makes no live intervention. We compare predicted pressure and proposed
+In shadow mode, VMAX makes no live intervention. We compare predicted pressure and proposed
 reroutes with observed movement, then calibrate widths, crossings, constraints and confidence.
 
 ## Five-minute pre-call check

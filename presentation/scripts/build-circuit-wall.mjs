@@ -88,8 +88,8 @@ const cells = geometries
   .join("");
 
 const wallSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${wallWidth} ${wallHeight}" role="img" aria-labelledby="title desc">
-  <title id="title">2026 CrowdFlow circuit vector wall</title>
-  <desc id="desc">Actual track outlines for all 23 circuits indexed in the CrowdFlow 2026 calendar.</desc>
+  <title id="title">2026 VMAX circuit vector wall</title>
+  <desc id="desc">Actual track outlines for all 23 circuits indexed in the VMAX 2026 calendar.</desc>
   <defs>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#141b24"/><stop offset="1" stop-color="#0c1118"/></linearGradient>
     <linearGradient id="active" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#26300e"/><stop offset="1" stop-color="#101608"/></linearGradient>
@@ -104,7 +104,7 @@ const silverstone = geometries.find((entry) => entry.id === "silverstone");
 if (!silverstone) throw new Error("Silverstone geometry missing");
 const silverstoneSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
   <title id="title">Silverstone Circuit</title>
-  <desc id="desc">Actual Silverstone track outline sourced from the circuit geometry referenced by CrowdFlow.</desc>
+  <desc id="desc">Actual Silverstone track outline sourced from the circuit geometry referenced by VMAX.</desc>
   <path d="${pathFor(silverstone.coordinates, 800, 520, 30)}" fill="none" stroke="#edff46" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
@@ -147,7 +147,7 @@ const observed = zones.filter((_, zoneIndex) => zoneIndex % 89 === 0).slice(0, 2
 }).join("");
 const venueSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${graphWidth} ${graphHeight}" role="img" aria-labelledby="title desc">
   <title id="title">Silverstone venue graph</title>
-  <desc id="desc">All 1,875 zones and 2,404 edges rendered from the same graph used by the live CrowdFlow dashboard.</desc>
+  <desc id="desc">All 1,875 zones and 2,404 edges rendered from the same graph used by the live VMAX dashboard.</desc>
   <style>.edge{fill:none;stroke:#334151;stroke-width:.7}.zone{fill:none;stroke:#627185;stroke-width:.65}.track{fill:none;stroke:#b4c0ce;stroke-width:2}.observed{fill:#3de0b3;stroke:#07120f;stroke-width:1}</style>
   <path class="edge" d="${edgePath}"/>
   <path class="zone" d="${zonePath}"/>
