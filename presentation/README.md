@@ -15,6 +15,11 @@ Then open the printed local URL. Use the arrow keys to navigate, `S` for speaker
 `O` for the slide overview, and `F` for full screen. Add `?print-pdf` to the URL and print
 from Chromium to export a PDF.
 
+The nine-slide judging path is timed for **4:38**, leaving 22 seconds of safety inside the
+five-minute presentation limit. Per-slide timing is built into Reveal's speaker view. See
+[`RUN_OF_SHOW.md`](./RUN_OF_SHOW.md) for the talk track, online-round checklist, rubric map,
+and two-minute Q&A bank.
+
 ## Deployment boundary
 
 `.github/workflows/pages.yml` uploads `presentation/` directly as the GitHub Pages artifact.

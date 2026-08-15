@@ -25,7 +25,7 @@
     <a class="skip-link" href="#deck">Skip to presentation</a>
     <div class="reveal" id="deck">
       <div class="slides">
-        <section class="hero" data-background-color="#080b10">
+        <section class="hero" data-background-color="#080b10" data-timing="18">
           <div class="eyebrow"><span class="signal"></span> Crowd intelligence, before the crush</div>
           <div class="hero-grid">
             <div>
@@ -53,7 +53,7 @@
               </div>
             </div>
           </div>
-          <div class="slide-footer"><span>HACKATHON PITCH</span><span>vmax.pulkit.page</span></div>
+          <div class="slide-footer"><span>5-MINUTE HACKATHON PITCH</span><span>vmax.pulkit.page</span></div>
           <aside class="notes" role="note">
             Crowds are usually managed in the present tense. We built CrowdFlow to operate in
             the future tense: predict the bottleneck, test an intervention, and move people
@@ -61,7 +61,7 @@
           </aside>
         </section>
 
-        <section data-background-color="#0b0e14">
+        <section data-background-color="#0b0e14" data-timing="25">
           <div class="eyebrow">01 · The problem</div>
           <h2>Operations see the crowd.<br />They rarely see <em>what happens next.</em></h2>
           <div class="problem-flow">
@@ -93,7 +93,7 @@
           </aside>
         </section>
 
-        <section data-background-color="#080b10">
+        <section data-background-color="#080b10" data-timing="30">
           <div class="eyebrow">02 · The closed loop</div>
           <h2>From scattered signals to one<br /><em>safe, testable decision.</em></h2>
           <div class="loop" role="img" aria-label="Observe, understand, predict, simulate, redirect, verify">
@@ -122,7 +122,7 @@
           </aside>
         </section>
 
-        <section class="proof" data-background-color="#f2f0e9">
+        <section class="proof" data-background-color="#f2f0e9" data-timing="35">
           <div class="eyebrow dark">03 · Reproducible proof</div>
           <div class="proof-layout">
             <div>
@@ -160,7 +160,7 @@
           </aside>
         </section>
 
-        <section class="screen-slide" data-background-color="#080b10">
+        <section class="screen-slide" data-background-color="#080b10" data-timing="30">
           <div class="screen-copy">
             <div class="eyebrow">04 · Control-room experience</div>
             <h2>See the whole venue.<br /><em>Focus on what matters.</em></h2>
@@ -181,7 +181,7 @@
           </aside>
         </section>
 
-        <section data-background-color="#0b0e14">
+        <section data-background-color="#0b0e14" data-timing="40">
           <div class="eyebrow">05 · Decision engine</div>
           <h2>Every recommendation earns<br />its way onto the map.</h2>
           <div class="decision-layout">
@@ -203,70 +203,8 @@
           </aside>
         </section>
 
-        <section data-background-color="#080b10">
-          <div class="eyebrow">06 · Last-mile guidance</div>
-          <div class="split-title">
-            <h2>A control-room decision<br />only works if it <em>moves people.</em></h2>
-            <p>Turn an operational intervention into a small, timely instruction on the spectator’s phone.</p>
-          </div>
-          <div class="spectator-layout">
-            <figure class="product-shot spectator-shot">
-              <img src="assets/spectator.png" alt="CrowdFlow spectator guidance prototype" />
-            </figure>
-            <div class="phone-card">
-              <div class="phone-top"><span>11:30</span><span>● LIVE</span></div>
-              <small>QUIETER ROUTE</small>
-              <h3>Gate 3 → Village East</h3>
-              <strong>12 min</strong>
-              <div class="mini-route"><i>1</i><span></span><i>2</i><span></span><i>3</i></div>
-              <p>A safer path is open. Leave via Village East to avoid the Gate 3 surge.</p>
-              <button type="button">Start guidance →</button>
-            </div>
-          </div>
-          <aside class="notes" role="note">
-            Instead of announcing “Gate 3 is busy” to everyone, we can give the right group a
-            specific alternative at the right moment. The mobile app already renders live routed
-            spectator views from the API; the phone sensing and real radio transport come next.
-          </aside>
-        </section>
-
-        <section data-background-color="#0b0e14">
-          <div class="eyebrow">07 · Resilient by design</div>
-          <h2>The network can disappear.<br />The guidance <em>shouldn’t.</em></h2>
-          <div class="resilience-grid">
-            <article class="resilience-card">
-              <div class="mesh-visual" aria-hidden="true">
-                <span class="m1"></span><span class="m2"></span><span class="m3"></span>
-                <span class="m4"></span><span class="m5"></span><span class="m6"></span>
-                <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l5"></i>
-              </div>
-              <h3>Store, carry, forward</h3>
-              <p>Compact reroutes can relay between nearby phones over the companion mesh.</p>
-              <span class="status-chip next">TRANSPORT · NEXT</span>
-            </article>
-            <article class="resilience-card">
-              <div class="privacy-mark" aria-hidden="true">◎<span></span></div>
-              <h3>Privacy at the edge</h3>
-              <p>On-device location noise and anonymous crowd nodes keep identity out of the loop.</p>
-              <span class="status-chip built">PRIVACY ENGINE · BUILT</span>
-            </article>
-            <article class="resilience-card">
-              <div class="offline-mark" aria-hidden="true">↯</div>
-              <h3>Useful while offline</h3>
-              <p>Phones retain the latest venue pack and route locally until connectivity returns.</p>
-              <span class="status-chip next">HANDSET WIRING · NEXT</span>
-            </article>
-          </div>
-          <p class="center muted">Honest status: the mesh protocol is simulated; the native radio implementation is not yet connected.</p>
-          <aside class="notes" role="note">
-            A safety product cannot assume perfect connectivity. We have tested the privacy,
-            relay and fan-in logic in simulation. The native Android interface and service exist,
-            but the production Wi-Fi and Bluetooth transport is the next engineering milestone.
-          </aside>
-        </section>
-
-        <section data-background-color="#080b10">
-          <div class="eyebrow">08 · Why we can win</div>
+        <section data-background-color="#080b10" data-timing="45">
+          <div class="eyebrow">06 · Original technical edge</div>
           <h2>Not a chatbot on a map.<br /><em>A verifiable crowd engine.</em></h2>
           <div class="architecture">
             <div class="arch-source">
@@ -285,54 +223,21 @@
             </div>
           </div>
           <div class="moat-strip">
-            <span><b>1,875</b> Silverstone zones</span>
-            <span><b>2,404</b> graph edges</span>
-            <span><b>23</b> 2026 circuits indexed</span>
+            <span><b>SAFETY</b> mandatory veto</span>
+            <span><b>PRIVACY</b> on-device noise</span>
+            <span><b>MESH</b> protocol simulated</span>
             <span><b>141</b> passing tests</span>
           </div>
           <aside class="notes" role="note">
             The core does not depend on an LLM. It is a reproducible engine over a venue graph,
             with confidence and safety represented in contracts. AI can explain or propose, but
-            it cannot bypass the safety review or directly dispatch a route.
+            it cannot bypass the safety review or directly dispatch a route. Privacy noise is
+            built at the edge; the offline mesh protocol works in simulation, with real radios next.
           </aside>
         </section>
 
-        <section data-background-color="#f2f0e9" class="market-slide">
-          <div class="eyebrow dark">09 · Beachhead and expansion</div>
-          <h2>Start where crowd movement is<br /><em>high-stakes and highly structured.</em></h2>
-          <div class="market-road">
-            <article class="current">
-              <span>01 · BEACHHEAD</span>
-              <h3>Grand Prix circuits</h3>
-              <p>Known geometry, scheduled surges, repeatable race weekends, premium operations.</p>
-              <strong>23 circuits indexed</strong>
-            </article>
-            <div class="road-line"></div>
-            <article>
-              <span>02 · EXPAND</span>
-              <h3>Stadiums + festivals</h3>
-              <p>The same arrival, interval and exit pressure—on a new venue pack.</p>
-            </article>
-            <div class="road-line"></div>
-            <article>
-              <span>03 · PLATFORM</span>
-              <h3>Transit + public realm</h3>
-              <p>Continuous flow orchestration across connected complex venues.</p>
-            </article>
-          </div>
-          <div class="model-line">
-            <span>GO-TO-MARKET HYPOTHESIS</span>
-            <strong>Paid pilot → annual venue license → multi-venue network</strong>
-          </div>
-          <aside class="notes" role="note">
-            We start with circuits because event schedules and geometry create a tractable,
-            repeatable wedge. The venue pack is data, not custom code, so the engine can expand
-            into stadiums, festivals and transit environments after calibration.
-          </aside>
-        </section>
-
-        <section data-background-color="#0b0e14">
-          <div class="eyebrow">10 · Built now / next</div>
+        <section data-background-color="#0b0e14" data-timing="35">
+          <div class="eyebrow">07 · Completeness + functionality</div>
           <h2>We know exactly what is real—<br />and what the pilot must prove.</h2>
           <div class="now-next">
             <div class="now-column">
@@ -363,7 +268,7 @@
           </aside>
         </section>
 
-        <section class="final-slide" data-background-color="#edff46">
+        <section class="final-slide" data-background-color="#edff46" data-timing="20">
           <div class="final-mark"><img src="assets/mark-dark.svg" alt="" /></div>
           <div class="eyebrow dark">The ask</div>
           <h2>Give us one circuit.<br />One event.<br /><em>One chance to see ahead.</em></h2>
