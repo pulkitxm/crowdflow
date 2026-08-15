@@ -8,8 +8,8 @@
 - Q&A limit: **2:00**. Give the direct answer first, then one supporting fact.
 - The moderator may warn at 6:00 overall. At that point, finish the current answer in one
   sentence and thank the judges.
-- Use one lead presenter to avoid online handoff delays. Other team members should own one Q&A
-  topic each and stay visibly engaged.
+- Use the rehearsed four-person split in `SPEAKER_NOTES.md`. Each person owns one continuous block,
+  keeping the deck to three short handoffs.
 
 ## Timed talk track
 
@@ -21,14 +21,14 @@ Open the speaker view with `S`; its timer reads each slide's `data-timing` value
 | 0:18–0:43 | 2 · Problem | Establish urgency | Signals are fragmented, pressure compounds, and generic responses arrive late. |
 | 0:43–1:13 | 3 · Closed loop | Originality | Observe, predict, simulate several interventions, safety-review one, redirect, verify. |
 | 1:13–1:48 | 4 · Proof | Functionality | Same seed and crowd; one intervention cuts critical exposure 34.7% with no mean walk penalty. |
-| 1:48–2:18 | 5 · Experience | Design | Show the shared operating picture. State clearly that this polished view uses simulated data. |
-| 2:18–2:58 | 6 · Decision engine | Technical depth | Forecast → compare → constrain → safety veto → measure. Advance the four fragments while speaking. |
+| 1:48–2:18 | 5 · Circuit programme | Design + scale | These are the actual vector outlines for all 23 rounds. Silverstone is the complete venue pack today; the importer is the path to the next circuit. |
+| 2:18–2:58 | 6 · Decision engine | Technical depth | Forecast → compare → constrain → safety veto → measure. The five steps appear automatically over the real 1,875-zone venue graph. |
 | 2:58–3:43 | 7 · Technical edge | Originality + depth | Deterministic core, explicit confidence, mandatory veto, edge privacy; AI cannot dispatch. |
 | 3:43–4:18 | 8 · Built / next | Completeness | Name what runs today, then honestly name the three pilot gaps. Do not apologize for them. |
 | 4:18–4:38 | 9 · Ask | Close | Ask for one circuit, one signal, and one shadow-mode session. End on “measured pilot.” |
 
-If behind by more than 15 seconds, skip the individual fragments on slide 6 and describe the
-pipeline in one sentence. Never cut the proof slide or the final ask.
+If behind by more than 15 seconds, describe slide 6 in one sentence while its steps appear.
+Never cut the proof slide or the final ask.
 
 ## Judging rubric map
 
