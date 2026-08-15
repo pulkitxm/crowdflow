@@ -82,6 +82,27 @@ body {
 .reveal .progress { height: 4px; color: var(--acid); }
 .reveal .slide-number { background: transparent; color: rgba(255,255,255,.55); font-family: var(--mono); }
 
+.progress-car {
+  position: fixed;
+  z-index: 31;
+  right: auto;
+  bottom: 5px;
+  left: 0;
+  width: 170px;
+  height: 42px;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.45));
+  will-change: transform;
+}
+
+.progress-car img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
 .reveal section::before {
   position: absolute;
   inset: 0;

@@ -17,3 +17,17 @@ Reveal.initialize({
   maxScale: 2,
   plugins: [RevealNotes],
 });
+
+const progressCar = document.querySelector('.progress-car');
+
+function placeProgressCar() {
+  const progressBar = document.querySelector('.reveal .progress');
+  if (!progressCar || !progressBar) return;
+
+  const progress = Math.max(0, Math.min(1, Reveal.getProgress()));
+  const travel = Math.max(0, progressBar.clientWidth - progressCar.offsetWidth - 12);
+  progressCar.style.transform = `translateX(${progress * travel + 6}px)`;
+  requestAnimationFrame(placeProgressCar);
+}
+
+Reveal.on('ready', placeProgressCar);
