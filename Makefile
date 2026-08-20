@@ -36,14 +36,14 @@ console:
 	@echo "UI   http://127.0.0.1:$(UI_PORT)"
 	@trap 'kill 0' EXIT INT TERM; \
 	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED) & \
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT) & \
+	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --host 127.0.0.1 --port $(UI_PORT) & \
 	wait
 
 api:
 	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED)
 
 dashboard:
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT)
+	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --host 127.0.0.1 --port $(UI_PORT)
 
 simulator:
 	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(API_PORT) $(if $(SIM_RESET),--reset,) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --movement-scale $(SIM_MOVEMENT_SCALE) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
