@@ -1,0 +1,128 @@
+{
+  "$ref": "#/$defs/NodeReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CrowdNode": {
+      "additionalProperties": false,
+      "description": "One anonymous device's live movement state.\n\nnode_id is a rotating pseudonym, not an identity. It is valid only within its rotation epoch and must never be joined across epochs.",
+      "properties": {
+        "accuracy_m": {
+          "description": "positional 1-sigma; feeds the confidence model",
+          "type": "number"
+        },
+        "epoch": {
+          "description": "ID rotation epoch; IDs are not comparable across epochs",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "degrees clockwise from north",
+          "type": "number"
+        },
+        "node_id": {
+          "description": "rotating pseudonym, valid within its epoch only",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "speed_ms": {
+          "description": "metres per second",
+          "type": "number"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        },
+        "zone_id": {
+          "description": "assigned by the state engine, not self-reported",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "node_id",
+        "epoch",
+        "timestamp",
+        "position",
+        "speed_ms",
+        "heading_deg",
+        "accuracy_m"
+      ],
+      "type": "object"
+    },
+    "NodeReport": {
+      "additionalProperties": false,
+      "description": "What a handset uploads.\n\nDeliberately made of CrowdNode and nothing else. There are no anchor ids here, no RSSI, no scan lists: those are resolved on the phone and dropped. A report is a position, a speed and a heading under a rotating pseudonym — enough to count a crowd, not enough to follow a person.\n\nBatched because uplinks are opportunistic (D7): a phone with no data connection keeps sensing and sends the backlog when it next has one.",
+      "properties": {
+        "circuit_id": {
+          "type": "string"
+        },
+        "consent_version": {
+          "description": "which disclosure this person actually agreed to. A report under an unknown consent version is rejected, not accepted-and-flagged.",
+          "type": "string"
+        },
+        "epoch": {
+          "type": "number"
+        },
+        "node_id": {
+          "description": "rotating pseudonym, valid within its epoch only",
+          "type": "string"
+        },
+        "nodes": {
+          "description": "one or more samples, oldest first",
+          "items": {
+            "$ref": "#/$defs/CrowdNode"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "description": "which radios were usable while this batch was formed. Explains a coverage gap: 'the zone is empty' and 'every phone in the zone lost its anchor map' look identical without it.",
+          "items": {
+            "$ref": "#/$defs/PositionSource"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "node_id",
+        "epoch",
+        "circuit_id",
+        "consent_version",
+        "nodes"
+      ],
+      "type": "object"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "PositionSource": {
+      "description": "Which radio produced a position.\n\nNot decorative and not merely diagnostic: accuracy differs by an order of magnitude between these, the confidence model weights on it, and an operator reading a sparse zone is entitled to know whether the dots there are GNSS fixes in the open or BLE fixes under a stand.",
+      "enum": [
+        "gnss",
+        "wifi",
+        "ble",
+        "fused",
+        "dead_reckoning"
+      ],
+      "type": "string"
+    }
+  }
+}

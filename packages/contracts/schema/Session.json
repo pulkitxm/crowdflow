@@ -2,17 +2,37 @@
   "$ref": "#/$defs/Session",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Provenance": {
+      "description": "Where a value came from. Never decorative — routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "type": "string"
+    },
     "Session": {
       "additionalProperties": false,
       "properties": {
         "end": {
           "type": "string"
         },
+        "end_provenance": {
+          "$ref": "#/$defs/Provenance",
+          "description": "Whether the end time was published or inferred.\n\nSession ends move — a race runs long, a session is red-flagged — and the egress prediction hangs off the end of the race more than anything else in this system. An assumed end is a guess about the largest crowd-movement trigger of the day, and it must not read like a schedule."
+        },
         "id": {
           "type": "string"
         },
         "kind": {
           "description": "practice | qualifying | sprint | race | support | ceremony",
+          "type": "string"
+        },
+        "name": {
+          "description": "As the sport names it: 'Practice 1', 'Sprint Qualifying', 'Race'.",
           "type": "string"
         },
         "start": {

@@ -21,16 +21,18 @@ the status report: what exists, what is wired to what, and what is still missing
 | | |
 |---|---|
 | Runtime | Bun 1.3.14, TypeScript 6, one workspace, one lockfile |
-| Source | ~9,650 lines TS/TSX across 5 packages and 2 apps |
-| Tests | 141 passing across 19 files, 7 workspaces |
+| Source | ~16,140 lines TS/TSX across 6 packages and 2 apps |
+| Tests | 268 passing across 31 files, 8 workspaces |
 | Typecheck | clean |
 | Proof gate | passes, seeded, reproducible |
-| Circuits | 1 of 23 committed (Silverstone) |
-| Overall | core loop real and running; mesh radio, LLM agent, and phone sensing not connected |
+| Circuits | 1 of 23 committed (Silverstone); 0 radio-surveyed |
+| Calendar | 2026 season imported, 23 rounds with published session times |
+| Overall | core loop real and running; phone sensing connected end to end; mesh radio and LLM agent not connected |
 
 The honest one-line summary: **the prediction and intervention loop is real and demonstrably
-works. The differentiator layer around it (real radios, LLM narration, live phone data) is
-built but unplugged.**
+works, and real phones can now feed it — consent, radio positioning, ingest and an operator
+picture all run end to end against a simulated crowd. What remains unplugged is the peer-to-peer
+mesh radio and the LLM narration, and no venue has been radio-surveyed.**
 
 ---
 
@@ -38,17 +40,17 @@ built but unplugged.**
 
 ```
 packages/
-  contracts/   authored TypeScript wire contracts + 48 standards constants + JSON Schema codegen
+  contracts/   authored TypeScript wire contracts + 72 standards constants + JSON Schema codegen
   core/        pure engines, no I/O: state, routing, prediction, intervention, safety, mesh, refinement
-  cli/         headless command surface (standards, circuit, sim, mesh, refine)
-  api/         Bun HTTP + WebSocket server, scenario session, spectator feed
+  cli/         headless command surface (standards, circuit, sim, mesh, refine, anchors, live)
+  api/         Bun HTTP + WebSocket server, scenario session, spectator feed, live handset ingest
   agent/       Crowd Ops LLM agent behind a safety-reviewed proposal seam
 apps/
   dashboard/   operator console (Vite, vanilla TS, no framework)
-  mobile/      spectator app (Expo / React Native) + native Kotlin mesh module
+  mobile/      spectator app (Expo / React Native) + radio sensing stack + native Kotlin mesh module
 circuits/
   index.yaml   all 23 rounds of 2026 indexed with per-circuit coordinate frames
-  silverstone/ the one committed data pack + rendered SVG
+  silverstone/ the one committed data pack + rendered SVG (anchors.json is generated, never committed)
 plan/          vision, architecture, decisions, standards, methods, open questions
 ```
 
@@ -102,6 +104,14 @@ Boots, holds a session, streams ticks. Endpoints:
 | POST | `/api/session` | works, starts a seeded scenario |
 | POST | `/api/session/control` | works, play / pause / step / speed |
 | GET | `/api/spectator/view` | works, returns a routed path with per-leg walk times |
+| GET | `/api/circuits/:id/anchors` | works, serves the radio survey; empty pack, never 404 |
+| GET | `/api/events` | works, the season as races; `has_map` marks which are guidable |
+| GET | `/api/events/current` | works, the race running now or the next one |
+| GET | `/api/events/:id` | works |
+| POST | `/api/live` | works, arms handset ingest; refuses without a participation estimate |
+| GET | `/api/live` | works, the live phone picture with rejections named |
+| DELETE | `/api/live` | works, forgets every sample and counter |
+| POST | `/api/nodes` | works, one handset batch; 503 until ingest is armed |
 | WS | `/ws` | works, hello frame then tick frames plus 500 ms heartbeat |
 
 A tick envelope carries per-zone density, flow, queue excess, mean speed, Fruin LOS grade,
@@ -131,22 +141,40 @@ crowdflow circuit list|show|import|validate|render [id]
 crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]
 crowdflow mesh compare [--nodes N --ticks N --seed N]
 crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
+crowdflow anchors show|plan|accuracy [id] [--spacing M --write --samples N --sigma dB --kinds ...]
+crowdflow live rehearse [id] [--api URL --phones N --ticks N --interval S --radios wifi,ble,gnss]
+crowdflow calendar import|show [--season 2026 --write --jolpica-only]
 ```
 
 All present and dispatching.
+
+`calendar import` builds the season from two live sources and joins them **by race date**:
+Jolpica (`api.jolpi.ca`) is the authority on which races exist — it is the Ergast replacement, and
+ergast.com itself now returns 404 — and OpenF1 (`api.openf1.org`) is the authority on when
+sessions run, since it publishes ends as well as starts. Joining on names would need a mapping
+table for `spa` against `Spa-Francorchamps`; two grands prix never share a date. The result is
+committed, because a venue with a saturated cell network must still be able to say when the race
+ends.
+
+`anchors accuracy` is the headless answer to "would radio positioning work at this venue": it
+puts a known position in, generates the scan the log-distance law would produce, solves it blind
+and measures the true error. `live rehearse` is the same idea one layer up — a crowd of simulated
+handsets driving the real solve, ladder, pseudonym rotation and HTTP ingest, so the operator
+picture can be exercised without a single device.
 
 ### Tests
 
 | Workspace | Files | Tests |
 |---|---:|---:|
 | `@crowdflow/contracts` | 1 | 7 |
-| `@crowdflow/core` | 5 | 19 |
+| `@crowdflow/core` | 6 | 56 |
 | `@crowdflow/cli` | 1 | 3 |
-| `@crowdflow/api` | 1 | 4 |
-| `@crowdflow/agent` | 1 | 5 |
+| `@crowdflow/api` | 3 | 15 |
+| `@crowdflow/agent` | 2 | 9 |
+| `@crowdflow/hf` | 2 | 9 |
 | `crowdflow-dashboard` | 2 | 22 |
-| `crowdflow-spectator` | 8 | 81 |
-| **Total** | **19** | **141** |
+| `crowdflow-spectator` | 14 | 147 |
+| **Total** | **31** | **268** |
 
 `make test` runs typecheck then every suite. Both pass.
 
@@ -156,9 +184,15 @@ All present and dispatching.
 
 ### `@crowdflow/contracts`
 
-Single source of truth. TypeScript is authored, JSON Schema is generated (39 schema files) with
-a byte-for-byte drift test in CI via `make codegen`. 48 exported standards constants, each with
+Single source of truth. TypeScript is authored, JSON Schema is generated (48 schema files) with
+a byte-for-byte drift test in CI via `make codegen`. 72 exported standards constants, each with
 a citation or a measurement; anything unmeasured is prefixed `ASSUMED_` so it cannot hide.
+
+The sensing contracts are here too — `RadioAnchor`, `RadioObservation`, `PositionFix`,
+`NodeReport`, `IngestAck`, `SensingStatus` — and the shape of `NodeReport` is the privacy design:
+it carries positions and nothing else, so there is nowhere to put the scan a position was solved
+from. `SurveyReport` is the one contract that does carry raw observations, and it is a staff walk
+test on a separate endpoint under a separate consent.
 
 `Position` is metric x/y in the circuit's own frame. Latitude and longitude exist only at the
 pack origin, deliberately.
@@ -173,6 +207,13 @@ Pure. Performs no I/O. 24 exported modules:
 | `routing/graph` | dynamic graph, congestion-weighted Dijkstra, bounded LRU, crossing-aware | working |
 | `prediction/baseline` | deterministic `baseline-v1`, needs 3 ticks of history | working |
 | `intervention/whatif` | counterfactual over 5 diversion fractions, walk cost 8 per minute | working |
+| `positioning/geo` | the only place lat/lon exists: local tangent-plane projection, venue rotation, boundary test | working |
+| `positioning/pathloss` | log-distance ranging, per-anchor curves, range sigma from the model gradient | working |
+| `positioning/solve` | weighted Gauss-Newton trilateration, colinearity fallback, covariance-floored accuracy | working |
+| `positioning/anchors` | anchor index, dual-band collapse, unmatched-anchor counting | working |
+| `positioning/fuse` | the Wi-Fi / BLE / GNSS ladder: hysteresis, ceiling, jump test, bounded dead reckoning | working |
+| `positioning/track` | rotating pseudonym, `CrowdNode` shaping, decimetre rounding | working |
+| `positioning/survey` | anchor deployment plans and the headless accuracy harness | working |
 | `safety/engine` | mandatory review; nothing dispatches without a verdict | working |
 | `loop` | the tick loop, 300 s command TTL | working |
 | `metrics` | run metrics including the A/B gate figures | working |
@@ -222,14 +263,18 @@ API every 2 s) and `DemoShell` (scripted mock day). Native Kotlin mesh module at
 
 ```
 contracts ──> core ──> cli ──> api ──> dashboard        FULLY CONNECTED, RUNNING
-     │                          │
-     │                          └──> mobile (HTTP, only when env-configured)
+     │           │              │
+     │           │              └──> mobile (HTTP, only when env-configured)
+     │           │
+     │           └──> core/positioning ──> mobile/sensing ──> POST /api/nodes
+     │                                            │                  │
+     │                                    Wi-Fi / BLE / GNSS      LiveIngest ──> LIVE PHONES panel
      │
      └──> mobile (type-only)
 
 agent ──> (nothing)                                     ORPHANED
 mesh Kotlin ──> StubMeshNetwork only                    STUBBED
-phone GPS ──> (does not exist)                          ABSENT
+phone radios ──> real adapters, unwalked anchor map     CONNECTED, UNSURVEYED
 ```
 
 ### Connected and exercised
@@ -237,6 +282,11 @@ phone GPS ──> (does not exist)                          ABSENT
 - `contracts -> core -> cli`: the CLI drives the engines directly and produces the gate.
 - `core -> api -> dashboard`: session ticks flow over WebSocket into live panels.
 - `api -> mobile`: `LiveSpectatorFeed` polls `/api/spectator/view` and renders real routes.
+- `core/positioning -> mobile/sensing -> api -> dashboard`: the sensing ladder solves a position
+  from radio scans, shapes a `CrowdNode` under a rotating pseudonym, POSTs it to `/api/nodes`, and
+  the LIVE PHONES panel draws it. Proven end to end by `packages/api/tests/rehearse.test.ts` and
+  by `crowdflow live rehearse`, both of which drive the real solve, ladder and HTTP path with
+  simulated radios.
 - Both apps consume authored TypeScript contracts directly, so there is no codegen drift risk.
 
 ### Built but not connected
@@ -245,9 +295,13 @@ phone GPS ──> (does not exist)                          ABSENT
 |---|---|
 | `@crowdflow/agent` | Zero importers outside its own tests. Not referenced by the API, CLI, dashboard, Makefile, or any config. No `ANTHROPIC_API_KEY` is read anywhere in the repo. It is a library with no caller. |
 | `StubMeshNetwork` | The only `MeshNetwork` implementation. In-memory, `isOnline` hardcoded `false`, talks to nobody. No Wi-Fi Aware, Wi-Fi Direct or BLE exists. |
-| Phone location | No `expo-location`, no `navigator.geolocation`, no `FusedLocation`, no location plugin in `app.json`, no iOS usage description. The single `ACCESS_FINE_LOCATION` grant is `maxSdkVersion="32"` and exists solely because Android 12 and earlier gate BLE and Wi-Fi scanning behind it; the API 33+ permissions carry `usesPermissionFlags="neverForLocation"`. |
-| `CrowdNode` from handsets | The shared contract exists and carries `position` and `accuracy_m`, but the only producer in the repo is `core/src/simulation/model.ts`. The phone never constructs one. The "phones become crowd nodes" premise is currently fed entirely by simulated walkers. |
-| Mobile live mode | `App.tsx` renders `LiveShell` only when `EXPO_PUBLIC_CROWDFLOW_API`, `_ORIGIN` and `_DESTINATION` are all set. Otherwise it falls back to `DemoShell` reading `feed/mock.ts`. Origin and destination are static config for the session; nothing updates as the user walks. |
+| Radio survey | **The one that matters.** No anchor has ever been walked. Every anchor pack this repo can produce comes from `crowdflow anchors plan`, which places hardware where hardware *would* go: `surveyed_at` is null, every `Sourced` value is `provenance: 'assumed'`, and both the solver's weighting and the app's status screen say so. `anchors accuracy` measures the **geometry** of a layout, not whether the log-distance law holds at the venue. Until a walk test exists, Wi-Fi and BLE positioning is demonstrable, not validated. |
+| Wi-Fi on iOS | Permanently unavailable, not a gap to close. iOS has no public access-point scan API. The Wi-Fi rung exists on Android only, and the app reports that in words rather than appearing broken. |
+| Radio native modules | `react-native-wifi-reborn` and `react-native-ble-plx` are old-architecture community modules running through the RN 0.86 bridgeless interop layer; that is unverified on a device. Both are `require`d lazily and report themselves unavailable when missing, so removing either from `package.json` degrades the ladder without a code change. |
+| Anchor pack size | Served whole. An 80 m plan for Silverstone is ~2,300 anchors and over a megabyte, downloaded over the same saturated cell network that justifies the mesh. A per-zone filter does not exist yet. |
+| Live participation rate | `POST /api/live` requires an operator estimate and `LiveSnapshot` labels it `assumed`. `estimated_population` is reporting devices divided by it, so the label is load-bearing. `estimateParticipation` (capture-recapture over private sketches) exists in core and is not wired to anything; MAC randomisation is the obstacle. |
+| `StubMeshNetwork` as uplink | Handset reports go over HTTP directly. The opportunistic mesh uplink (D7) — batches relayed peer to peer to whichever phone has a data connection — is the design, and `Uplink` queues for it, but the transport underneath is still HTTP-or-nothing. |
+| Mobile live guidance | `App.tsx` renders `LiveShell` only when `EXPO_PUBLIC_CROWDFLOW_API`, `_ORIGIN` and `_DESTINATION` are all set. Origin and destination are static config; the guidance does not yet re-route from the sensed position, even though that position is now available. |
 
 ### Data holes in the committed pack
 

@@ -9,6 +9,10 @@ import {
   MEASURED_NOT_ASSUMED, bandForDensity, losGradeForFlow,
 } from '@crowdflow/contracts';
 import { abTest, buildPack, comparePolicies, egress, parseOsm, refine, renderSvg, runScenario, summariseOsm, VenueGraph } from '@crowdflow/core';
+import { planAnchors, positioningAccuracy, type AnchorPlanOptions } from '@crowdflow/core/positioning';
+import type { AnchorPack } from '@crowdflow/contracts';
+import { rehearseLivePhones } from './rehearse.js';
+import { importCalendar, type CalendarFile } from './calendar.js';
 import { createHfPredictor, downloadHubText, ensureRepo, FEATURE_NAMES, labelStates, renderModelCard, uploadHubFiles, writeDataset } from '@crowdflow/hf';
 import { bboxForTrack, fetchOsm, loadTrackGeometry, readPack, readTraceFragments, readTrack, writePack, writeTraceFragments } from './ingest.js';
 
@@ -34,6 +38,12 @@ try {
   else if (words[0] === 'sim' && words[1] === 'ab') simAb(words[2] ?? 'silverstone', options);
   else if (words[0] === 'mesh' && words[1] === 'compare') meshCompare(options);
   else if (words[0] === 'refine' && words[1] === 'run') refineRun(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'anchors' && words[1] === 'show') anchorsShow(words[2] ?? 'silverstone');
+  else if (words[0] === 'anchors' && words[1] === 'plan') anchorsPlan(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'anchors' && words[1] === 'accuracy') anchorsAccuracy(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'live' && words[1] === 'rehearse') await liveRehearse(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'calendar' && words[1] === 'import') await calendarImport(options);
+  else if (words[0] === 'calendar' && words[1] === 'show') calendarShow(options);
   else if (words[0] === 'hf' && words[1] === 'predict') await hfPredict(words[2] ?? 'silverstone', options);
   else if (words[0] === 'hf' && words[1] === 'export-dataset') await hfExportDataset(words[2] ?? 'silverstone', options);
   else if (words[0] === 'hf' && words[1] === 'upload') await hfUpload(options);
@@ -62,5 +72,120 @@ async function hfPredict(id: string, opts: Options): Promise<void> { const model
 async function hfExportDataset(id: string, opts: Options): Promise<void> { const out = string(opts, 'out'); if (!out) throw new Error('--out is required'); const seed = number(opts, 'seed', 42); const value = scenario(id, number(opts, 'count', 2000), seed); const [, results] = runScenario(value.scenario, value.graph, true, number(opts, 'participation', 0.18), number(opts, 'ticks', 400)); const rows = labelStates(results.map((result) => result.state), { scenario: value.scenario.name, seed, horizonS: number(opts, 'horizon', 180) }); writeDataset(out, rows); console.log(`${rows.length} labelled rows -> ${out}`); }
 async function hfUpload(opts: Options): Promise<void> { const repo = string(opts, 'repo'); if (!repo) throw new Error('--repo is required'); const file = string(opts, 'file'); if (!file) throw new Error('--file is required'); const type = (string(opts, 'type') ?? 'dataset') === 'dataset' ? 'dataset' as const : 'model' as const; const accessToken = string(opts, 'token') ?? process.env.HF_TOKEN; if (!accessToken) throw new Error('--token or HF_TOKEN is required'); await ensureRepo(repo, type, { accessToken, visibility: 'public' }); const content = readFileSync(resolve(file), 'utf8'); await uploadHubFiles(repo, [{ path: basename(file), content }, { path: 'README.md', content: renderModelCard({ model_id: repo, task: type === 'dataset' ? 'crowdflow-congestion-dataset' : 'crowdflow-time-to-congestion', features: [...FEATURE_NAMES], outputs: ['time_to_threshold_s'] }) }], { accessToken, repoType: type }); console.log(`uploaded ${basename(file)} + README.md -> ${type}/${repo}`); }
 async function hfDownload(opts: Options): Promise<void> { const repo = string(opts, 'repo'); if (!repo) throw new Error('--repo is required'); const path = string(opts, 'path'); if (!path) throw new Error('--path is required'); const out = string(opts, 'out'); if (!out) throw new Error('--out is required'); const type = (string(opts, 'type') ?? 'model') === 'dataset' ? 'dataset' as const : 'model' as const; const text = await downloadHubText(repo, path, { accessToken: string(opts, 'token'), repoType: type }); if (text == null) throw new Error(`${repo}/${path} not found`); writeFileSync(resolve(out), text); console.log(`wrote ${resolve(out)} (${text.length} bytes)`); }
+function anchorsPath(id: string): string { return join(root(), 'circuits', id, 'pack', 'anchors.json'); }
+function readAnchors(id: string): AnchorPack { const path = anchorsPath(id); if (!existsSync(path)) return { circuit_id: id, surveyed_at: null, anchors: {} }; return JSON.parse(readFileSync(path, 'utf8')) as AnchorPack; }
+
+function anchorsShow(id: string): void {
+  const anchorPack = readAnchors(id); const anchors = Object.values(anchorPack.anchors ?? {});
+  if (!anchors.length) { console.log(`${id}: no anchor map. Radio positioning is unavailable here; handsets fall through to GNSS.`); return; }
+  const measured = anchors.filter((anchor) => anchor.rssi_at_1m_dbm.provenance === 'measured' && anchor.path_loss_exponent.provenance === 'measured').length;
+  console.log(`${id} — ${anchors.length} anchors (${anchors.filter((a) => a.kind === 'wifi_ap').length} Wi-Fi, ${anchors.filter((a) => a.kind === 'ble_beacon').length} BLE)`);
+  // Surveyed-or-not is the headline, not a footnote: an unsurveyed plan produces
+  // fixes, they are just fixes against positions nobody has confirmed.
+  console.log(`  surveyed  ${anchorPack.surveyed_at ?? 'NEVER — this is a deployment plan, not a survey'}`);
+  console.log(`  calibrated curves  ${measured} of ${anchors.length}${measured === anchors.length ? '' : ' — the rest are assumed and the solver charges them extra uncertainty'}`);
+}
+
+function anchorsPlan(id: string, opts: Options): void {
+  const pack = readPack(root(), id);
+  const environment = string(opts, 'environment') as AnchorPlanOptions['environment'];
+  const plan = planAnchors(pack, { spacing_m: number(opts, 'spacing', 60), ...(environment ? { environment } : {}) });
+  const count = Object.keys(plan.anchors ?? {}).length;
+  console.log(`${pack.name} — ${count} planned anchor positions at ${number(opts, 'spacing', 60)} m spacing`);
+  console.log('  every anchor is provenance=assumed: this is where hardware would go, not where hardware is');
+  if (opts.write !== true) { console.log(`  dry run — nothing written (pass --write to create ${anchorsPath(id).replace(root() + '/', '')})`); return; }
+  writeFileSync(anchorsPath(id), `${JSON.stringify(plan, null, 2)}\n`);
+  console.log(`  wrote ${anchorsPath(id)}`);
+}
+
+function anchorsAccuracy(id: string, opts: Options): void {
+  const pack = readPack(root(), id); const anchorPack = readAnchors(id);
+  if (!Object.keys(anchorPack.anchors ?? {}).length) throw new Error(`no anchor map for ${id} — run: crowdflow anchors plan ${id} --write`);
+  const kinds = string(opts, 'kinds')?.split(',') as ('wifi_ap' | 'ble_beacon')[] | undefined;
+  const report = positioningAccuracy(pack, anchorPack, { samples: number(opts, 'samples', 500), seed: number(opts, 'seed', 42), sigma_db: number(opts, 'sigma', 6), ...(kinds ? { kinds } : {}) });
+  console.log(`${pack.name} — radio positioning, ${kinds ? kinds.join('+') : 'all radios'}`);
+  console.log(`  ${report.anchors} anchors (${report.wifi_anchors} Wi-Fi, ${report.ble_anchors} BLE); ${report.sigma_db} dB shadowing, seed ${report.seed}`);
+  console.log(`  heard enough to solve   ${report.solved} of ${report.samples} (${(100 * report.solved / report.samples).toFixed(1)}%)`);
+  console.log(`  fix accepted by ladder  ${report.usable} of ${report.samples} (${(100 * report.usable / report.samples).toFixed(1)}%)`);
+  console.log(`  true error              p50 ${report.p50_error_m} m; p95 ${report.p95_error_m} m`);
+  console.log(`  claimed accuracy        p50 ${report.p50_claimed_m} m`);
+  console.log(`  error inside 3 sigma    ${(100 * report.within_3_sigma).toFixed(1)}%`);
+  console.log(`  anchors heard per scan  ${report.mean_anchors_heard.toFixed(1)}`);
+  // A layout that cannot be trusted about its own error is worse than one that
+  // is merely imprecise, because everything downstream weights on accuracy_m.
+  if (report.within_3_sigma < 0.9) console.log('\n  WARNING: the accuracy estimate does not bound the true error. Do not trust these fixes.');
+}
+
+async function liveRehearse(id: string, opts: Options): Promise<void> {
+  const api = string(opts, 'api') ?? 'http://127.0.0.1:8099';
+  const radios = (string(opts, 'radios') ?? 'wifi,ble,gnss').split(',') as ('wifi' | 'ble' | 'gnss')[];
+  const phones = number(opts, 'phones', 25);
+  const ticks = number(opts, 'ticks', 10);
+  console.log(`rehearsing ${phones} handsets on ${id} against ${api} — radios ${radios.join('+')}`);
+  console.log('  every layer below the radio is the shipping code: anchor resolution, solve, ladder, pseudonym, ingest\n');
+  const run = await rehearseLivePhones({
+    api, circuitId: id, phones, ticks,
+    intervalS: number(opts, 'interval', 2), seed: number(opts, 'seed', 42),
+    sigmaDb: number(opts, 'sigma', 6), gnssSigmaM: number(opts, 'gnss-sigma', 9), radios,
+    onTick: (tick, state) => console.log(`  tick ${String(tick).padStart(3)}  accepted ${String(state.accepted).padStart(5)}  rejected ${String(state.rejected).padStart(4)}  no fix ${state.no_fix}`),
+  });
+  console.log(`\n  handsets                ${run.phones}`);
+  console.log(`  Wi-Fi solves            ${run.wifi_solves}`);
+  console.log(`  BLE solves              ${run.ble_solves}`);
+  console.log(`  ticks with no fix       ${run.no_fix}`);
+  console.log(`  rung the ladder chose   ${Object.entries(run.by_source).map(([source, count]) => `${source}=${count}`).join(' ') || 'none'}`);
+  console.log(`  server accepted         ${run.accepted}`);
+  console.log(`  server rejected         ${run.rejected}`);
+  // The one number a real walk test cannot produce: the simulator knows where
+  // each handset was, so this is the true accuracy of the dots on the console.
+  console.log(`  true position error     p50 ${run.p50_error_m} m; p95 ${run.p95_error_m} m`);
+  if (run.problems.length) console.log(`  problems                ${run.problems.join('; ')}`);
+  if (run.rejected > run.accepted) { console.log('\n  WARNING: more samples were rejected than accepted.'); process.exitCode = 1; }
+}
+
+function calendarPath(season: number): string { return join(root(), 'circuits', `calendar.${season}.json`); }
+
+async function calendarImport(opts: Options): Promise<void> {
+  const season = number(opts, 'season', 2026);
+  console.log(`importing the ${season} calendar`);
+  console.log('  races and rounds  api.jolpi.ca (the Ergast replacement; ergast.com itself now 404s)');
+  console.log(`  session times     ${opts['jolpica-only'] === true ? 'skipped — every end time will be assumed' : 'api.openf1.org, joined by race date'}\n`);
+  const calendar = await importCalendar({ season, jolpicaOnly: opts['jolpica-only'] === true });
+  const published = calendar.events.length - calendar.rounds_without_published_ends.length;
+  console.log(`  ${calendar.events.length} rounds; ${published} with published session end times`);
+  if (calendar.rounds_without_published_ends.length) {
+    // The chequered flag is the largest crowd-movement trigger of the day, so a
+    // guessed race end is worth naming rather than counting.
+    console.log(`  rounds on assumed durations: ${calendar.rounds_without_published_ends.join(', ')}`);
+  }
+  const withMaps = calendar.events.filter((event) => existsSync(join(root(), 'circuits', event.circuit_id, 'pack', 'circuit.json')));
+  console.log(`  ${withMaps.length} of ${calendar.events.length} have a committed circuit pack, so only those can be guided`);
+  // Upstream data quality, reported rather than corrected. A calendar importer
+  // that quietly patches its sources is an importer nobody can audit — and the
+  // next run would silently undo the patch anyway.
+  const thin = calendar.events.filter((event) => (event.sessions?.length ?? 0) < 3);
+  if (thin.length) console.log(`  thin session data upstream: ${thin.map((event) => `R${event.round} (${event.sessions?.length ?? 0})`).join(', ')}`);
+  if (opts.write !== true) { console.log(`\n  dry run — nothing written (pass --write to create circuits/calendar.${season}.json)`); return; }
+  writeFileSync(calendarPath(season), `${JSON.stringify(calendar, null, 2)}\n`);
+  console.log(`\n  wrote ${calendarPath(season)}`);
+}
+
+function calendarShow(opts: Options): void {
+  const season = number(opts, 'season', 2026);
+  const path = calendarPath(season);
+  if (!existsSync(path)) throw new Error(`no calendar for ${season} — run: crowdflow calendar import --season ${season} --write`);
+  const calendar = JSON.parse(readFileSync(path, 'utf8')) as CalendarFile;
+  console.log(`${calendar.season} season — ${calendar.events.length} rounds, generated ${calendar.generated_at.slice(0, 10)}`);
+  for (const event of calendar.events) {
+    const hasMap = existsSync(join(root(), 'circuits', event.circuit_id, 'pack', 'circuit.json'));
+    const race = event.sessions?.find((session) => session.kind === 'race');
+    const assumed = race?.end_provenance !== 'measured';
+    console.log(`  R${String(event.round).padStart(2)}  ${event.date}  ${(event.name ?? '').padEnd(30)} ${(event.locality ?? '').padEnd(16)} ${String(event.sessions?.length ?? 0).padStart(2)} sessions${assumed ? ' (assumed ends)' : ''}${hasMap ? '  [MAP]' : ''}`);
+  }
+}
+
 function hfFeatures(): void { console.log(`CrowdFlow tabular feature contract (${FEATURE_NAMES.length})\n  ${FEATURE_NAMES.join('\n  ')}`); }
-function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]\n  crowdflow hf predict|export-dataset|upload|download|features`); }
+function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
+  crowdflow anchors show|plan|accuracy [id] [--spacing M --write --samples N --sigma dB --kinds wifi_ap,ble_beacon]
+  crowdflow live rehearse [id] [--api URL --phones N --ticks N --interval S --radios wifi,ble,gnss]
+  crowdflow calendar import|show [--season 2026 --write --jolpica-only]\n  crowdflow hf predict|export-dataset|upload|download|features`); }

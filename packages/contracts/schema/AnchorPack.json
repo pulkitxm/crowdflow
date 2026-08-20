@@ -1,0 +1,146 @@
+{
+  "$ref": "#/$defs/AnchorPack",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AnchorKind": {
+      "enum": [
+        "wifi_ap",
+        "ble_beacon"
+      ],
+      "type": "string"
+    },
+    "AnchorPack": {
+      "additionalProperties": false,
+      "description": "A surveyed anchor map for one circuit.\n\nShipped beside the circuit pack rather than inside it because it decays on a different clock: the geography is good for a decade, the Wi-Fi estate is re-cabled between events.",
+      "properties": {
+        "anchors": {
+          "additionalProperties": {
+            "$ref": "#/$defs/RadioAnchor"
+          },
+          "type": "object"
+        },
+        "circuit_id": {
+          "type": "string"
+        },
+        "surveyed_at": {
+          "description": "when the survey was walked, ISO 8601. A fix from a year-old anchor map is a guess wearing a number.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "circuit_id"
+      ],
+      "type": "object"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Where a value came from. Never decorative — routing weights it.",
+      "enum": [
+        "osm",
+        "venue_map",
+        "f1_circuits",
+        "authored",
+        "measured",
+        "assumed"
+      ],
+      "type": "string"
+    },
+    "RadioAnchor": {
+      "additionalProperties": false,
+      "description": "One surveyed radio landmark at a known place in the venue.\n\n`anchor_id` is a digest of the hardware identifier (BSSID, or beacon UUID/major/minor), never the identifier itself. That is not a privacy measure — the MAC space is small enough to brute force — it is so that a pack committed to this repository does not publish a venue's Wi-Fi infrastructure inventory. The privacy measure is that anchor ids stay on the handset.\n\n`rssi_at_1m_dbm` and `path_loss_exponent` are per-anchor because they are properties of an installation, not of a radio standard: an AP behind a metal panel and one on a mast have the same chipset and different curves. Both are Sourced, so a pack can be honest that a given anchor was placed off a site plan (assumed) rather than walked (measured), and the solver can down-weight it accordingly.",
+      "properties": {
+        "anchor_id": {
+          "description": "digest of the hardware identifier, never the identifier",
+          "type": "string"
+        },
+        "floor": {
+          "description": "for multi-level venues; null in a single-level frame",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AnchorKind"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path_loss_exponent": {
+          "$ref": "#/$defs/Sourced",
+          "description": "the exponent of the log-distance model. Free space is 2; a packed concourse is nearer 3.5 because bodies absorb 2.4 GHz."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "venue frame, metres"
+        },
+        "rssi_at_1m_dbm": {
+          "$ref": "#/$defs/Sourced",
+          "description": "calibrated received strength at one metre — the intercept of the range curve"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "kind",
+        "position",
+        "rssi_at_1m_dbm",
+        "path_loss_exponent"
+      ],
+      "type": "object"
+    },
+    "Sourced": {
+      "additionalProperties": false,
+      "description": "A value with its provenance and, where applicable, its sample count.",
+      "properties": {
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "samples": {
+          "description": "observations behind a MEASURED value",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "provenance"
+      ],
+      "type": "object"
+    }
+  }
+}

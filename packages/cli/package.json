@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./ingest": "./src/ingest.ts"
+    "./ingest": "./src/ingest.ts",
+    "./rehearse": "./src/rehearse.ts",
+    "./calendar": "./src/calendar.ts"
   },
   "bin": {
     "crowdflow": "./src/main.ts"

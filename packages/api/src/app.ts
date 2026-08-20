@@ -3,11 +3,14 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
 import { CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_SPEED_MS, JAM_DENSITY_PERSONS_M2, LOS_A_MAX, LOS_B_MAX, LOS_C_MAX, LOS_D_MAX, LOS_E_MAX, MEASURED_NOT_ASSUMED } from '@crowdflow/contracts';
 import { capacityFlow } from '@crowdflow/core';
-import { availableCircuits, geometry, loadCircuit, summary, type LoadedCircuit } from './packs.js';
+import { anchorPack, availableCircuits, geometry, loadCircuit, summary, type LoadedCircuit } from './packs.js';
+import { LiveIngest } from './live.js';
+import { currentRace, race, races } from './events.js';
 import { ScenarioSession } from './session.js';
 import { ASSUMED_DEMO_POPULATION, buildScenario, scenarioOptions } from './scenarios.js';
 import { SpectatorFeed } from './spectator.js';
-import type { SessionRequest, SocketFrame, StandardsReport } from './wire.js';
+import type { LiveRequest, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
+import type { NodeReport } from '@crowdflow/contracts';
 
 export function standardsReport(): StandardsReport {
   return { source: 'Fruin, "Pedestrian Planning and Design" (1971), walkway LOS', bands: [
@@ -20,6 +23,15 @@ export function standardsReport(): StandardsReport {
 export class CrowdFlowServer {
   session: ScenarioSession | null = null;
   spectator: SpectatorFeed | null = null;
+  /**
+   * Live phone ingest, independent of the scenario session.
+   *
+   * Separate on purpose: a demo runs a scenario, a walk test runs live phones,
+   * and a real event would run both — a simulated egress beside the handsets
+   * actually on site. Coupling them would mean a live venue could not be watched
+   * without starting a simulation of it.
+   */
+  live: LiveIngest | null = null;
   private circuits = new Map<string, LoadedCircuit>();
   readonly server = createServer((request, response) => void this.handle(request, response));
   readonly sockets = new WebSocketServer({ noServer: true });
@@ -59,10 +71,25 @@ export class CrowdFlowServer {
     const { scenario, option } = buildScenario(circuit, request.scenario ?? 'egress', count, seed, request.origins, request.destination);
     this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); return this.session;
   }
+  /**
+   * Arm live ingest.
+   *
+   * `participation` is required by the contract and validated here rather than
+   * defaulted, because `estimated_population` is observed devices divided by it
+   * and that is the number an operator would act on. A default would put a
+   * plausible figure on the wall that nobody chose.
+   */
+  startLive(request: LiveRequest): LiveIngest {
+    const participation = request.participation;
+    if (!(participation > 0 && participation <= 1)) throw new Error('participation must be a measured or stated estimate in (0, 1]');
+    this.live = new LiveIngest(this.load(request.circuit_id ?? 'silverstone'), request.window_s == null ? { participation } : { participation, window_s: request.window_s });
+    return this.live;
+  }
   private load(id: string): LoadedCircuit { const cached = this.circuits.get(id); if (cached) return cached; const circuit = loadCircuit(this.root, id); this.circuits.set(id, circuit); return circuit; }
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
       const url = new URL(request.url ?? '/', 'http://localhost'); const path = url.pathname;
+      if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type' }); response.end(); return; }
       if (request.method === 'GET' && path === '/api/health') return json(response, 200, { ok: true, circuits: availableCircuits(this.root), session: this.session?.sessionId ?? null, status: this.session?.status ?? 'idle' });
       if (request.method === 'GET' && path === '/api/standards') return json(response, 200, standardsReport());
       if (request.method === 'GET' && path === '/api/circuits') return json(response, 200, availableCircuits(this.root).map((id) => summary(this.load(id))));
@@ -70,6 +97,20 @@ export class CrowdFlowServer {
       const scenarioMatch = path.match(/^\/api\/circuits\/([^/]+)\/scenarios$/); if (request.method === 'GET' && scenarioMatch) return json(response, 200, scenarioOptions(this.load(scenarioMatch[1]!)));
       if (request.method === 'GET' && path === '/api/session') return this.session ? json(response, 200, this.session.info()) : json(response, 404, { detail: 'no session started' });
       if (request.method === 'GET' && path === '/api/spectator/view') { if (!this.spectator) return json(response, 404, { detail: 'no session started' }); const origin = url.searchParams.get('origin') ?? ''; const destination = url.searchParams.get('destination') ?? ''; if (!origin || !destination) return json(response, 422, { detail: 'origin and destination are required' }); return json(response, 200, this.spectator.view({ origin, destination, online: url.searchParams.get('online') !== 'false', mesh_peers: Number(url.searchParams.get('mesh_peers') ?? 0), now_unix_s: Number(url.searchParams.get('now') ?? Date.now() / 1000) })); }
+      if (request.method === 'GET' && path === '/api/events') return json(response, 200, races(this.root));
+      if (request.method === 'GET' && path === '/api/events/current') { const next = currentRace(this.root, new Date()); return next ? json(response, 200, next) : json(response, 404, { detail: 'no calendar is committed' }); }
+      const raceMatch = path.match(/^\/api\/events\/([^/]+)$/); if (request.method === 'GET' && raceMatch) { const found = race(this.root, raceMatch[1]!); return found ? json(response, 200, found) : json(response, 404, { detail: `no race ${raceMatch[1]}` }); }
+      const anchorMatch = path.match(/^\/api\/circuits\/([^/]+)\/anchors$/); if (request.method === 'GET' && anchorMatch) return json(response, 200, anchorPack(this.root, anchorMatch[1]!));
+      if (request.method === 'POST' && path === '/api/live') { const command = await body(request) as LiveRequest; return json(response, 200, this.startLive(command).snapshot(Date.now() / 1000)); }
+      if (request.method === 'GET' && path === '/api/live') return this.live ? json(response, 200, this.live.snapshot(Date.now() / 1000)) : json(response, 404, { detail: 'live ingest is not running' });
+      if (request.method === 'DELETE' && path === '/api/live') { if (!this.live) return json(response, 404, { detail: 'live ingest is not running' }); this.live.clear(); return json(response, 200, this.live.snapshot(Date.now() / 1000)); }
+      if (request.method === 'POST' && path === '/api/nodes') {
+        // A handset must be able to tell "the venue is not listening" from "the
+        // venue rejected my batch": the first is a 503 it should retry, the
+        // second is an ack with a reason it must act on.
+        if (!this.live) return json(response, 503, { detail: 'live ingest is not running' });
+        return json(response, 200, this.live.report(await body(request) as NodeReport, Date.now() / 1000));
+      }
       if (request.method === 'POST' && path === '/api/session') return json(response, 200, this.startSession(await body(request)).info());
       if (request.method === 'POST' && path === '/api/session/control') { if (!this.session) return json(response, 404, { detail: 'no session started' }); const command = await body(request) as { action: 'play' | 'pause' | 'step' | 'speed'; speed?: number }; return json(response, 200, this.session.control(command.action, command.speed)); }
       return json(response, 404, { detail: 'not found' });

@@ -63,11 +63,12 @@ button {
   gap: 1px;
   background: var(--line-soft);
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 1.1fr) auto;
+  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 0.75fr) minmax(0, 1.1fr) auto;
   grid-template-areas:
     "header       header"
     "map          prediction"
     "map          intervention"
+    "map          live"
     "zones        feed"
     "metrics      metrics";
 }
@@ -182,6 +183,7 @@ button {
 .panel--intervention { grid-area: intervention; }
 .panel--zones { grid-area: zones; }
 .panel--feed { grid-area: feed; }
+.panel--live { grid-area: live; }
 
 .panel__head {
   display: flex;
@@ -577,12 +579,13 @@ button:focus-visible {
        instead of itself. Every area named here — including metrics; an item
        whose grid-area matches no name lands in an implicit track and drags the
        whole layout with it. */
-    grid-template-rows: auto 320px 300px 320px 360px 360px auto;
+    grid-template-rows: auto 320px 300px 320px 260px 360px 360px auto;
     grid-template-areas:
       "header"
       "map"
       "prediction"
       "intervention"
+      "live"
       "zones"
       "feed"
       "metrics";
@@ -602,7 +605,7 @@ button:focus-visible {
 
   .console {
     min-width: 0;
-    grid-template-rows: auto 280px 330px 360px 360px 360px auto;
+    grid-template-rows: auto 280px 330px 360px 260px 360px 360px auto;
   }
 
   .strip--header {
@@ -657,3 +660,65 @@ button:focus-visible {
     min-width: 0;
   }
 }
+
+
+/* ------------------------------------------------------------- live phones -- */
+
+/* Every row is label, number, and — where there is one — the caveat that number
+   comes with. The caveat is part of the reading, not a tooltip: a population
+   estimate divided by an assumed participation rate must never appear on a wall
+   as a bare figure. */
+.live__row {
+  display: grid;
+  grid-template-columns: 150px 90px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.live__label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+}
+
+.live__value {
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  color: var(--ink);
+  text-align: right;
+}
+
+.live__note { font-size: 11px; color: var(--ink-dim); }
+.live__note--warn { color: var(--building); }
+
+.live__radios,
+.live__problems {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.live__problems { flex-direction: column; align-items: stretch; }
+
+.live__problem {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.live__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--building);
+  min-width: 48px;
+  text-align: right;
+}
+
+.live__none { font-size: 11px; color: var(--ink-dim); }
+
+.tool--stale { color: var(--building); border-color: var(--building); }

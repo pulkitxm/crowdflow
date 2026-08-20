@@ -9,16 +9,51 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "co.crowdflow.spectator"
+      "bundleIdentifier": "co.crowdflow.spectator",
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "bluetooth-central"]
+      }
     },
     "android": {
       "package": "co.crowdflow.spectator",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.CHANGE_WIFI_STATE",
+        "android.permission.NEARBY_WIFI_DEVICES",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-status-bar"]
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CrowdFlow uses your position to guide you through the circuit and to see where walkways are filling up.",
+          "locationAlwaysAndWhenInUsePermission": "Allowing this while your phone is locked keeps the crowd picture accurate while your phone is in your pocket, which is where it spends most of the day.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": ["central"],
+          "bluetoothAlwaysPermission": "CrowdFlow reads nearby circuit beacons to place you under grandstands and in tunnels, where GPS cannot reach. It never connects to your devices."
+        }
+      ],
+      "react-native-wifi-reborn"
+    ]
   }
 }

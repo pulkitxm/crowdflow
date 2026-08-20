@@ -7,7 +7,7 @@ import { createGenerator, type Config } from 'ts-json-schema-generator';
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config: Config = { path: join(packageRoot, 'src/types.ts'), tsconfig: join(packageRoot, 'tsconfig.json'), type: '*', expose: 'export', topRef: true, jsDoc: 'extended', additionalProperties: false, skipTypeCheck: false };
 const EXPORTED = [
-  'CrossingClosed', 'CrossingNotice', 'CrossingOpen', 'LinkStatus', 'RerouteCommand', 'RerouteOffer', 'Route', 'SafetyVerdict', 'Step', 'AheadView', 'GateChoice', 'ArrivalView', 'Availability', 'CoordinateFrame', 'Crossing', 'Edge', 'Position', 'SafetyConstraints', 'Sourced', 'Zone', 'CircuitPack', 'Confidence', 'CrowdNode', 'Session', 'EventProfile', 'Forecast', 'LeaveOption', 'HoldView', 'ScoreBreakdown', 'InterventionCandidate', 'MeshMessage', 'OfflineView', 'ReroutedView', 'WalkView', 'SpectatorView', 'TraceFragment', 'ZoneState', 'VenueState',
+  'CrossingClosed', 'CrossingNotice', 'CrossingOpen', 'LinkStatus', 'RerouteCommand', 'RerouteOffer', 'Route', 'SafetyVerdict', 'Step', 'AheadView', 'GateChoice', 'ArrivalView', 'Availability', 'CoordinateFrame', 'Crossing', 'Edge', 'Position', 'SafetyConstraints', 'Sourced', 'Zone', 'CircuitPack', 'Confidence', 'CrowdNode', 'Session', 'EventProfile', 'Forecast', 'LeaveOption', 'HoldView', 'ScoreBreakdown', 'InterventionCandidate', 'MeshMessage', 'OfflineView', 'ReroutedView', 'WalkView', 'SpectatorView', 'TraceFragment', 'ZoneState', 'VenueState', 'RadioAnchor', 'AnchorPack', 'RadioObservation', 'PositionFix', 'NodeReport', 'IngestAck', 'SurveyReport', 'SurveySample', 'SensingStatus',
 ] as const;
 
 export function documents(): Record<string, unknown> {

@@ -1,0 +1,94 @@
+{
+  "$ref": "#/$defs/SurveySample",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AnchorKind": {
+      "enum": [
+        "wifi_ap",
+        "ble_beacon"
+      ],
+      "type": "string"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "RadioObservation": {
+      "additionalProperties": false,
+      "description": "One radio heard once. Never leaves the handset except in an operator survey.",
+      "properties": {
+        "anchor_id": {
+          "type": "string"
+        },
+        "frequency_mhz": {
+          "description": "2.4 GHz and 5 GHz attenuate differently; the solver uses it to pick the exponent when the anchor does not supply one",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AnchorKind"
+        },
+        "rssi_dbm": {
+          "description": "received signal strength, dBm. Negative; closer to zero is stronger.",
+          "type": "number"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "kind",
+        "rssi_dbm",
+        "timestamp"
+      ],
+      "type": "object"
+    },
+    "SurveySample": {
+      "additionalProperties": false,
+      "properties": {
+        "accuracy_m": {
+          "description": "how well the surveyor knew where they were standing",
+          "type": "number"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/RadioObservation"
+          },
+          "type": "array"
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "ground truth for this sample, venue frame"
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "position",
+        "accuracy_m",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  }
+}
