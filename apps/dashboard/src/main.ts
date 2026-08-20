@@ -67,12 +67,52 @@ const feed = new FeedPanel(must("feed-body"), must("feed-count"));
 const metrics = new MetricsStrip(must("metrics"));
 const live = new LivePanel(must("live-body"), must("live-status"));
 
+const mapControls = must("map-controls");
+
+const portraitButton = document.createElement("button");
+portraitButton.type = "button";
+portraitButton.className = "tool";
+portraitButton.title = "Toggle between landscape and portrait view";
+portraitButton.addEventListener("click", () => {
+  const isPortrait = map.togglePortrait();
+  portraitButton.classList.toggle("tool--on", isPortrait);
+  portraitButton.textContent = isPortrait ? "LANDSCAPE" : "PORTRAIT";
+});
+const initialPortrait = map.orientationDeg === 90 || map.orientationDeg === 270;
+portraitButton.classList.toggle("tool--on", initialPortrait);
+portraitButton.textContent = initialPortrait ? "LANDSCAPE" : "PORTRAIT";
+mapControls.append(portraitButton);
+
+const rotateButton = document.createElement("button");
+rotateButton.type = "button";
+rotateButton.className = "tool";
+rotateButton.textContent = "ROTATE";
+rotateButton.title = "Rotate circuit 90°";
+rotateButton.addEventListener("click", () => {
+  const deg = map.rotate90();
+  portraitButton.classList.toggle("tool--on", deg === 90 || deg === 270);
+  portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
+});
+mapControls.append(rotateButton);
+
+const kindButton = document.createElement("button");
+kindButton.type = "button";
+kindButton.className = "tool";
+kindButton.textContent = "ZONE KINDS";
+kindButton.title = "Toggle between live state and how zones are categorised";
+kindButton.addEventListener("click", () => {
+  const showingKinds = map.toggleKindView();
+  kindButton.classList.toggle("tool--on", showingKinds);
+  kindButton.textContent = showingKinds ? "LIVE STATE" : "ZONE KINDS";
+});
+mapControls.append(kindButton);
+
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
 fitButton.textContent = "FIT";
 fitButton.addEventListener("click", () => map.fit());
-must("map-controls").append(fitButton);
+mapControls.append(fitButton);
 
 function zoneName(id: string): string {
   return geometry?.pack.zones?.[id]?.name ?? id;

@@ -21,8 +21,8 @@
  *   * **Static geometry is cached.** Track and edges are re-rasterised only when
  *     the view changes, so a tick costs one blit plus the live marks.
  */
-import type { LOSBand } from "@crowdflow/contracts";
-import type { NodeMark, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import type { LOSBand, Zone, ZoneKind } from "@crowdflow/contracts";
+import type { StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
 import type { ZoneRow } from "../model";
@@ -35,9 +35,51 @@ const BAND_COLOUR: Record<LOSBand, string> = {
 
 const SILENT_COLOUR = "#7f8f9e";
 const UNKNOWN_COLOUR = "#4d5a66";
-const NODE_COLOUR = "rgba(120, 200, 255, 0.55)";
 const EDGE_COLOUR = "#1e262e";
 const TRACK_COLOUR = "#55636f";
+
+/**
+ * Zone-kind palette. Categorical hues validated against the map's dark
+ * surface with the dataviz skill's checker (`--pairs all`, since any two
+ * kinds can sit next to each other anywhere on the map): blue/aqua/amber
+ * clear every CVD and contrast gate together. `concourse` is 87% of zones
+ * on Silverstone and carries no distinguishing information of its own — it
+ * is the plain pedestrian network the other kinds sit on top of — so it
+ * stays on the same muted ink already used for "no data", rather than
+ * spending a fourth identity hue on the background.
+ */
+const GATE_COLOUR = "#3987e5";
+const PARK_COLOUR = "#199e70";
+const STAND_COLOUR = "#c98500";
+const KIND_COLOUR: Record<ZoneKind, string> = {
+  gate: GATE_COLOUR,
+  parking: PARK_COLOUR,
+  viewing: STAND_COLOUR,
+  concourse: UNKNOWN_COLOUR,
+  crossing: UNKNOWN_COLOUR,
+  amenity: UNKNOWN_COLOUR,
+  exit: UNKNOWN_COLOUR,
+};
+const KIND_LABEL: Record<ZoneKind, string> = {
+  gate: "GATE",
+  parking: "PARKING",
+  viewing: "STAND",
+  concourse: "CONCOURSE",
+  crossing: "CROSSING",
+  amenity: "AMENITY",
+  exit: "EXIT",
+};
+
+/**
+ * Zoom ratio (current scale / fit-to-screen scale) past which each tier of
+ * named place labels switches on. Stands are the few, genuinely distinct
+ * landmarks — Google Maps' "always show the city name" tier — so they are
+ * visible from the fitted overview. Parking is 71 zones, 62 of them sharing
+ * the literal name "Car park"; showing that tier before the view is zoomed
+ * in just stacks duplicate text, so it waits for room to breathe.
+ */
+const STAND_LABEL_MIN_RATIO = 0;
+const PARK_LABEL_MIN_RATIO = 2.5;
 
 /** Screen radius of a zone glyph, in CSS pixels. Not a threshold — a size. */
 const GLYPH_R = 3.2;
@@ -60,13 +102,18 @@ export class MapPanel {
   private standards: StandardsReport | null = null;
   private rows: ZoneRow[] = [];
   private byId = new Map<string, ZoneRow>();
-  private nodes: NodeMark[] = [];
   private view: View = { scale: 1, offsetX: 0, offsetY: 0 };
+  private fitScale = 1;
+  // Matches the orientation of the official Silverstone circuit map: Copse
+  // top-left, Becketts/Chapel along the top, National Straight/Woodcote/
+  // Luffield down the left edge, Stowe/Vale/Club as the right-hand loop.
+  private rotation: 0 | 90 | 180 | 270 = 270;
   private statics: HTMLCanvasElement | null = null;
   private staticKey = "";
   private selected: string | null = null;
   private hovered: string | null = null;
   private dragging: { x: number; y: number } | null = null;
+  private showKinds = false;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -104,10 +151,63 @@ export class MapPanel {
     this.draw();
   }
 
-  update(envelope: TickEnvelope, rows: ZoneRow[]): void {
+  /**
+   * Toggle between the operator's live-state view (nominal/building/critical,
+   * silent, unknown) and a zone-kind view (concourse/gate/parking/stand) that
+   * shows how the venue's zones are categorised rather than what they are
+   * currently reporting.
+   */
+  toggleKindView(): boolean {
+    this.showKinds = !this.showKinds;
+    this.draw();
+    this.paintLegend();
+    return this.showKinds;
+  }
+
+
+  /**
+   * Set the map orientation. Landscape (0°) shows the venue in its natural
+   * aspect; portrait (90°) rotates it 90° clockwise so a wide circuit fills
+   * a tall panel better.
+   */
+  setOrientation(deg: 0 | 90 | 180 | 270): void {
+    if (this.rotation === deg) return;
+    this.rotation = deg;
+    this.statics = null;
+    this.fit();
+  }
+
+  /** Rotate orientation 90 degrees clockwise */
+  rotate90(): number {
+    this.rotation = ((this.rotation + 90) % 360) as 0 | 90 | 180 | 270;
+    this.statics = null;
+    this.fit();
+    return this.rotation;
+  }
+
+  /** Toggle between Landscape (0°) and Portrait (90°) views */
+  togglePortrait(): boolean {
+    this.rotation = (this.rotation === 90 ? 0 : 90);
+    this.statics = null;
+    this.fit();
+    return this.rotation === 90;
+  }
+
+  get orientationDeg(): number { return this.rotation; }
+
+  /** Rotate world coordinates by the current orientation angle. */
+  private rotateCoord(x: number, y: number): [number, number] {
+    switch (this.rotation) {
+      case 0:   return [x, y];
+      case 90:  return [y, -x];
+      case 180: return [-x, -y];
+      case 270: return [-y, x];
+    }
+  }
+
+  update(_envelope: TickEnvelope, rows: ZoneRow[]): void {
     this.rows = rows;
     this.byId = new Map(rows.map((row) => [row.id, row]));
-    this.nodes = envelope.nodes ?? [];
     this.draw();
     this.paintLegend();
     this.paintReadout();
@@ -135,10 +235,11 @@ export class MapPanel {
     let maxX = -Infinity;
     let maxY = -Infinity;
     const include = (x: number, y: number) => {
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
+      const [rx, ry] = this.rotateCoord(x, y);
+      if (rx < minX) minX = rx;
+      if (ry < minY) minY = ry;
+      if (rx > maxX) maxX = rx;
+      if (ry > maxY) maxY = ry;
     };
     for (const zone of Object.values(geometry.pack.zones ?? {})) {
       include(zone.position.x, zone.position.y);
@@ -161,6 +262,7 @@ export class MapPanel {
       (width - pad * 2) / Math.max(maxX - minX, 1),
       (height - pad * 2) / Math.max(maxY - minY, 1),
     );
+    this.fitScale = scale;
     this.view = {
       scale,
       offsetX: pad - minX * scale + (width - pad * 2 - (maxX - minX) * scale) / 2,
@@ -173,7 +275,8 @@ export class MapPanel {
   private toScreen(x: number, y: number): [number, number] {
     // Venue y is metres north; canvas y grows downward, so it is inverted here
     // and nowhere else.
-    return [x * this.view.scale + this.view.offsetX, this.view.offsetY - y * this.view.scale];
+    const [rx, ry] = this.rotateCoord(x, y);
+    return [rx * this.view.scale + this.view.offsetX, this.view.offsetY - ry * this.view.scale];
   }
 
   private resize(): void {
@@ -203,7 +306,10 @@ export class MapPanel {
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
     const factor = Math.exp(-event.deltaY * 0.0015);
-    const scale = Math.min(Math.max(this.view.scale * factor, 0.02), 6);
+    // Floor is half the fit scale — enough to see extra context but not
+    // shrink the venue to an unreadable dot. Ceiling stays generous.
+    const minScale = this.fitScale * 0.5;
+    const scale = Math.min(Math.max(this.view.scale * factor, minScale), 20);
     // Keep the point under the cursor fixed while zooming.
     this.view = {
       scale,
@@ -249,7 +355,7 @@ export class MapPanel {
     this.dragging = null;
   };
 
-  private pick(event: PointerEvent): string | null {
+  private pick(event: { clientX: number; clientY: number }): string | null {
     const geometry = this.geometry;
     if (!geometry) return null;
     const rect = this.canvas.getBoundingClientRect();
@@ -268,10 +374,11 @@ export class MapPanel {
     return best;
   }
 
+
   // -- drawing -------------------------------------------------------------
 
   private drawStatics(): HTMLCanvasElement {
-    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}`;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}`;
     if (this.statics && this.staticKey === key) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
@@ -315,39 +422,54 @@ export class MapPanel {
       ctx.stroke();
     }
 
+
+    const zoomRatio = this.view.scale / (this.fitScale || this.view.scale || 1);
+    const cssWidth = this.canvas.width / dpr;
+    const cssHeight = this.canvas.height / dpr;
+    const placed: Array<[number, number, number, number]> = [];
+    const overlaps = (a: [number, number, number, number]): boolean =>
+      placed.some(([px, py, pw, ph]) => a[0] < px + pw && a[0] + a[2] > px && a[1] < py + ph && a[1] + a[3] > py);
+
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textBaseline = "middle";
+    const placeLabels = (kind: "viewing" | "parking", colour: string): void => {
+      for (const zone of Object.values(zones)) {
+        if (zone.kind !== kind || !zone.name) continue;
+        const [x, y] = this.toScreen(zone.position.x, zone.position.y);
+        if (x < -20 || y < -20 || x > cssWidth + 20 || y > cssHeight + 20) continue;
+        const w = ctx.measureText(zone.name).width;
+        const box: [number, number, number, number] = [x + 5, y - 6, w + 4, 12];
+        if (overlaps(box)) continue;
+        placed.push(box);
+        ctx.fillStyle = colour;
+        if (kind === "viewing") ctx.fillRect(x - 2, y - 2, 4, 4);
+        else {
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "rgba(8,11,14,0.75)";
+        ctx.fillRect(...box);
+        ctx.fillStyle = colour;
+        ctx.fillText(zone.name, x + 7, y);
+      }
+    };
+    if (zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
+    if (zoomRatio >= PARK_LABEL_MIN_RATIO) placeLabels("parking", PARK_COLOUR);
+
     this.statics = layer;
     this.staticKey = key;
     return layer;
   }
 
-  private draw(): void {
-    const ctx = this.context;
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
-    // Same reason as `resize`: an unsized canvas means layout has not run yet.
-    if (this.canvas.width === 0 || this.canvas.height === 0) return;
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.restore();
-    if (!this.geometry) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.drawStatics(), 0, 0);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // Devices. Drawn under the zone glyphs so a critical marker is never hidden
-    // by the crowd that produced it.
-    ctx.fillStyle = NODE_COLOUR;
-    for (const node of this.nodes) {
-      const [x, y] = this.toScreen(node.x, node.y);
-      if (x < -8 || y < -8 || x > width + 8 || y > height + 8) continue;
-      ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5);
-    }
-
-    const zones = this.geometry.pack.zones ?? {};
+  /** Live operator view: nominal/building/critical, silent, unreportable. */
+  private drawStateGlyphs(
+    ctx: CanvasRenderingContext2D,
+    zones: Record<string, Zone>,
+    width: number,
+    height: number,
+  ): void {
     const labelled: Array<{ x: number; y: number; row: ZoneRow }> = [];
 
     for (const [id, zone] of Object.entries(zones)) {
@@ -357,16 +479,8 @@ export class MapPanel {
       const visibility = row?.visibility ?? "unknown";
 
       if (visibility === "unknown") {
-        // A cross: no data. Faint, because there are hundreds; present, because
-        // pretending they are quiet is the failure this product is about.
-        ctx.strokeStyle = UNKNOWN_COLOUR;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x - 2, y - 2);
-        ctx.lineTo(x + 2, y + 2);
-        ctx.moveTo(x + 2, y - 2);
-        ctx.lineTo(x - 2, y + 2);
-        ctx.stroke();
+        // Unknown zones are still counted in the legend, just not drawn — the
+        // crosses were burying the signal. Revisit if that trade feels wrong.
         continue;
       }
 
@@ -383,14 +497,6 @@ export class MapPanel {
       // violates that contract, draw unknown rather than choosing green as a
       // convenient fallback.
       if (!row?.band) {
-        ctx.strokeStyle = UNKNOWN_COLOUR;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x - 2, y - 2);
-        ctx.lineTo(x + 2, y + 2);
-        ctx.moveTo(x + 2, y - 2);
-        ctx.lineTo(x - 2, y + 2);
-        ctx.stroke();
         continue;
       }
       const band = row.band;
@@ -437,6 +543,60 @@ export class MapPanel {
       ctx.fillStyle = row.band ? BAND_COLOUR[row.band] : UNKNOWN_COLOUR;
       ctx.fillText(text, x + 10, y);
     }
+  }
+
+  /**
+   * How the venue's zones are categorised, independent of what they are
+   * reporting right now. Only landmark kinds are drawn — gates, parking,
+   * stands — so the pedestrian network stays as lines rather than a field of
+   * dots. Concourse (87% of Silverstone) is the network itself; marking every
+   * junction adds no information the edges do not already carry.
+   */
+  private drawKindGlyphs(
+    ctx: CanvasRenderingContext2D,
+    zones: Record<string, Zone>,
+    width: number,
+    height: number,
+  ): void {
+    for (const zone of Object.values(zones)) {
+      if (zone.kind === "concourse" || zone.kind === "crossing" || zone.kind === "amenity" || zone.kind === "exit") {
+        continue;
+      }
+      const [x, y] = this.toScreen(zone.position.x, zone.position.y);
+      if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
+      const colour = KIND_COLOUR[zone.kind];
+      ctx.fillStyle = colour;
+      if (zone.kind === "viewing") {
+        ctx.fillRect(x - GLYPH_R / 2, y - GLYPH_R / 2, GLYPH_R, GLYPH_R);
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, GLYPH_R * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  private draw(): void {
+    const ctx = this.context;
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    // Same reason as `resize`: an unsized canvas means layout has not run yet.
+    if (this.canvas.width === 0 || this.canvas.height === 0) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
+    if (!this.geometry) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.drawStatics(), 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const zones = this.geometry.pack.zones ?? {};
+    if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
+    else this.drawStateGlyphs(ctx, zones, width, height);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -452,6 +612,7 @@ export class MapPanel {
 
     ctx.restore();
   }
+
 
   // -- chrome --------------------------------------------------------------
 
@@ -499,6 +660,10 @@ export class MapPanel {
 
   private paintLegend(): void {
     clear(this.legend);
+    if (this.showKinds) {
+      this.paintKindLegend();
+      return;
+    }
     const counts = { nominal: 0, building: 0, critical: 0, silent: 0, unknown: 0 };
     for (const row of this.rows) {
       if (row.visibility === "observed" && row.band) counts[row.band] += 1;
@@ -529,6 +694,40 @@ export class MapPanel {
           el("span", { class: "legend__word", text: word }),
           el("span", { class: "legend__count", text: count }),
           el("span", { class: "legend__note", text: note }),
+        ),
+      );
+    }
+  }
+
+  /** How the venue's zones break down by kind, independent of live state. */
+  private paintKindLegend(): void {
+    const zones = this.geometry?.pack.zones ?? {};
+    const counts: Record<ZoneKind, number> = {
+      concourse: 0, gate: 0, parking: 0, viewing: 0, crossing: 0, amenity: 0, exit: 0,
+    };
+    for (const zone of Object.values(zones)) counts[zone.kind] += 1;
+    const glyph = (kind: ZoneKind): string => (kind === "concourse" || kind === "viewing" ? "■" : "●");
+    const note = (kind: ZoneKind): string => {
+      switch (kind) {
+        case "concourse": return "plain pedestrian network";
+        case "gate": return "entry / exit point";
+        case "parking": return "car park";
+        case "viewing": return "grandstand";
+        default: return "";
+      }
+    };
+    const order: ZoneKind[] = ["concourse", "gate", "parking", "viewing", "crossing", "amenity", "exit"];
+    for (const kind of order) {
+      if (counts[kind] === 0) continue;
+      const word = KIND_LABEL[kind];
+      this.legend.append(
+        el(
+          "div",
+          { class: `legend__item legend__item--${word.toLowerCase()}` },
+          el("span", { class: "legend__glyph", text: glyph(kind) }),
+          el("span", { class: "legend__word", text: word }),
+          el("span", { class: "legend__count", text: `${counts[kind]}` }),
+          el("span", { class: "legend__note", text: note(kind) }),
         ),
       );
     }
