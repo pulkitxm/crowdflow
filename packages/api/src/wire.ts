@@ -3,9 +3,50 @@
 // Contract types are imported, never restated: one authored TypeScript
 // definition of ZoneState serves every runtime and UI.
 import type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "@crowdflow/contracts";
-import type { GridCell, PeopleQueryResult, PersonLocation, PersonRecord } from "./people.js";
 export type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState };
-export type { GridCell, PeopleQueryResult, PersonLocation, PersonRecord };
+
+export interface PersonRecord {
+  person_id: number;
+  circuit_id: string;
+  joined_at: number;
+  last_seen_at: number | null;
+  status: 'active';
+}
+
+export interface PersonLocation extends PersonRecord {
+  position: Position;
+  speed_ms: number;
+  accuracy_m: number;
+  source: PositionSource;
+  gate_id: string | null;
+}
+
+export interface PeopleQuery {
+  coordinates: Position[];
+  zoom: number;
+  count?: number;
+}
+
+export interface GridCell {
+  id: string;
+  min_x: number;
+  min_y: number;
+  max_x: number;
+  max_y: number;
+  count: number;
+  person_ids: number[];
+}
+
+export interface PeopleQueryResult {
+  circuit_id: string;
+  coordinates: Position[];
+  zoom: number;
+  grid_size_m: number;
+  matched_count: number;
+  returned_count: number;
+  people: PersonLocation[];
+  cells: GridCell[];
+}
 
 /**
  * Everything needed to draw the venue, sent once per console.

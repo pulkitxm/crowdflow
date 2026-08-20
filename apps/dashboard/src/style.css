@@ -78,6 +78,19 @@ button {
     "metrics      metrics";
 }
 
+.console--map-focus {
+  display: block;
+  background: var(--ground);
+}
+
+.console--map-focus > :not(.panel--map) {
+  display: none;
+}
+
+.console--map-focus .panel--map {
+  height: 100vh;
+}
+
 /* ---------------------------------------------------------------- header -- */
 
 .strip--header {
@@ -310,6 +323,8 @@ button {
 .legend__item--crossing .legend__glyph, .legend__item--crossing .legend__word,
 .legend__item--amenity .legend__glyph, .legend__item--amenity .legend__word,
 .legend__item--exit .legend__glyph, .legend__item--exit .legend__word { color: var(--unknown); }
+.legend__item--grid .legend__glyph, .legend__item--grid .legend__word,
+.legend__item--people .legend__glyph, .legend__item--people .legend__word { color: var(--info); }
 
 /* ------------------------------------------------------------ state atoms -- */
 

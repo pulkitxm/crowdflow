@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { LiveSnapshot, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
+import type { PeopleQueryResult, Position, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 
@@ -29,6 +29,14 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function fetchGeometry(circuitId: string): Promise<VenueGeometry> {
   return json<VenueGeometry>(`/api/circuits/${circuitId}/geometry`);
+}
+
+export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom: number, count = 5000): Promise<PeopleQueryResult> {
+  return json<PeopleQueryResult>(`/api/circuits/${circuitId}/people/query`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ coordinates, zoom, count }),
+  });
 }
 
 export function control(action: string, speed?: number): Promise<SessionInfo> {
@@ -52,13 +60,6 @@ export function control(action: string, speed?: number): Promise<SessionInfo> {
  * the normal state of a console watching a scenario. Null means "not running",
  * which the panel renders differently from "running and nobody has reported".
  */
-export async function fetchLive(): Promise<LiveSnapshot | null> {
-  const response = await fetch("/api/live");
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`GET /api/live → ${response.status}`);
-  return (await response.json()) as LiveSnapshot;
-}
-
 export interface LinkHandlers {
   onFrame(frame: SocketFrame): void;
   onLink(state: LinkState, detail: string): void;
@@ -101,7 +102,7 @@ export class ConsoleLink {
       if (frame.type === "tick") {
         this.lastTickAt = now;
       }
-      this.handlers.onLink(frame.type === "tick" ? "live" : "waiting", frame.session.status);
+      this.handlers.onLink(["tick", "live", "person_joined", "people_joined"].includes(frame.type) ? "live" : "waiting", frame.session.status);
       this.handlers.onFrame(frame);
     };
     socket.onerror = () => {

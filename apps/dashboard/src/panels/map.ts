@@ -21,8 +21,8 @@
  *   * **Static geometry is cached.** Track and edges are re-rasterised only when
  *     the view changes, so a tick costs one blit plus the live marks.
  */
-import type { LOSBand, Zone, ZoneKind } from "@crowdflow/contracts";
-import type { StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
+import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
 import type { ZoneRow } from "../model";
@@ -114,12 +114,16 @@ export class MapPanel {
   private hovered: string | null = null;
   private dragging: { x: number; y: number } | null = null;
   private showKinds = false;
+  private live: LiveSnapshot | null = null;
+  private grid: PeopleQueryResult | null = null;
+  private viewportTimer: number | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
     readout: HTMLElement,
     legend: HTMLElement,
     private readonly onSelect: (zoneId: string | null) => void,
+    private readonly onViewport: (coordinates: Position[], zoom: number) => void,
   ) {
     this.canvas = canvas;
     this.readout = readout;
@@ -149,6 +153,19 @@ export class MapPanel {
   setSelected(zoneId: string | null): void {
     this.selected = zoneId;
     this.draw();
+  }
+
+  updateLive(snapshot: LiveSnapshot): void {
+    this.live = snapshot;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+  }
+
+  setGrid(grid: PeopleQueryResult): void {
+    this.grid = grid;
+    this.draw();
+    this.paintLegend();
   }
 
   /**
@@ -270,6 +287,7 @@ export class MapPanel {
     };
     this.statics = null;
     this.draw();
+    this.notifyViewport();
   }
 
   private toScreen(x: number, y: number): [number, number] {
@@ -277,6 +295,33 @@ export class MapPanel {
     // and nowhere else.
     const [rx, ry] = this.rotateCoord(x, y);
     return [rx * this.view.scale + this.view.offsetX, this.view.offsetY - ry * this.view.scale];
+  }
+
+  private fromScreen(x: number, y: number): Position {
+    const rx = (x - this.view.offsetX) / this.view.scale;
+    const ry = (this.view.offsetY - y) / this.view.scale;
+    switch (this.rotation) {
+      case 0: return { x: rx, y: ry };
+      case 90: return { x: -ry, y: rx };
+      case 180: return { x: -rx, y: -ry };
+      case 270: return { x: ry, y: -rx };
+    }
+  }
+
+  private notifyViewport(): void {
+    if (!this.geometry || this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
+    if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
+    this.viewportTimer = window.setTimeout(() => {
+      const width = this.canvas.clientWidth;
+      const height = this.canvas.clientHeight;
+      const coordinates = [
+        this.fromScreen(0, 0),
+        this.fromScreen(width, 0),
+        this.fromScreen(width, height),
+        this.fromScreen(0, height),
+      ];
+      this.onViewport(coordinates, this.view.scale / Math.max(this.fitScale, 0.0001));
+    }, 120);
   }
 
   private resize(): void {
@@ -297,7 +342,10 @@ export class MapPanel {
     this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.statics = null;
     if (this.view.scale === 1) this.fit();
-    else this.draw();
+    else {
+      this.draw();
+      this.notifyViewport();
+    }
   }
 
   private onWheel = (event: WheelEvent): void => {
@@ -318,6 +366,7 @@ export class MapPanel {
     };
     this.statics = null;
     this.draw();
+    this.notifyViewport();
   };
 
   private onPointerDown = (event: PointerEvent): void => {
@@ -352,6 +401,7 @@ export class MapPanel {
   };
 
   private onPointerUp = (): void => {
+    if (this.dragging) this.notifyViewport();
     this.dragging = null;
   };
 
@@ -576,6 +626,94 @@ export class MapPanel {
     }
   }
 
+  private drawGrid(ctx: CanvasRenderingContext2D): void {
+    const grid = this.grid;
+    if (!grid) return;
+    const size = grid.grid_size_m;
+    const xs = grid.coordinates.map((position) => position.x);
+    const ys = grid.coordinates.map((position) => position.y);
+    const minX = Math.floor(Math.min(...xs) / size) * size;
+    const maxX = Math.ceil(Math.max(...xs) / size) * size;
+    const minY = Math.floor(Math.min(...ys) / size) * size;
+    const maxY = Math.ceil(Math.max(...ys) / size) * size;
+    ctx.save();
+    for (const cell of grid.cells) {
+      const corners = [
+        this.toScreen(cell.min_x, cell.min_y),
+        this.toScreen(cell.max_x, cell.min_y),
+        this.toScreen(cell.max_x, cell.max_y),
+        this.toScreen(cell.min_x, cell.max_y),
+      ];
+      ctx.beginPath();
+      ctx.moveTo(corners[0]![0], corners[0]![1]);
+      for (const [x, y] of corners.slice(1)) ctx.lineTo(x, y);
+      ctx.closePath();
+      const alpha = Math.min(0.48, 0.08 + Math.log2(cell.count + 1) * 0.07);
+      ctx.fillStyle = `rgba(88, 182, 255, ${alpha})`;
+      ctx.fill();
+      if (size * this.view.scale >= 34) {
+        const [x, y] = this.toScreen((cell.min_x + cell.max_x) / 2, (cell.min_y + cell.max_y) / 2);
+        ctx.fillStyle = "#d8e2ec";
+        ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(cell.count), x, y);
+      }
+    }
+    ctx.strokeStyle = "rgba(88, 182, 255, 0.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = minX; x <= maxX; x += size) {
+      const start = this.toScreen(x, minY);
+      const end = this.toScreen(x, maxY);
+      ctx.moveTo(start[0], start[1]);
+      ctx.lineTo(end[0], end[1]);
+    }
+    for (let y = minY; y <= maxY; y += size) {
+      const start = this.toScreen(minX, y);
+      const end = this.toScreen(maxX, y);
+      ctx.moveTo(start[0], start[1]);
+      ctx.lineTo(end[0], end[1]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawPeople(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const nodes = this.live?.nodes ?? [];
+    const zoom = this.view.scale / Math.max(this.fitScale, 0.0001);
+    const label = zoom >= 4 || nodes.length <= 80;
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.save();
+    for (const node of nodes) {
+      const [x, y] = this.toScreen(node.x, node.y);
+      if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
+      ctx.strokeStyle = "rgba(88, 182, 255, 0.28)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(3, Math.min(18, node.accuracy_m * this.view.scale)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#58b6ff";
+      ctx.beginPath();
+      ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      if (label && node.person_id != null) {
+        ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "bottom";
+        const text = `#${node.person_id}`;
+        const box: [number, number, number, number] = [x + 4, y - 15, ctx.measureText(text).width + 4, 12];
+        const overlaps = placed.some(([left, top, boxWidth, boxHeight]) => box[0] < left + boxWidth && box[0] + box[2] > left && box[1] < top + boxHeight && box[1] + box[3] > top);
+        if (!overlaps) {
+          placed.push(box);
+          ctx.fillStyle = "#cfe6ff";
+          ctx.fillText(text, x + 5, y - 3);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   private draw(): void {
     const ctx = this.context;
     const width = this.canvas.clientWidth;
@@ -595,8 +733,10 @@ export class MapPanel {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const zones = this.geometry.pack.zones ?? {};
+    this.drawGrid(ctx);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
+    this.drawPeople(ctx, width, height);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -624,6 +764,12 @@ export class MapPanel {
       this.readout.append(
         el("div", { class: "readout__hint", text: "drag to pan · wheel to zoom · click a zone" }),
       );
+      if (this.grid) {
+        this.readout.append(
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
+        );
+      }
       return;
     }
     const zone = this.geometry?.pack.zones?.[id];
@@ -662,6 +808,7 @@ export class MapPanel {
     clear(this.legend);
     if (this.showKinds) {
       this.paintKindLegend();
+      this.paintLiveLegend();
       return;
     }
     const counts = { nominal: 0, building: 0, critical: 0, silent: 0, unknown: 0 };
@@ -697,6 +844,30 @@ export class MapPanel {
         ),
       );
     }
+    this.paintLiveLegend();
+  }
+
+  private paintLiveLegend(): void {
+    const grid = this.grid;
+    const people = this.live?.nodes?.length ?? 0;
+    this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--grid" },
+        el("span", { class: "legend__glyph", text: "▦" }),
+        el("span", { class: "legend__word", text: grid ? `${grid.grid_size_m} M GRID` : "GRID" }),
+        el("span", { class: "legend__count", text: grid ? integer(grid.matched_count) : "0" }),
+        el("span", { class: "legend__note", text: "people in viewport" }),
+      ),
+      el(
+        "div",
+        { class: "legend__item legend__item--people" },
+        el("span", { class: "legend__glyph", text: "●" }),
+        el("span", { class: "legend__word", text: "LIVE PEOPLE" }),
+        el("span", { class: "legend__count", text: integer(people) }),
+        el("span", { class: "legend__note", text: "WebSocket locations" }),
+      ),
+    );
   }
 
   /** How the venue's zones break down by kind, independent of live state. */

@@ -2,49 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { Database } from 'bun:sqlite';
 import type { Position, PositionSource } from '@crowdflow/contracts';
-
-export interface PersonRecord {
-  person_id: number;
-  circuit_id: string;
-  joined_at: number;
-  last_seen_at: number | null;
-  status: 'active';
-}
-
-export interface PersonLocation extends PersonRecord {
-  position: Position;
-  speed_ms: number;
-  accuracy_m: number;
-  source: PositionSource;
-  gate_id: string | null;
-}
-
-export interface PeopleQuery {
-  coordinates: Position[];
-  zoom: number;
-  count?: number;
-}
-
-export interface GridCell {
-  id: string;
-  min_x: number;
-  min_y: number;
-  max_x: number;
-  max_y: number;
-  count: number;
-  person_ids: number[];
-}
-
-export interface PeopleQueryResult {
-  circuit_id: string;
-  coordinates: Position[];
-  zoom: number;
-  grid_size_m: number;
-  matched_count: number;
-  returned_count: number;
-  people: PersonLocation[];
-  cells: GridCell[];
-}
+import type { GridCell, PeopleQuery, PeopleQueryResult, PersonLocation, PersonRecord } from './wire.js';
+export type { GridCell, PeopleQuery, PeopleQueryResult, PersonLocation, PersonRecord } from './wire.js';
 
 interface PersonRow {
   person_id: number;

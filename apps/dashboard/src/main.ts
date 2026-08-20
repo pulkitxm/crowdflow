@@ -9,8 +9,8 @@
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
 import "./style.css";
-import type { SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
-import { ConsoleLink, control, fetchGeometry, fetchLive } from "./client";
+import type { Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
 import { ZoneMemory, buildRows } from "./model";
@@ -32,6 +32,7 @@ let latest: TickEnvelope | null = null;
 let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
 let sessionId: string | null = null;
+let gridRequest = 0;
 
 const link = new ConsoleLink({
   onFrame: (frame) => handleFrame(frame),
@@ -54,6 +55,7 @@ const map = new MapPanel(
   must("map-readout"),
   must("map-legend"),
   (zoneId) => select(zoneId),
+  (coordinates, zoom) => void loadGrid(coordinates, zoom),
 );
 
 const table = new ZoneTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
@@ -114,6 +116,17 @@ fitButton.textContent = "FIT";
 fitButton.addEventListener("click", () => map.fit());
 mapControls.append(fitButton);
 
+const focusButton = document.createElement("button");
+focusButton.type = "button";
+focusButton.className = "tool";
+focusButton.textContent = "FULL MAP";
+focusButton.addEventListener("click", () => {
+  const focused = must("console").classList.toggle("console--map-focus");
+  focusButton.classList.toggle("tool--on", focused);
+  focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+});
+mapControls.append(focusButton);
+
 function zoneName(id: string): string {
   return geometry?.pack.zones?.[id]?.name ?? id;
 }
@@ -154,9 +167,25 @@ async function loadGeometry(circuitId: string): Promise<void> {
   }
 }
 
+async function loadGrid(coordinates: Position[], zoom: number): Promise<void> {
+  const circuitId = latestSession?.circuit_id;
+  if (!circuitId) return;
+  const request = ++gridRequest;
+  try {
+    const result = await fetchPeopleGrid(circuitId, coordinates, zoom);
+    if (request === gridRequest) map.setGrid(result);
+  } catch (error) {
+    console.error("grid unavailable", error);
+  }
+}
+
 function handleFrame(frame: SocketFrame): void {
   latestSession = frame.session;
   header.setSession(frame.session);
+  if (frame.live) {
+    live.update(frame.live);
+    map.updateLive(frame.live);
+  }
 
   if (frame.type === "hello") {
     if (frame.standards) standards = frame.standards;
@@ -194,20 +223,6 @@ function handleFrame(frame: SocketFrame): void {
  * running while the socket is down, which is exactly when an operator most needs
  * to know whether the phones are still talking.
  */
-const LIVE_POLL_MS = 1000;
-
-async function pollLive(): Promise<void> {
-  try {
-    const snapshot = await fetchLive();
-    if (snapshot) live.update(snapshot);
-    else live.setIdle();
-  } catch (error) {
-    live.setProblem(error instanceof Error ? error.message : "the live feed could not be read");
-  }
-}
-
 live.setIdle();
-void pollLive();
-setInterval(() => void pollLive(), LIVE_POLL_MS);
 
 link.connect();
