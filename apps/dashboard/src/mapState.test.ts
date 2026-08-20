@@ -29,6 +29,12 @@ describe("map query state", () => {
     });
   });
 
+  it("restores a map with crowd rendering disabled", () => {
+    const state = readMapQuery("?crowd=none");
+    expect(state.crowd).toBe("none");
+    expect(writeMapQuery("", state)).toContain("crowd=none");
+  });
+
   it("uses safe defaults for invalid values", () => {
     expect(readMapQuery("?zoom=zero&cx=1&rotation=45&layer=other")).toEqual({
       full: false,

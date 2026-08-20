@@ -980,7 +980,7 @@ export class MapPanel {
       if (x < 40 || y < 22 || x > width - 40 || y > height - 22) continue;
       const row = this.sectorRows.get(sector.id);
       const name = sector.name.toUpperCase();
-      const detail = row ? `${integer(row.people)} PEOPLE · ${row.word}` : "SECTOR";
+      const detail = this.crowd === "none" || !row ? "SECTOR" : `${integer(row.people)} PEOPLE · ${row.word}`;
       const boxWidth = Math.max(ctx.measureText(name).width, ctx.measureText(detail).width) + 14;
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
       if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
@@ -1029,7 +1029,7 @@ export class MapPanel {
     if (this.crowd === "heatmap") {
       if (this.previousGrid) this.drawHeatMap(ctx, this.previousGrid, width, height, 1 - gridProgress);
       if (this.grid) this.drawHeatMap(ctx, this.grid, width, height, gridProgress);
-    } else {
+    } else if (this.crowd === "cohorts") {
       if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
       if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
     }
@@ -1061,7 +1061,7 @@ export class MapPanel {
       this.readout.append(
         el("div", { class: "readout__hint", text: "drag to pan · wheel to zoom · click a zone" }),
       );
-      if (this.grid) {
+      if (this.grid && this.crowd !== "none") {
         this.readout.append(
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: this.crowd === "heatmap" ? "HEAT MAP" : "COHORT" }), el("span", { class: "readout__value", text: this.crowd === "heatmap" ? "ped/m²" : `≤ ${COHORT_CAPACITY}` })),
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
@@ -1199,7 +1199,7 @@ export class MapPanel {
           el("span", { class: "legend__note", text: band.range }),
         ),
       );
-    } else this.legend.append(
+    } else if (this.crowd === "cohorts") this.legend.append(
       el(
         "div",
         { class: "legend__item legend__item--people" },

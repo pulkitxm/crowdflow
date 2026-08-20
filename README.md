@@ -118,8 +118,9 @@ circuit to the viewport. Full-map mode, zoom, map center, orientation, layer, an
 are kept in the URL query string and restored after reload. People are rendered as cohorts of at
 most 50 inside the current spatial cells, never as individual map markers. The exact reporting total
 remains visible in the live metrics while WebSocket updates refresh the cohort query.
-`HEAT MAP` switches to a live weighted radial density view with stable people-per-square-metre labels;
-the default remains fixed cohorts. The selected crowd view is also restored from the URL.
+The crowd-view menu offers `NO VIEW`, `COHORT VIEW`, and `HEAT MAP VIEW`. Cohorts remain the default,
+the heat map uses stable people-per-square-metre labels, and `NO VIEW` leaves the crowd layer off. The
+selected crowd view is also restored from the URL.
 
 The `SECTORS` table groups every venue zone around its nearest named viewing area. It refreshes from
 the live WebSocket feed and shows exact current crowd, reporting-zone coverage, density state, flow,

@@ -13,7 +13,7 @@ import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFram
 import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
-import { readMapQuery, writeMapQuery } from "./mapState";
+import { readMapQuery, writeMapQuery, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
 import { FeedPanel } from "./panels/feed";
@@ -168,22 +168,25 @@ gridButton.addEventListener("click", () => {
 updateGridButton();
 mapControls.append(gridButton);
 
-const heatButton = document.createElement("button");
-heatButton.type = "button";
-heatButton.className = "tool";
-heatButton.title = "Toggle between fixed cohorts and a live density heat map";
-const updateHeatButton = () => {
-  const heatmap = map.crowdMode === "heatmap";
-  heatButton.classList.toggle("tool--on", heatmap);
-  heatButton.textContent = heatmap ? "COHORTS" : "HEAT MAP";
-};
-heatButton.addEventListener("click", () => {
-  map.setCrowdMode(map.crowdMode === "heatmap" ? "cohorts" : "heatmap");
-  updateHeatButton();
+const crowdView = document.createElement("label");
+crowdView.className = "crowd-view";
+crowdView.append("CROWD VIEW");
+const crowdSelect = document.createElement("select");
+crowdSelect.className = "crowd-view__select";
+crowdSelect.setAttribute("aria-label", "Crowd view");
+for (const [value, label] of [["none", "NO VIEW"], ["cohorts", "COHORT VIEW"], ["heatmap", "HEAT MAP VIEW"]] as const) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  crowdSelect.append(option);
+}
+crowdSelect.value = map.crowdMode;
+crowdSelect.addEventListener("change", () => {
+  map.setCrowdMode(crowdSelect.value as CrowdLayer);
   persistMapControls();
 });
-updateHeatButton();
-mapControls.append(heatButton);
+crowdView.append(crowdSelect);
+mapControls.append(crowdView);
 
 const sectorButton = document.createElement("button");
 sectorButton.type = "button";
