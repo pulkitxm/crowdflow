@@ -1,6 +1,7 @@
 import type { Position } from "@crowdflow/contracts";
 
 export type MapLayer = "live" | "kinds";
+export type CrowdLayer = "cohorts" | "heatmap";
 export type MapRotation = 0 | 90 | 180 | 270;
 
 export interface MapQueryState {
@@ -10,6 +11,7 @@ export interface MapQueryState {
   rotation: MapRotation;
   layer: MapLayer;
   grid: boolean;
+  crowd: CrowdLayer;
 }
 
 export function readMapQuery(search: string): MapQueryState {
@@ -33,6 +35,7 @@ export function readMapQuery(search: string): MapQueryState {
     rotation,
     layer: query.get("layer") === "kinds" ? "kinds" : "live",
     grid: query.get("grid") === "on",
+    crowd: query.get("crowd") === "heatmap" ? "heatmap" : "cohorts",
   };
 }
 
@@ -45,6 +48,8 @@ export function writeMapQuery(search: string, state: MapQueryState): string {
   query.set("layer", state.layer);
   if (state.grid) query.set("grid", "on");
   else query.delete("grid");
+  if (state.crowd === "heatmap") query.set("crowd", "heatmap");
+  else query.delete("crowd");
   if (state.center) {
     query.set("cx", compact(state.center.x, 1));
     query.set("cy", compact(state.center.y, 1));

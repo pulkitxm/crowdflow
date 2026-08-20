@@ -352,6 +352,12 @@ button {
 .legend__item--exit .legend__glyph, .legend__item--exit .legend__word { color: var(--unknown); }
 .legend__item--grid .legend__glyph, .legend__item--grid .legend__word,
 .legend__item--people .legend__glyph, .legend__item--people .legend__word { color: var(--info); }
+.legend__item--heatmap { align-items: center; }
+.legend__heat-gradient { width: 72px; height: 7px; border-radius: 999px; background: linear-gradient(90deg, #2b83f6, #18c886, #ffb11b, #ff4057); }
+.legend__item--heat-low .legend__glyph, .legend__item--heat-low .legend__word { color: #2b83f6; }
+.legend__item--heat-active .legend__glyph, .legend__item--heat-active .legend__word { color: #18c886; }
+.legend__item--heat-busy .legend__glyph, .legend__item--heat-busy .legend__word { color: #ffb11b; }
+.legend__item--heat-peak .legend__glyph, .legend__item--heat-peak .legend__word { color: #ff4057; }
 
 /* ------------------------------------------------------------ state atoms -- */
 

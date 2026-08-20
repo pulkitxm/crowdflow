@@ -11,17 +11,19 @@ describe("map query state", () => {
       rotation: 270,
       layer: "live",
       grid: false,
+      crowd: "cohorts",
     });
   });
 
   it("reads a complete shared map view", () => {
-    expect(readMapQuery("?map=full&zoom=8.5&cx=410.2&cy=990.7&rotation=90&layer=kinds&grid=on")).toEqual({
+    expect(readMapQuery("?map=full&zoom=8.5&cx=410.2&cy=990.7&rotation=90&layer=kinds&grid=on&crowd=heatmap")).toEqual({
       full: true,
       zoom: 8.5,
       center: { x: 410.2, y: 990.7 },
       rotation: 90,
       layer: "kinds",
       grid: true,
+      crowd: "heatmap",
     });
   });
 
@@ -33,6 +35,7 @@ describe("map query state", () => {
       rotation: 270,
       layer: "live",
       grid: false,
+      crowd: "cohorts",
     });
   });
 
@@ -44,6 +47,7 @@ describe("map query state", () => {
       rotation: 180,
       layer: "live",
       grid: true,
+      crowd: "heatmap",
     });
     const values = new URLSearchParams(query);
     expect(values.get("circuit")).toBe("silverstone");
@@ -52,5 +56,6 @@ describe("map query state", () => {
     expect(values.get("cx")).toBe("12.3");
     expect(values.get("cy")).toBe("98.8");
     expect(values.get("grid")).toBe("on");
+    expect(values.get("crowd")).toBe("heatmap");
   });
 });

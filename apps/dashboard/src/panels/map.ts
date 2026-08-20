@@ -28,6 +28,8 @@ import { fixed, integer } from "../format";
 import { easeOutCubic, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
+import { HEAT_BANDS, heatSpots } from "../heatmap";
+import type { CrowdLayer } from "../mapState";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
   nominal: "#37d67a",
@@ -123,6 +125,7 @@ export class MapPanel {
   private grid: PeopleQueryResult | null = null;
   private previousGrid: PeopleQueryResult | null = null;
   private showGrid = false;
+  private crowd: CrowdLayer = "cohorts";
   private viewportTimer: number | null = null;
   private viewportWidth = 0;
   private viewportHeight = 0;
@@ -199,6 +202,16 @@ export class MapPanel {
   }
 
   get gridVisible(): boolean { return this.showGrid; }
+
+  setCrowdMode(mode: CrowdLayer): CrowdLayer {
+    this.crowd = mode;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.crowd;
+  }
+
+  get crowdMode(): CrowdLayer { return this.crowd; }
 
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
@@ -835,6 +848,48 @@ export class MapPanel {
     ctx.restore();
   }
 
+  private drawHeatMap(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+    const spots = heatSpots(grid);
+    const colours = Object.fromEntries(HEAT_BANDS.map((band) => [band.band, band.colour]));
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.globalCompositeOperation = "screen";
+    for (const spot of spots) {
+      const [x, y] = this.toScreen(spot.x, spot.y);
+      const radius = Math.min(90, Math.max(20, grid.grid_size_m * this.view.scale * 0.9));
+      if (x < -radius || y < -radius || x > width + radius || y > height + radius) continue;
+      const colour = colours[spot.band] ?? "#2b83f6";
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      gradient.addColorStop(0, `${colour}d9`);
+      gradient.addColorStop(0.42, `${colour}80`);
+      gradient.addColorStop(1, `${colour}00`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    const labelled = [...spots].sort((a, b) => b.density - a.density || b.count - a.count).slice(0, 16);
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const spot of labelled) {
+      const [x, y] = this.toScreen(spot.x, spot.y);
+      if (x < 28 || y < 12 || x > width - 28 || y > height - 12) continue;
+      const text = `${spot.count} · ${spot.density.toFixed(2)}`;
+      const boxWidth = ctx.measureText(text).width + 12;
+      const box: [number, number, number, number] = [x - boxWidth / 2, y - 9, boxWidth, 18];
+      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py)) continue;
+      placed.push(box);
+      ctx.fillStyle = "rgba(7, 12, 18, 0.88)";
+      ctx.fillRect(...box);
+      ctx.fillStyle = "#f4fbff";
+      ctx.fillText(text, x, y);
+    }
+    ctx.restore();
+  }
+
   private draw(): void {
     const ctx = this.context;
     const width = this.canvas.clientWidth;
@@ -861,8 +916,13 @@ export class MapPanel {
     if (this.showGrid && this.grid) this.drawGrid(ctx, this.grid, gridProgress);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
-    if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
-    if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
+    if (this.crowd === "heatmap") {
+      if (this.previousGrid) this.drawHeatMap(ctx, this.previousGrid, width, height, 1 - gridProgress);
+      if (this.grid) this.drawHeatMap(ctx, this.grid, width, height, gridProgress);
+    } else {
+      if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
+      if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
+    }
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -892,7 +952,7 @@ export class MapPanel {
       );
       if (this.grid) {
         this.readout.append(
-          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "COHORT" }), el("span", { class: "readout__value", text: `≤ ${COHORT_CAPACITY}` })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: this.crowd === "heatmap" ? "HEAT MAP" : "COHORT" }), el("span", { class: "readout__value", text: this.crowd === "heatmap" ? "ped/m²" : `≤ ${COHORT_CAPACITY}` })),
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
         );
         if (this.showGrid) this.readout.append(
@@ -991,7 +1051,25 @@ export class MapPanel {
         el("span", { class: "legend__note", text: "people in viewport" }),
       ));
     }
-    this.legend.append(
+    if (this.crowd === "heatmap") {
+      this.legend.append(
+        el(
+          "div",
+          { class: "legend__item legend__item--heatmap" },
+          el("span", { class: "legend__word", text: "LIVE DENSITY" }),
+          el("span", { class: "legend__heat-gradient", text: "" }),
+        ),
+      );
+      for (const band of HEAT_BANDS) this.legend.append(
+        el(
+          "div",
+          { class: `legend__item legend__item--heat-${band.band}` },
+          el("span", { class: "legend__glyph", text: "●" }),
+          el("span", { class: "legend__word", text: band.label }),
+          el("span", { class: "legend__note", text: band.range }),
+        ),
+      );
+    } else this.legend.append(
       el(
         "div",
         { class: "legend__item legend__item--people" },
@@ -1000,6 +1078,8 @@ export class MapPanel {
         el("span", { class: "legend__count", text: integer(cohorts) }),
         el("span", { class: "legend__note", text: `up to ${COHORT_CAPACITY} people each` }),
       ),
+    );
+    this.legend.append(
       el(
         "div",
         { class: "legend__item legend__item--people" },

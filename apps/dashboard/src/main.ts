@@ -64,6 +64,7 @@ const map = new MapPanel(
 map.setOrientation(mapState.rotation);
 map.setKindView(mapState.layer === "kinds");
 map.setGridVisible(mapState.grid);
+map.setCrowdMode(mapState.crowd);
 
 const table = new ZoneTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
 table.onResort(() => {
@@ -163,6 +164,23 @@ gridButton.addEventListener("click", () => {
 updateGridButton();
 mapControls.append(gridButton);
 
+const heatButton = document.createElement("button");
+heatButton.type = "button";
+heatButton.className = "tool";
+heatButton.title = "Toggle between fixed cohorts and a live density heat map";
+const updateHeatButton = () => {
+  const heatmap = map.crowdMode === "heatmap";
+  heatButton.classList.toggle("tool--on", heatmap);
+  heatButton.textContent = heatmap ? "COHORTS" : "HEAT MAP";
+};
+heatButton.addEventListener("click", () => {
+  map.setCrowdMode(map.crowdMode === "heatmap" ? "cohorts" : "heatmap");
+  updateHeatButton();
+  persistMapControls();
+});
+updateHeatButton();
+mapControls.append(heatButton);
+
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
@@ -223,6 +241,7 @@ function persistMapControls(): void {
     rotation: map.orientationDeg,
     layer: map.kindView ? "kinds" : "live",
     grid: map.gridVisible,
+    crowd: map.crowdMode,
   };
   const search = writeMapQuery(window.location.search, mapState);
   window.history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);

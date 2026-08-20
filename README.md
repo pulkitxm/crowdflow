@@ -115,6 +115,8 @@ circuit to the viewport. Full-map mode, zoom, map center, orientation, layer, an
 are kept in the URL query string and restored after reload. People are rendered as cohorts of at
 most 50 inside the current spatial cells, never as individual map markers. The exact reporting total
 remains visible in the live metrics while WebSocket updates refresh the cohort query.
+`HEAT MAP` switches to a live Gaussian density view with stable people-per-square-metre labels;
+the default remains fixed cohorts. The selected crowd view is also restored from the URL.
 
 Query a four-corner area with a result limit and zoom level:
 
