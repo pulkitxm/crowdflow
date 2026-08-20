@@ -8,9 +8,11 @@ import { LiveShell } from './src/LiveShell';
 import { isCurrent, readConsent, recordConsent, setSharing, withdrawConsent, type ConsentRecord } from './src/consent';
 import { createCircuitSource } from './src/circuits/registry';
 import { createRaceSource } from './src/events/registry';
-import { storeRace, storedRace, type SelectedRace } from './src/events/selection';
+import { storeRace, storedRace, toSelected, type SelectedRace } from './src/events/selection';
+import { storePersonId, storedPersonId } from './src/identity';
 import { LandingScreen } from './src/screens/LandingScreen';
 import { LocationConsent } from './src/screens/LocationConsent';
+import { PersonLogin } from './src/screens/PersonLogin';
 import { RacePicker } from './src/screens/RacePicker';
 import { SensingSettings } from './src/screens/SensingSettings';
 import { LocationCheck } from './src/screens/LocationCheck';
@@ -20,23 +22,44 @@ const api = process.env.EXPO_PUBLIC_CROWDFLOW_API;
 const origin = process.env.EXPO_PUBLIC_CROWDFLOW_ORIGIN;
 const destination = process.env.EXPO_PUBLIC_CROWDFLOW_DESTINATION;
 const sensingMode = process.env.EXPO_PUBLIC_CROWDFLOW_SENSING === 'rehearsal' ? 'rehearsal' : 'device';
+const preferredCircuit = process.env.EXPO_PUBLIC_CROWDFLOW_CIRCUIT ?? 'silverstone';
 const circuits = createCircuitSource(api);
 const raceSource = createRaceSource(api);
 
-type Stage = 'consent' | 'check' | 'landing' | 'picker' | 'app' | 'sensing';
+type Stage = 'login' | 'consent' | 'check' | 'landing' | 'picker' | 'app' | 'sensing';
+
+async function registerPerson(personId: number, circuitId: string): Promise<void> {
+  if (!api) return;
+  const response = await fetch(`${api.replace(/\/$/, '')}/api/people/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ person_id: personId, circuit_id: circuitId }),
+  });
+  if (!response.ok) throw new Error(`The circuit could not register this ID (${response.status}).`);
+}
 
 export default function App() {
-  const [stage, setStage] = useState<Stage>('consent');
+  const [stage, setStage] = useState<Stage>('login');
+  const [personId, setPersonId] = useState<number | null>(null);
   const [race, setRace] = useState<SelectedRace | null>(null);
   const [consent, setConsent] = useState<ConsentRecord | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [record, stored] = await Promise.all([readConsent(), storedRace()]);
+      const [record, stored, person] = await Promise.all([readConsent(), storedRace(), storedPersonId()]);
+      let selected = stored;
+      if (!selected) {
+        const races = await raceSource.list().catch(() => []);
+        const preferred = races.find((item) => item.circuit_id === preferredCircuit && item.has_map)
+          ?? races.find((item) => item.has_map);
+        selected = preferred ? toSelected(preferred) : null;
+        if (selected) await storeRace(selected);
+      }
       setConsent(isCurrent(record) ? record : null);
-      setRace(stored);
-      setStage(isCurrent(record) ? 'check' : 'consent');
+      setRace(selected);
+      setPersonId(person);
+      setStage(person == null ? 'login' : isCurrent(record) ? 'check' : 'consent');
       setReady(true);
     })();
   }, []);
@@ -45,15 +68,24 @@ export default function App() {
     baseUrl: api ?? '',
     source: circuits,
     circuitId: race?.has_map ? race.circuit_id : null,
-    enabled: isCurrent(consent) && consent.sharing && race?.has_map === true,
+    personId,
+    enabled: personId != null && isCurrent(consent) && consent.sharing && race?.has_map === true,
     mode: sensingMode,
   });
 
   const choose = useCallback(async (next: SelectedRace) => {
+    if (personId != null) await registerPerson(personId, next.circuit_id);
     setRace(next);
     await storeRace(next);
     setStage('landing');
-  }, []);
+  }, [personId]);
+
+  const login = useCallback(async (nextPersonId: number) => {
+    await registerPerson(nextPersonId, race?.circuit_id ?? preferredCircuit);
+    await storePersonId(nextPersonId);
+    setPersonId(nextPersonId);
+    setStage(isCurrent(consent) ? 'check' : 'consent');
+  }, [consent, race]);
 
   const changeSharing = useCallback(async (sharing: boolean) => {
     if (!consent) return;
@@ -71,6 +103,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
+      {stage === 'login' ? <PersonLogin onLogin={login} /> : null}
       {stage === 'consent' ? (
         <LocationConsent
           onDone={async () => {
@@ -79,11 +112,11 @@ export default function App() {
           }}
         />
       ) : null}
-      {}
       {stage === 'check' ? <LocationCheck onContinue={() => setStage('landing')} /> : null}
       {stage === 'landing' ? (
         <LandingScreen
           race={race}
+          personId={personId!}
           sensing={sensing.status}
           onSelect={() => setStage('picker')}
           onContinue={() => setStage('app')}

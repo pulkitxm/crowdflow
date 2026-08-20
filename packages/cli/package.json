@@ -6,6 +6,7 @@
   "exports": {
     "./ingest": "./src/ingest.ts",
     "./rehearse": "./src/rehearse.ts",
+    "./simulator": "./src/simulator.ts",
     "./calendar": "./src/calendar.ts"
   },
   "bin": {

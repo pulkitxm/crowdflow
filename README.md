@@ -58,8 +58,14 @@ make dashboard
 Run the spectator app:
 
 ```sh
+EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:8099 \
 bun run --filter crowdflow-spectator start
 ```
+
+The first screen accepts a positive sequential person ID. The app registers that ID against the
+selected circuit, asks for location permissions, then uploads the latest position resolved from
+GPS, Wi-Fi, or Bluetooth. The operator dashboard receives joins and position updates over its
+WebSocket connection.
 
 Live mobile guidance requires all three values:
 
@@ -71,6 +77,65 @@ bun run --filter crowdflow-spectator start
 ```
 
 Without them, the app uses its deterministic demonstration feed.
+
+## Live crowd simulator
+
+With `make console` running in another terminal, populate the circuit from several connected gates:
+
+```sh
+make simulator SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
+```
+
+Start from an empty people database and live dashboard state by adding `--reset` to the direct
+simulator command:
+
+```sh
+bun run crowdflow -- live simulate silverstone --reset --people 500 --rate 50 --duration 30
+```
+
+The equivalent Make command is:
+
+```sh
+make simulator SIM_RESET=1 SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
+```
+
+`SIM_RATE` is the number of new people per second, `SIM_TICK_MS` controls movement update frequency,
+`SIM_MOVEMENT_SCALE` accelerates walking through the race-event timeline, `SIM_START_ID` sets the
+first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate IDs. If no gates are
+supplied, the simulator chooses up to six gates with routes to viewing areas. People enter through
+those gates, walk toward viewing zones distributed around the circuit, and gather near their chosen
+stand. Each person has independent speed, route choice, path drift, and viewing-area movement. Every
+active person's location is sent on every simulator tick for the full `--duration`, including after
+arrival, so the WebSocket-driven cohorts, sectors, grids, and heat map continue changing throughout
+the race. `--reset` deletes
+the selected circuit's people and current locations, clears its live WebSocket state, then starts
+again from person ID 1 unless `--start-id` is supplied. People and their current locations are stored
+locally in `.data/crowdflow.sqlite`.
+
+The dashboard starts with the grid hidden. `GRID OFF` enables it at 100 m, then it switches through
+50 m and 25 m cells down to a minimum 10 m grid as the map is enlarged. `FULL MAP` expands the
+circuit to the viewport. Full-map mode, zoom, map center, orientation, layer, and grid visibility
+are kept in the URL query string and restored after reload. People are rendered as cohorts of at
+most 50 inside the current spatial cells, never as individual map markers. The exact reporting total
+remains visible in the live metrics while WebSocket updates refresh the cohort query.
+The crowd-view menu offers `NO VIEW`, `COHORT VIEW`, and `HEAT MAP VIEW`. Cohorts remain the default,
+the heat map uses stable people-per-square-metre labels, and `NO VIEW` leaves the crowd layer off. The
+selected crowd view is also restored from the URL.
+
+The `SECTORS` table groups every venue zone around its nearest named viewing area. It refreshes from
+the live WebSocket feed and shows exact current crowd, reporting-zone coverage, density state, flow,
+LOS, reporting devices, speed, net flow, queue, and confidence for each circuit sector.
+
+Query a four-corner area with a result limit and zoom level:
+
+```sh
+curl -sS http://127.0.0.1:8099/api/circuits/silverstone/people/query \
+  -H 'content-type: application/json' \
+  -d '{"coordinates":[{"x":0,"y":0},{"x":1000,"y":0},{"x":1000,"y":1800},{"x":0,"y":1800}],"zoom":8,"count":100}'
+```
+
+The response contains exact current person-location JSON in `people`, the total polygon match in
+`matched_count`, the limited result count in `returned_count`, and occupied cells in `cells`.
 
 ## Quality gates
 

@@ -10,10 +10,10 @@ import { requestBackground, requestBluetooth, requestForeground, type Permission
 
 const POINTS = [
   'Your phone works out roughly where it is on the circuit, and we use that to guide you and keep the walkways moving.',
-  'It places itself using GPS, and where that is poor — under a grandstand, in a tunnel — using the Wi-Fi and Bluetooth signals around it.',
+  'It places itself using GPS and, where that is poor under a grandstand or in a tunnel, the Wi-Fi and Bluetooth signals around it.',
   'Which networks and beacons your phone can hear never leaves your phone. Only the position it worked out is sent, and only while you are at the circuit.',
-  'Your phone reports under a random label that changes every fifteen minutes, so there is no trail to follow.',
-  'We never track who is where — only how many people are moving through each area.',
+  'Your person ID links to your current circuit position. Each update replaces the previous position, so the dashboard does not build a location trail.',
+  'The circuit team can see your person ID, current position, accuracy, and whether the fix came from GPS, Wi-Fi, or Bluetooth.',
   'The moment you leave the circuit, reporting stops. You can stop it sooner from the app at any time.',
 ] as const;
 
@@ -30,7 +30,7 @@ const ASKS: Ask[] = [
   {
     key: 'location',
     label: 'Your position',
-    why: 'Places you on the circuit. Without it nothing below works either — Android ties the Wi-Fi and Bluetooth signal lists to this same permission.',
+    why: 'Places you on the circuit. Without it nothing below works either. Android ties the Wi-Fi and Bluetooth signal lists to this same permission.',
     ifDeclined: 'You can still use the app, but it cannot guide you.',
     granted: (state) => state.foreground,
     request: requestForeground,
@@ -92,7 +92,7 @@ export function LocationConsent({ onDone }: { onDone: () => void }) {
         </Card>
 
         <Body tone="soft" style={styles.finePrint}>
-          This is not a contract — it is what this app does with your position, and
+          This is not a contract. It is what this app does with your position, and
           what it will not do.
         </Body>
       </Page>
@@ -104,9 +104,9 @@ export function LocationConsent({ onDone }: { onDone: () => void }) {
   return (
     <Page
       eyebrow="Three requests"
-      title="Only the first one matters."
+      title="Only the first one is required."
       lede="You can change any of these later, in the app or in your phone's settings."
-      footer={<PrimaryAction label={locationSettled ? 'Done — take me in' : 'Skip for now'} onPress={onDone} />}
+      footer={<PrimaryAction label={locationSettled ? 'Done, take me in' : 'Skip for now'} onPress={onDone} />}
     >
       {ASKS.map((item) => {
         const granted = state ? item.granted(state) : false;

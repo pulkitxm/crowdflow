@@ -1,33 +1,17 @@
-/**
- * The zone table — the dense half of the console.
- *
- * Live-timing conventions throughout: one line per zone, fixed columns, tabular
- * figures, no wrapping, no truncation of the numbers. Forty rows of eleven
- * columns is the right amount of information for this screen; withholding a
- * column because the layout is tighter without it is how an operator ends up
- * asking for a number the system already had.
- *
- * The one editorial decision: zones with a reading and zones that have fallen
- * silent are always listed, while the ~1,800 zones the system has never seen sit
- * behind a toggle and a count. They are not hidden — the count is a permanent
- * row and it is large — but paging 1,800 rows of dashes past an operator every
- * second would bury the forty that matter.
- */
-import type { TickEnvelope } from "@crowdflow/api/wire";
+import type { LiveSnapshot, PeopleQueryResult, VenueGeometry } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, fixed, integer, signed } from "../format";
-import type { Sort, SortKey, ZoneRow } from "../model";
-import { sortRows } from "../model";
+import { buildSectorRows, sortSectorRows, type SectorRow, type SectorSort, type SectorSortKey } from "../sectors";
 
 interface Column {
-  key: SortKey | null;
+  key: SectorSortKey | null;
   label: string;
   title: string;
   numeric: boolean;
-  cell(row: ZoneRow): HTMLElement | string;
+  cell(row: SectorRow): HTMLElement | string;
 }
 
-function tone(row: ZoneRow): string {
+function tone(row: SectorRow): string {
   if (row.visibility === "unknown") return "unknown";
   if (row.visibility === "silent") return "silent";
   return row.band ?? "nominal";
@@ -36,98 +20,91 @@ function tone(row: ZoneRow): string {
 const COLUMNS: Column[] = [
   {
     key: "name",
-    label: "ZONE",
-    title: "zone name from the imported venue graph",
+    label: "SECTOR",
+    title: "named circuit sector",
     numeric: false,
     cell: (row) => el("span", { class: "cell__name", text: row.name }),
   },
   {
     key: null,
-    label: "KIND",
-    title: "zone kind",
-    numeric: false,
-    cell: (row) => String(row.kind).toUpperCase(),
+    label: "ZONES LIVE",
+    title: "source zones currently reporting inside this sector",
+    numeric: true,
+    cell: (row) => `${integer(row.observedZoneCount)}/${integer(row.zoneCount)}`,
   },
   {
     key: "density",
     label: "STATE / PED·M²",
-    title: "operational band and the density it was classified from",
+    title: "highest live density in the sector and its operational band",
     numeric: true,
-    cell: (row) => stateCell(row.word, row.value, tone(row)),
+    cell: (row) => stateCell(row.word, fixed(row.density, 2), tone(row)),
   },
   {
     key: "flow",
     label: "FLOW",
-    title: "ped/m/min — reported, never classified on",
+    title: "device-weighted pedestrian flow across reporting zones",
     numeric: true,
     cell: (row) => fixed(row.flow, 1),
   },
   {
     key: null,
     label: "LOS",
-    title: "Fruin grade A–F, from flow",
+    title: "worst live Fruin grade across the sector",
     numeric: true,
-    cell: (row) => row.losGrade,
+    cell: (row) => row.visibility === "observed" ? row.losGrade : NO_VALUE,
   },
   {
     key: "nodes",
-    label: "NODES",
-    title: "reporting devices — NOT people",
+    label: "DEVICES",
+    title: "reporting devices in the sector",
     numeric: true,
-    cell: (row) => (row.visibility === "observed" ? integer(row.nodes) : NO_VALUE),
+    cell: (row) => row.visibility === "observed" ? integer(row.nodes) : NO_VALUE,
   },
   {
     key: "people",
-    label: "EST PEOPLE",
-    title: "devices scaled by the measured participation rate",
+    label: "LIVE CROWD",
+    title: "exact current people from the live spatial feed",
     numeric: true,
     cell: (row) => integer(row.people),
   },
   {
     key: null,
     label: "SPEED",
-    title: "mean walking speed, m/s — falling speed at constant headcount is the early warning",
+    title: "device-weighted mean walking speed in metres per second",
     numeric: true,
     cell: (row) => fixed(row.speed, 2),
   },
   {
     key: "net",
     label: "NET/MIN",
-    title: "inflow minus outflow; sustained positive means filling",
+    title: "sector inflow minus outflow per minute",
     numeric: true,
     cell: (row) => signed(row.net, 1),
   },
   {
     key: "queue",
     label: "QUEUED",
-    title: "people who do not fit at jam density, i.e. backed up behind",
+    title: "estimated people backed up across sector zones",
     numeric: true,
     cell: (row) => integer(row.queue),
   },
   {
     key: "confidence",
     label: "CONF",
-    title: "confidence in the estimate beside it; LOW means the contract says do not lean on it",
+    title: "device-weighted confidence across reporting zones",
     numeric: true,
-    cell: (row) =>
-      row.confidence === null
-        ? NO_VALUE
-        : el(
-            "span",
-            { class: row.reportable ? "conf" : "conf conf--low" },
-            fixed(row.confidence, 2) + (row.reportable ? "" : " LOW"),
-          ),
+    cell: (row) => row.confidence === null
+      ? NO_VALUE
+      : el("span", { class: row.reportable ? "conf" : "conf conf--low" }, fixed(row.confidence, 2) + (row.reportable ? "" : " LOW")),
   },
 ];
 
-export class ZoneTable {
-  private sort: Sort = { key: "density", descending: true };
-  private showUnknown = false;
-  private unknownSignature = "";
+export class SectorTable {
+  private sort: SectorSort = { key: "people", descending: true };
   private readonly head: HTMLElement;
   private readonly body: HTMLElement;
-  private readonly unknownBody: HTMLElement;
   private readonly footer: HTMLElement;
+  private readonly status: HTMLElement;
   private selected: string | null = null;
 
   constructor(
@@ -135,33 +112,15 @@ export class ZoneTable {
     tools: HTMLElement,
     private readonly onSelect: (zoneId: string) => void,
   ) {
-    const table = el("table", { class: "zones" });
+    const table = el("table", { class: "zones sectors" });
     this.head = el("thead");
     this.body = el("tbody");
-    this.unknownBody = el("tbody", { class: "zones__unknown" });
     this.footer = el("tbody", { class: "zones__footer" });
-    table.append(this.head, this.body, this.footer, this.unknownBody);
+    this.status = el("span", { class: "sector-status", text: "WAITING FOR LIVE CROWD" });
+    table.append(this.head, this.body, this.footer);
     clear(host).append(table);
+    clear(tools).append(this.status);
     this.renderHead();
-
-    const toggle = el("button", {
-      class: "tool",
-      type: "button",
-      text: "SHOW UNKNOWN",
-      title: "list every zone with no reporting device",
-    });
-    toggle.addEventListener("click", () => {
-      this.showUnknown = !this.showUnknown;
-      toggle.textContent = this.showUnknown ? "HIDE UNKNOWN" : "SHOW UNKNOWN";
-      toggle.classList.toggle("tool--on", this.showUnknown);
-      this.unknownSignature = "";
-      if (!this.showUnknown) clear(this.unknownBody);
-      // Repaint now rather than on the next tick. A paused or finished run
-      // delivers no more ticks, and a control that appears to do nothing is
-      // indistinguishable from a broken one.
-      this.host.dispatchEvent(new CustomEvent("resort"));
-    });
-    clear(tools).append(toggle);
   }
 
   setSelected(zoneId: string | null): void {
@@ -171,23 +130,37 @@ export class ZoneTable {
     }
   }
 
+  update(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
+    const rows = sortSectorRows(buildSectorRows(live, geometry, grid), this.sort);
+    clear(this.body);
+    for (const row of rows) this.body.append(this.renderRow(row));
+    const reporting = rows.filter((row) => row.observedZoneCount > 0).length;
+    this.status.textContent = `LIVE ${integer(grid?.matched_count ?? live.reporting_devices)} · ${integer(reporting)}/${integer(rows.length)} SECTORS`;
+    clear(this.footer).append(
+      el(
+        "tr",
+        { class: "zones__count" },
+        el(
+          "td",
+          { colspan: String(COLUMNS.length) },
+          el("span", { class: "state state--nominal" }, el("span", { class: "state__word", text: "LIVE CROWD" }), el("span", { class: "state__value", text: integer(grid?.matched_count ?? live.reporting_devices) })),
+          el("span", { class: "zones__countnote", text: ` people across ${integer(rows.length)} sectors · ${integer(live.coverage.observed)}/${integer(live.coverage.zones_total)} source zones reporting` }),
+        ),
+      ),
+    );
+    return rows;
+  }
+
   private renderHead(): void {
     const tr = el("tr");
     for (const column of COLUMNS) {
-      const th = el("th", {
-        class: column.numeric ? "num" : "",
-        title: column.title,
-        "data-sortable": column.key ? "yes" : "no",
-      });
+      const th = el("th", { class: column.numeric ? "num" : "", title: column.title, "data-sortable": column.key ? "yes" : "no" });
       th.append(column.label);
       if (column.key) {
         const key = column.key;
         th.classList.add("sortable");
         th.addEventListener("click", () => {
-          this.sort =
-            this.sort.key === key
-              ? { key, descending: !this.sort.descending }
-              : { key, descending: true };
+          this.sort = this.sort.key === key ? { key, descending: !this.sort.descending } : { key, descending: true };
           this.renderHead();
           this.host.dispatchEvent(new CustomEvent("resort"));
         });
@@ -205,55 +178,13 @@ export class ZoneTable {
     this.host.addEventListener("resort", handler);
   }
 
-  update(envelope: TickEnvelope, rows: ZoneRow[]): void {
-    const visible = sortRows(
-      rows.filter((row) => row.visibility !== "unknown"),
-      this.sort,
-    );
-    clear(this.body);
-    for (const row of visible) this.body.append(this.renderRow(row));
-
-    clear(this.footer).append(
-      el(
-        "tr",
-        { class: "zones__count" },
-        el("td", { colspan: String(COLUMNS.length) },
-          el("span", { class: "state state--unknown" },
-            el("span", { class: "state__word", text: "UNKNOWN" }),
-            el("span", { class: "state__value", text: integer(envelope.coverage.unknown) }),
-          ),
-          el("span", {
-            class: "zones__countnote",
-            text: ` zones have no reporting device — not empty, not observed · ${integer(
-              envelope.coverage.observed,
-            )} observed of ${integer(envelope.coverage.zones_total)}`,
-          }),
-        ),
-      ),
-    );
-
-    if (!this.showUnknown) return;
-    const unknown = rows.filter((row) => row.visibility === "unknown");
-    // Unknown rows carry no per-tick data, so they are rebuilt only when the set
-    // itself changes. Re-rendering 1,800 identical rows every second would cost
-    // more than everything else on the screen put together.
-    // The full id set is the state. Length plus endpoints missed churn in the
-    // middle and left a stale unknown list on the one panel devoted to honesty
-    // about missing data.
-    const signature = unknown.map((row) => row.id).sort().join("\u0000");
-    if (signature === this.unknownSignature) return;
-    this.unknownSignature = signature;
-    clear(this.unknownBody);
-    for (const row of sortRows(unknown, { key: "name", descending: false })) {
-      this.unknownBody.append(this.renderRow(row));
-    }
-  }
-
-  private renderRow(row: ZoneRow): HTMLElement {
+  private renderRow(row: SectorRow): HTMLElement {
     const tr = el("tr", {
       class: `row row--${tone(row)}${row.overCapacity ? " row--over" : ""}`,
       "data-zone": row.id,
-      title: row.id,
+      title: `${row.name}: ${row.zoneCount} source zones. Open sector in full map.`,
+      role: "button",
+      tabindex: "0",
     });
     if (row.id === this.selected) tr.classList.add("is-selected");
     for (const column of COLUMNS) {
@@ -263,6 +194,12 @@ export class ZoneTable {
       tr.append(td);
     }
     tr.addEventListener("click", () => this.onSelect(row.id));
+    tr.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        this.onSelect(row.id);
+      }
+    });
     return tr;
   }
 }

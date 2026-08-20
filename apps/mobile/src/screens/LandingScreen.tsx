@@ -12,12 +12,14 @@ import { usePalette } from '../ui/theme';
 
 export function LandingScreen({
   race,
+  personId,
   sensing,
   onSelect,
   onContinue,
   onSensing,
 }: {
   race: SelectedRace | null;
+  personId: number;
   sensing: SensingStatus | null;
   onSelect: () => void;
   onContinue: () => void;
@@ -39,6 +41,7 @@ export function LandingScreen({
             Twenty-three rounds are on the calendar. You only need to tell us which one.
           </Body>
         </Card>
+        <Chip label={`person #${personId}`} tone="strong" />
         <SharingLine sensing={sensing} onPress={onSensing} />
       </Page>
     );
@@ -73,6 +76,7 @@ export function LandingScreen({
           </View>
         </View>
         <View style={styles.chips}>
+          <Chip label={`person #${personId}`} tone="strong" />
           <Chip label={when} tone={when === 'Happening now' ? 'strong' : 'quiet'} />
           {race.has_map ? <Chip label="venue mapped" /> : <Chip label="no venue map" tone="warn" />}
         </View>

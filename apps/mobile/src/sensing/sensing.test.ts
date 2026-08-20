@@ -52,7 +52,7 @@ describe('uplink queue', () => {
 
   function uplink(fetchImpl: typeof fetch, onStop?: (reason: string) => void) {
     vi.stubGlobal('fetch', fetchImpl);
-    return new Uplink({ baseUrl: 'http://venue', circuitId: 'silverstone', ...(onStop ? { onStop } : {}) });
+    return new Uplink({ baseUrl: 'http://venue', circuitId: 'silverstone', personId: 42, ...(onStop ? { onStop } : {}) });
   }
 
   it('sends a batch and reports what was accepted', async () => {
@@ -69,7 +69,7 @@ describe('uplink queue', () => {
     expect(result.ok).toBe(true);
     expect(result.sent).toBe(2);
     expect(queue.depth).toBe(0);
-    expect(seen[0]).toMatchObject({ consent_version: LOCATION_DISCLOSURE_VERSION, circuit_id: 'silverstone', sources: ['wifi', 'gnss'] });
+    expect(seen[0]).toMatchObject({ person_id: 42, consent_version: LOCATION_DISCLOSURE_VERSION, circuit_id: 'silverstone', sources: ['wifi', 'gnss'] });
   });
 
   it('keeps a batch, in order, when the venue is unreachable', async () => {
@@ -134,7 +134,7 @@ describe('uplink queue', () => {
   it('does not attempt an upload with no venue configured', async () => {
     const calls: string[] = [];
     vi.stubGlobal('fetch', (async (url: string) => { calls.push(url); return { ok: true, status: 200, json: async () => ack() } as unknown as Response; }) as unknown as typeof fetch);
-    const queue = new Uplink({ baseUrl: '', circuitId: 'silverstone' });
+    const queue = new Uplink({ baseUrl: '', circuitId: 'silverstone', personId: 42 });
     queue.enqueue(node(1000), 'wifi');
     const result = await queue.flush(1001, 'nd-1', 7);
     expect(calls).toEqual([]);

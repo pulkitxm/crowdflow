@@ -4,3 +4,4 @@ export * from './session.js';
 export * from './scenarios.js';
 export * from './spectator.js';
 export * from './app.js';
+export * from './people.js';

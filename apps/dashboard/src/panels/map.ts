@@ -21,11 +21,16 @@
  *   * **Static geometry is cached.** Track and edges are re-rasterised only when
  *     the view changes, so a tick costs one blit plus the live marks.
  */
-import type { LOSBand, Zone, ZoneKind } from "@crowdflow/contracts";
-import type { StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
+import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
+import { easeOutCubic, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
+import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
+import { HEAT_BANDS, heatSpots } from "../heatmap";
+import type { CrowdLayer } from "../mapState";
+import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
   nominal: "#37d67a",
@@ -79,7 +84,10 @@ const KIND_LABEL: Record<ZoneKind, string> = {
  * in just stacks duplicate text, so it waits for room to breathe.
  */
 const STAND_LABEL_MIN_RATIO = 0;
-const PARK_LABEL_MIN_RATIO = 2.5;
+const PARK_LABEL_FADE_START = 1.8;
+const PARK_LABEL_FADE_END = 3;
+const ZOOM_ANIMATION_MS = 260;
+const GRID_FADE_MS = 220;
 
 /** Screen radius of a zone glyph, in CSS pixels. Not a threshold — a size. */
 const GLYPH_R = 3.2;
@@ -114,12 +122,28 @@ export class MapPanel {
   private hovered: string | null = null;
   private dragging: { x: number; y: number } | null = null;
   private showKinds = false;
+  private live: LiveSnapshot | null = null;
+  private grid: PeopleQueryResult | null = null;
+  private previousGrid: PeopleQueryResult | null = null;
+  private showGrid = false;
+  private crowd: CrowdLayer = "cohorts";
+  private sectors: SectorArea[] = [];
+  private sectorRows = new Map<string, SectorRow>();
+  private showSectors = true;
+  private viewportTimer: number | null = null;
+  private viewportWidth = 0;
+  private viewportHeight = 0;
+  private zoomFrame: number | null = null;
+  private zoomTargetScale: number | null = null;
+  private gridFrame: number | null = null;
+  private gridFadeStarted = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
     readout: HTMLElement,
     legend: HTMLElement,
     private readonly onSelect: (zoneId: string | null) => void,
+    private readonly onViewport: (coordinates: Position[], zoom: number) => void,
   ) {
     this.canvas = canvas;
     this.readout = readout;
@@ -142,6 +166,7 @@ export class MapPanel {
   setGeometry(geometry: VenueGeometry, standards: StandardsReport | null): void {
     this.geometry = geometry;
     this.standards = standards;
+    this.sectors = buildSectorAreas(geometry);
     this.fit();
     this.paintLegend();
   }
@@ -151,6 +176,65 @@ export class MapPanel {
     this.draw();
   }
 
+  updateLive(snapshot: LiveSnapshot): void {
+    this.live = snapshot;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+  }
+
+  setGrid(grid: PeopleQueryResult): void {
+    const previous = this.grid;
+    this.grid = grid;
+    if (previous && previous.grid_size_m !== grid.grid_size_m) {
+      this.previousGrid = previous;
+      this.gridFadeStarted = performance.now();
+      this.animateGridFade();
+    } else {
+      this.previousGrid = null;
+    }
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+  }
+
+  setGridVisible(showGrid: boolean): boolean {
+    this.showGrid = showGrid;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.showGrid;
+  }
+
+  get gridVisible(): boolean { return this.showGrid; }
+
+  setCrowdMode(mode: CrowdLayer): CrowdLayer {
+    this.crowd = mode;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.crowd;
+  }
+
+  get crowdMode(): CrowdLayer { return this.crowd; }
+
+  setSectors(rows: SectorRow[]): void {
+    this.sectorRows = new Map(rows.map((row) => [row.id, row]));
+    this.draw();
+    this.paintReadout();
+  }
+
+  setSectorVisible(visible: boolean): boolean {
+    this.showSectors = visible;
+    this.statics = null;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.showSectors;
+  }
+
+  get sectorsVisible(): boolean { return this.showSectors; }
+
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
    * silent, unknown) and a zone-kind view (concourse/gate/parking/stand) that
@@ -158,11 +242,17 @@ export class MapPanel {
    * currently reporting.
    */
   toggleKindView(): boolean {
-    this.showKinds = !this.showKinds;
+    return this.setKindView(!this.showKinds);
+  }
+
+  setKindView(showKinds: boolean): boolean {
+    this.showKinds = showKinds;
     this.draw();
     this.paintLegend();
     return this.showKinds;
   }
+
+  get kindView(): boolean { return this.showKinds; }
 
 
   /**
@@ -193,7 +283,7 @@ export class MapPanel {
     return this.rotation === 90;
   }
 
-  get orientationDeg(): number { return this.rotation; }
+  get orientationDeg(): 0 | 90 | 180 | 270 { return this.rotation; }
 
   /** Rotate world coordinates by the current orientation angle. */
   private rotateCoord(x: number, y: number): [number, number] {
@@ -254,6 +344,7 @@ export class MapPanel {
   fit(): void {
     const geometry = this.geometry;
     if (!geometry) return;
+    this.cancelZoom();
     const [minX, minY, maxX, maxY] = this.contentBounds();
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
@@ -270,6 +361,73 @@ export class MapPanel {
     };
     this.statics = null;
     this.draw();
+    this.emitZoom();
+    this.notifyViewport();
+  }
+
+  get zoomRatio(): number {
+    return this.view.scale / Math.max(this.fitScale, 0.0001);
+  }
+
+  zoomBy(factor: number): number {
+    return this.animateZoom(factor, this.canvas.clientWidth / 2, this.canvas.clientHeight / 2);
+  }
+
+  focusSector(sectorId: string, zoom = 12): void {
+    const sector = this.sectors.find((item) => item.id === sectorId);
+    if (!sector || this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
+    this.cancelZoom();
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    const targetScale = this.fitScale * Math.min(Math.max(zoom, 0.5), 50);
+    const [rx, ry] = this.rotateCoord(sector.x, sector.y);
+    const startView = { ...this.view };
+    const targetView = {
+      scale: targetScale,
+      offsetX: width / 2 - rx * targetScale,
+      offsetY: height / 2 + ry * targetScale,
+    };
+    const started = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = (now: number): void => {
+      const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
+      this.view = {
+        scale: startView.scale + (targetView.scale - startView.scale) * progress,
+        offsetX: startView.offsetX + (targetView.offsetX - startView.offsetX) * progress,
+        offsetY: startView.offsetY + (targetView.offsetY - startView.offsetY) * progress,
+      };
+      this.statics = null;
+      this.draw();
+      this.emitZoom();
+      if (progress < 1) {
+        this.zoomFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.zoomFrame = null;
+        this.notifyViewport();
+      }
+    };
+    this.zoomFrame = window.requestAnimationFrame(frame);
+  }
+
+  restoreView(zoom: number, center: Position | null): void {
+    if (!this.geometry) return;
+    this.cancelZoom();
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    if (width <= 0 || height <= 0) return;
+    const ratio = Math.min(Math.max(zoom, 0.5), 50);
+    const scale = this.fitScale * ratio;
+    const target = center ?? this.fromScreen(width / 2, height / 2);
+    const [rx, ry] = this.rotateCoord(target.x, target.y);
+    this.view = {
+      scale,
+      offsetX: width / 2 - rx * scale,
+      offsetY: height / 2 + ry * scale,
+    };
+    this.statics = null;
+    this.draw();
+    this.emitZoom();
+    this.notifyViewport();
   }
 
   private toScreen(x: number, y: number): [number, number] {
@@ -277,6 +435,33 @@ export class MapPanel {
     // and nowhere else.
     const [rx, ry] = this.rotateCoord(x, y);
     return [rx * this.view.scale + this.view.offsetX, this.view.offsetY - ry * this.view.scale];
+  }
+
+  private fromScreen(x: number, y: number): Position {
+    const rx = (x - this.view.offsetX) / this.view.scale;
+    const ry = (this.view.offsetY - y) / this.view.scale;
+    switch (this.rotation) {
+      case 0: return { x: rx, y: ry };
+      case 90: return { x: -ry, y: rx };
+      case 180: return { x: -rx, y: -ry };
+      case 270: return { x: ry, y: -rx };
+    }
+  }
+
+  private notifyViewport(): void {
+    if (!this.geometry || this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
+    if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
+    this.viewportTimer = window.setTimeout(() => {
+      const width = this.canvas.clientWidth;
+      const height = this.canvas.clientHeight;
+      const coordinates = [
+        this.fromScreen(0, 0),
+        this.fromScreen(width, 0),
+        this.fromScreen(width, height),
+        this.fromScreen(0, height),
+      ];
+      this.onViewport(coordinates, this.view.scale / Math.max(this.fitScale, 0.0001));
+    }, 120);
   }
 
   private resize(): void {
@@ -290,14 +475,28 @@ export class MapPanel {
     // it is a frame that has not happened yet — so nothing is drawn until the
     // observer reports real dimensions.
     if (width <= 0 || height <= 0) return;
+    const previousCenter = this.geometry && this.viewportWidth > 0 && this.viewportHeight > 0
+      ? this.fromScreen(this.viewportWidth / 2, this.viewportHeight / 2)
+      : null;
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.canvas.width = Math.round(width * dpr);
     this.canvas.height = Math.round(height * dpr);
     this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.statics = null;
-    if (this.view.scale === 1) this.fit();
-    else this.draw();
+    const firstSize = this.viewportWidth === 0 || this.viewportHeight === 0;
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+    if (previousCenter) {
+      const [rx, ry] = this.rotateCoord(previousCenter.x, previousCenter.y);
+      this.view.offsetX = width / 2 - rx * this.view.scale;
+      this.view.offsetY = height / 2 + ry * this.view.scale;
+    }
+    if (firstSize) this.fit();
+    else {
+      this.draw();
+      this.notifyViewport();
+    }
   }
 
   private onWheel = (event: WheelEvent): void => {
@@ -306,21 +505,71 @@ export class MapPanel {
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
     const factor = Math.exp(-event.deltaY * 0.0015);
-    // Floor is half the fit scale — enough to see extra context but not
-    // shrink the venue to an unreadable dot. Ceiling stays generous.
-    const minScale = this.fitScale * 0.5;
-    const scale = Math.min(Math.max(this.view.scale * factor, minScale), 20);
-    // Keep the point under the cursor fixed while zooming.
-    this.view = {
-      scale,
-      offsetX: px - ((px - this.view.offsetX) / this.view.scale) * scale,
-      offsetY: py + ((this.view.offsetY - py) / this.view.scale) * scale,
-    };
-    this.statics = null;
-    this.draw();
+    this.animateZoom(factor, px, py);
   };
 
+  private animateZoom(factor: number, px: number, py: number): number {
+    const minScale = this.fitScale * 0.5;
+    const baseScale = this.zoomTargetScale ?? this.view.scale;
+    const targetScale = Math.min(Math.max(baseScale * factor, minScale), this.fitScale * 50);
+    this.zoomTargetScale = targetScale;
+    const startView = { ...this.view };
+    const target = this.fromScreen(px, py);
+    const [rx, ry] = this.rotateCoord(target.x, target.y);
+    if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
+    if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
+    const started = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = (now: number): void => {
+      const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
+      const scale = startView.scale + (targetScale - startView.scale) * progress;
+      this.view = {
+        scale,
+        offsetX: px - rx * scale,
+        offsetY: py + ry * scale,
+      };
+      this.statics = null;
+      this.draw();
+      this.emitZoom();
+      if (progress < 1) {
+        this.zoomFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.zoomFrame = null;
+        this.zoomTargetScale = null;
+        this.notifyViewport();
+      }
+    };
+    this.zoomFrame = window.requestAnimationFrame(frame);
+    return targetScale / Math.max(this.fitScale, 0.0001);
+  }
+
+  private cancelZoom(): void {
+    if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
+    this.zoomFrame = null;
+    this.zoomTargetScale = null;
+  }
+
+  private emitZoom(): void {
+    this.canvas.dispatchEvent(new CustomEvent("mapzoom", { detail: this.zoomRatio }));
+  }
+
+  private animateGridFade(): void {
+    if (this.gridFrame != null) window.cancelAnimationFrame(this.gridFrame);
+    const frame = (now: number): void => {
+      this.draw();
+      if (now - this.gridFadeStarted < GRID_FADE_MS) {
+        this.gridFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.gridFrame = null;
+        this.previousGrid = null;
+        this.draw();
+      }
+    };
+    this.gridFrame = window.requestAnimationFrame(frame);
+  }
+
   private onPointerDown = (event: PointerEvent): void => {
+    this.cancelZoom();
     this.dragging = { x: event.clientX, y: event.clientY };
     const picked = this.pick(event);
     this.selected = picked;
@@ -352,6 +601,7 @@ export class MapPanel {
   };
 
   private onPointerUp = (): void => {
+    if (this.dragging) this.notifyViewport();
     this.dragging = null;
   };
 
@@ -378,7 +628,7 @@ export class MapPanel {
   // -- drawing -------------------------------------------------------------
 
   private drawStatics(): HTMLCanvasElement {
-    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}`;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.showSectors}`;
     if (this.statics && this.staticKey === key) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
@@ -432,7 +682,9 @@ export class MapPanel {
 
     ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textBaseline = "middle";
-    const placeLabels = (kind: "viewing" | "parking", colour: string): void => {
+    const placeLabels = (kind: "viewing" | "parking", colour: string, opacity = 1): void => {
+      ctx.save();
+      ctx.globalAlpha = opacity;
       for (const zone of Object.values(zones)) {
         if (zone.kind !== kind || !zone.name) continue;
         const [x, y] = this.toScreen(zone.position.x, zone.position.y);
@@ -453,9 +705,11 @@ export class MapPanel {
         ctx.fillStyle = colour;
         ctx.fillText(zone.name, x + 7, y);
       }
+      ctx.restore();
     };
-    if (zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
-    if (zoomRatio >= PARK_LABEL_MIN_RATIO) placeLabels("parking", PARK_COLOUR);
+    if (!this.showSectors && zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
+    const parkingOpacity = revealProgress(zoomRatio, PARK_LABEL_FADE_START, PARK_LABEL_FADE_END);
+    if (parkingOpacity > 0) placeLabels("parking", PARK_COLOUR, parkingOpacity);
 
     this.statics = layer;
     this.staticKey = key;
@@ -576,6 +830,176 @@ export class MapPanel {
     }
   }
 
+  private drawGrid(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, opacity = 1): void {
+    const size = grid.grid_size_m;
+    const xs = grid.coordinates.map((position) => position.x);
+    const ys = grid.coordinates.map((position) => position.y);
+    const minX = Math.floor(Math.min(...xs) / size) * size;
+    const maxX = Math.ceil(Math.max(...xs) / size) * size;
+    const minY = Math.floor(Math.min(...ys) / size) * size;
+    const maxY = Math.ceil(Math.max(...ys) / size) * size;
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    for (const cell of grid.cells) {
+      const corners = [
+        this.toScreen(cell.min_x, cell.min_y),
+        this.toScreen(cell.max_x, cell.min_y),
+        this.toScreen(cell.max_x, cell.max_y),
+        this.toScreen(cell.min_x, cell.max_y),
+      ];
+      ctx.beginPath();
+      ctx.moveTo(corners[0]![0], corners[0]![1]);
+      for (const [x, y] of corners.slice(1)) ctx.lineTo(x, y);
+      ctx.closePath();
+      const alpha = Math.min(0.48, 0.08 + Math.log2(cell.count + 1) * 0.07);
+      ctx.fillStyle = `rgba(88, 182, 255, ${alpha})`;
+      ctx.fill();
+      if (size * this.view.scale >= 34) {
+        const [x, y] = this.toScreen((cell.min_x + cell.max_x) / 2, (cell.min_y + cell.max_y) / 2);
+        ctx.fillStyle = "#d8e2ec";
+        ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(cell.count), x, y);
+      }
+    }
+    ctx.strokeStyle = "rgba(88, 182, 255, 0.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = minX; x <= maxX; x += size) {
+      const start = this.toScreen(x, minY);
+      const end = this.toScreen(x, maxY);
+      ctx.moveTo(start[0], start[1]);
+      ctx.lineTo(end[0], end[1]);
+    }
+    for (let y = minY; y <= maxY; y += size) {
+      const start = this.toScreen(minX, y);
+      const end = this.toScreen(maxX, y);
+      ctx.moveTo(start[0], start[1]);
+      ctx.lineTo(end[0], end[1]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawCohorts(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+    const cohorts = buildPeopleCohorts(grid);
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    for (const cohort of cohorts) {
+      const [x, y] = this.toScreen(cohort.x, cohort.y);
+      if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
+      const radius = 9 + Math.sqrt(cohort.count / COHORT_CAPACITY) * 5;
+      ctx.fillStyle = "rgba(20, 91, 145, 0.92)";
+      ctx.strokeStyle = "#79c7ff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#f4fbff";
+      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(cohort.count), x, y);
+    }
+    ctx.restore();
+  }
+
+  private drawHeatMap(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+    const spots = heatSpots(grid);
+    const colours = Object.fromEntries(HEAT_BANDS.map((band) => [band.band, band.colour]));
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.globalCompositeOperation = "screen";
+    for (const spot of spots) {
+      const [x, y] = this.toScreen(spot.x, spot.y);
+      const radius = Math.min(90, Math.max(20, grid.grid_size_m * this.view.scale * 0.9));
+      if (x < -radius || y < -radius || x > width + radius || y > height + radius) continue;
+      const colour = colours[spot.band] ?? "#2b83f6";
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      gradient.addColorStop(0, `${colour}d9`);
+      gradient.addColorStop(0.42, `${colour}80`);
+      gradient.addColorStop(1, `${colour}00`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    const labelled = [...spots].sort((a, b) => b.density - a.density || b.count - a.count).slice(0, 16);
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const spot of labelled) {
+      const [x, y] = this.toScreen(spot.x, spot.y);
+      if (x < 28 || y < 12 || x > width - 28 || y > height - 12) continue;
+      const text = `${spot.count} · ${spot.density.toFixed(3)}`;
+      const boxWidth = ctx.measureText(text).width + 12;
+      const box: [number, number, number, number] = [x - boxWidth / 2, y - 9, boxWidth, 18];
+      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py)) continue;
+      placed.push(box);
+      ctx.fillStyle = "rgba(7, 12, 18, 0.88)";
+      ctx.fillRect(...box);
+      ctx.fillStyle = "#f4fbff";
+      ctx.fillText(text, x, y);
+    }
+    ctx.restore();
+  }
+
+  private drawSectors(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.save();
+    ctx.lineJoin = "round";
+    for (const sector of this.sectors) {
+      if (sector.polygon.length < 3) continue;
+      ctx.beginPath();
+      sector.polygon.forEach((point, index) => {
+        const [x, y] = this.toScreen(point.x, point.y);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      const isSelected = sector.id === this.selected;
+      if (isSelected) {
+        ctx.fillStyle = "rgba(88, 182, 255, 0.10)";
+        ctx.fill();
+      }
+      ctx.strokeStyle = isSelected ? "rgba(121, 199, 255, 0.90)" : "rgba(121, 199, 255, 0.26)";
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.setLineDash(isSelected ? [] : [5, 5]);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const sector of this.sectors) {
+      const [x, y] = this.toScreen(sector.x, sector.y);
+      if (x < 40 || y < 22 || x > width - 40 || y > height - 22) continue;
+      const row = this.sectorRows.get(sector.id);
+      const name = sector.name.toUpperCase();
+      const detail = this.crowd === "none" || !row ? "SECTOR" : `${integer(row.people)} PEOPLE · ${row.word}`;
+      const boxWidth = Math.max(ctx.measureText(name).width, ctx.measureText(detail).width) + 14;
+      const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
+      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
+      placed.push(box);
+      ctx.fillStyle = sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
+      ctx.strokeStyle = sector.id === this.selected ? "#79c7ff" : "rgba(121, 199, 255, 0.48)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(...box);
+      ctx.strokeRect(...box);
+      ctx.fillStyle = "#d8e2ec";
+      ctx.fillText(name, x, y - 6);
+      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : "#8a99a9";
+      ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.fillText(detail, x, y + 7);
+      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    }
+    ctx.restore();
+  }
+
   private draw(): void {
     const ctx = this.context;
     const width = this.canvas.clientWidth;
@@ -595,8 +1019,21 @@ export class MapPanel {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const zones = this.geometry.pack.zones ?? {};
+    const gridProgress = this.previousGrid
+      ? revealProgress(performance.now(), this.gridFadeStarted, this.gridFadeStarted + GRID_FADE_MS)
+      : 1;
+    if (this.showGrid && this.previousGrid) this.drawGrid(ctx, this.previousGrid, 1 - gridProgress);
+    if (this.showGrid && this.grid) this.drawGrid(ctx, this.grid, gridProgress);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
+    if (this.crowd === "heatmap") {
+      if (this.previousGrid) this.drawHeatMap(ctx, this.previousGrid, width, height, 1 - gridProgress);
+      if (this.grid) this.drawHeatMap(ctx, this.grid, width, height, gridProgress);
+    } else if (this.crowd === "cohorts") {
+      if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
+      if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
+    }
+    if (this.showSectors) this.drawSectors(ctx, width, height);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -624,13 +1061,31 @@ export class MapPanel {
       this.readout.append(
         el("div", { class: "readout__hint", text: "drag to pan · wheel to zoom · click a zone" }),
       );
+      if (this.grid && this.crowd !== "none") {
+        this.readout.append(
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: this.crowd === "heatmap" ? "HEAT MAP" : "COHORT" }), el("span", { class: "readout__value", text: this.crowd === "heatmap" ? "ped/m²" : `≤ ${COHORT_CAPACITY}` })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
+        );
+        if (this.showGrid) this.readout.append(
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
+        );
+      }
       return;
     }
     const zone = this.geometry?.pack.zones?.[id];
+    const sector = this.sectorRows.get(id);
     this.readout.append(
       el("div", { class: "readout__name", text: zone?.name ?? id }),
-      el("div", { class: "readout__id", text: `${id} · ${zone?.kind ?? "unknown"}` }),
+      el("div", { class: "readout__id", text: `${id} · ${sector ? "sector" : zone?.kind ?? "unknown"}` }),
     );
+    if (sector) {
+      this.readout.append(
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "LIVE CROWD" }), el("span", { class: "readout__value", text: integer(sector.people) })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "STATE" }), el("span", { class: "readout__value", text: sector.word })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "ZONES LIVE" }), el("span", { class: "readout__value", text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}` })),
+      );
+      return;
+    }
     if (!row) return;
     const facts: Array<[string, string]> =
       row.visibility === "observed"
@@ -662,8 +1117,19 @@ export class MapPanel {
     clear(this.legend);
     if (this.showKinds) {
       this.paintKindLegend();
+      this.paintLiveLegend();
       return;
     }
+    if (this.showSectors) this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--sectors" },
+        el("span", { class: "legend__glyph", text: "◇" }),
+        el("span", { class: "legend__word", text: "SECTORS" }),
+        el("span", { class: "legend__count", text: integer(this.sectors.length) }),
+        el("span", { class: "legend__note", text: "live crowd areas" }),
+      ),
+    );
     const counts = { nominal: 0, building: 0, critical: 0, silent: 0, unknown: 0 };
     for (const row of this.rows) {
       if (row.visibility === "observed" && row.band) counts[row.band] += 1;
@@ -697,6 +1163,62 @@ export class MapPanel {
         ),
       );
     }
+    this.paintLiveLegend();
+  }
+
+  private paintLiveLegend(): void {
+    const grid = this.grid;
+    const people = this.live?.reporting_devices ?? 0;
+    const cohorts = buildPeopleCohorts(grid).length;
+    if (this.showGrid) {
+      this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--grid" },
+        el("span", { class: "legend__glyph", text: "▦" }),
+        el("span", { class: "legend__word", text: grid ? `${grid.grid_size_m} M GRID` : "GRID" }),
+        el("span", { class: "legend__count", text: grid ? integer(grid.matched_count) : "0" }),
+        el("span", { class: "legend__note", text: "people in viewport" }),
+      ));
+    }
+    if (this.crowd === "heatmap") {
+      this.legend.append(
+        el(
+          "div",
+          { class: "legend__item legend__item--heatmap" },
+          el("span", { class: "legend__word", text: "LIVE DENSITY" }),
+          el("span", { class: "legend__heat-gradient", text: "" }),
+        ),
+      );
+      for (const band of HEAT_BANDS) this.legend.append(
+        el(
+          "div",
+          { class: `legend__item legend__item--heat-${band.band}` },
+          el("span", { class: "legend__glyph", text: "●" }),
+          el("span", { class: "legend__word", text: band.label }),
+          el("span", { class: "legend__note", text: band.range }),
+        ),
+      );
+    } else if (this.crowd === "cohorts") this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--people" },
+        el("span", { class: "legend__glyph", text: "●" }),
+        el("span", { class: "legend__word", text: "COHORTS" }),
+        el("span", { class: "legend__count", text: integer(cohorts) }),
+        el("span", { class: "legend__note", text: `up to ${COHORT_CAPACITY} people each` }),
+      ),
+    );
+    this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--people" },
+        el("span", { class: "legend__glyph", text: "Σ" }),
+        el("span", { class: "legend__word", text: "LIVE PEOPLE" }),
+        el("span", { class: "legend__count", text: integer(people) }),
+        el("span", { class: "legend__note", text: "exact reporting total" }),
+      ),
+    );
   }
 
   /** How the venue's zones break down by kind, independent of live state. */

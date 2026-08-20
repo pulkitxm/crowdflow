@@ -8,6 +8,7 @@ const SAMPLE_MAX_AGE_S = 60;
 export interface UplinkOptions {
   baseUrl: string;
   circuitId: string;
+  personId: number;
   onStop?: (reason: string) => void;
   onResult?: (result: UplinkResult) => void;
   batchMax?: number;
@@ -60,6 +61,7 @@ export class Uplink {
     const batch = this.queue.slice(0, this.batchMax);
     this.queue = this.queue.slice(batch.length);
     const report: NodeReport = {
+      person_id: this.options.personId,
       node_id: nodeId,
       epoch,
       circuit_id: this.options.circuitId,

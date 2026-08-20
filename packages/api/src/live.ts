@@ -38,6 +38,7 @@ import { ASSUMED_ID_ROTATION_S, SERVED_DISCLOSURE_VERSIONS, validateCrowdNode } 
 import { StateEngine } from '@crowdflow/core';
 import { insidePack } from '@crowdflow/core/positioning';
 import type { LoadedCircuit } from './packs.js';
+import type { PeopleStore } from './people.js';
 import type { LiveSnapshot, NodeMark } from './wire.js';
 
 /**
@@ -67,15 +68,21 @@ export interface LiveIngestOptions {
 
 export class LiveIngest {
   private engine: StateEngine;
-  private marks = new Map<string, { node: CrowdNode; received: number }>();
+  private marks = new Map<number, { node: CrowdNode; received: number; source: PositionSource }>();
   private sourceCounts = new Map<PositionSource, number>();
+  private listeners = new Set<(snapshot: LiveSnapshot) => void>();
   private accepted = 0;
   private rejected = 0;
   private problemCounts = new Map<string, number>();
   private lastReportAt: number | null = null;
 
-  constructor(readonly circuit: LoadedCircuit, readonly options: LiveIngestOptions) {
+  constructor(readonly circuit: LoadedCircuit, readonly options: LiveIngestOptions, private readonly people: PeopleStore) {
     this.engine = new StateEngine(circuit.pack, options.participation, options.window_s);
+  }
+
+  subscribe(listener: (snapshot: LiveSnapshot) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   /**
@@ -85,6 +92,25 @@ export class LiveIngest {
    * on the console from a quiet venue, and the two call for opposite responses.
    */
   report(report: NodeReport, now: number): IngestAck {
+    const ack = this.process(report, now);
+    this.emit(now);
+    return ack;
+  }
+
+  reportMany(reports: NodeReport[], now: number, emit = true): IngestAck {
+    if (!reports.length || reports.length > 1000) throw new Error('reports must contain from 1 to 1000 items');
+    const acknowledgements = reports.map((report) => this.process(report, now));
+    if (emit) this.emit(now);
+    return {
+      accepted: acknowledgements.reduce((sum, ack) => sum + ack.accepted, 0),
+      rejected: acknowledgements.reduce((sum, ack) => sum + ack.rejected, 0),
+      problems: [...new Set(acknowledgements.flatMap((ack) => ack.problems ?? []))],
+      server_time: now,
+      stop: acknowledgements.some((ack) => ack.stop),
+    };
+  }
+
+  private process(report: NodeReport, now: number): IngestAck {
     const problems: string[] = [];
     const fail = (reason: string, count = 1): IngestAck => {
       this.rejected += count;
@@ -100,6 +126,9 @@ export class LiveIngest {
     }
     if (report.circuit_id !== this.circuit.pack.id) {
       return fail(`circuit ${report.circuit_id} is not the live circuit`, Math.max(1, report.nodes?.length ?? 1));
+    }
+    if (!this.people.exists(report.person_id, report.circuit_id)) {
+      return fail(`person ${report.person_id} is not logged in to ${report.circuit_id}`, Math.max(1, report.nodes?.length ?? 1));
     }
 
     const batch = report.nodes ?? [];
@@ -124,15 +153,23 @@ export class LiveIngest {
     }
 
     const kept = usable.length ? this.engine.ingest(usable, now) : 0;
-    for (const node of usable) this.marks.set(node.node_id, { node, received: now });
-    for (const source of report.sources ?? []) this.sourceCounts.set(source, (this.sourceCounts.get(source) ?? 0) + 1);
+    const source = report.sources?.[0] ?? 'fused';
+    for (const node of usable) {
+      this.marks.set(report.person_id, { node, received: now, source });
+      this.people.updateLocation(report.person_id, report.circuit_id, node.position, node.speed_ms, node.accuracy_m, source, now, report.gate_id ?? null);
+    }
+    for (const reportedSource of report.sources ?? []) this.sourceCounts.set(reportedSource, (this.sourceCounts.get(reportedSource) ?? 0) + 1);
 
     this.accepted += kept;
     this.rejected += dropped + (usable.length - kept);
     if (usable.length > kept) problems.push('outside the reporting window');
     this.lastReportAt = now;
-
     return { accepted: kept, rejected: dropped + (usable.length - kept), problems, server_time: now, stop: false };
+  }
+
+  private emit(now: number): void {
+    const snapshot = this.snapshot(now, false);
+    for (const listener of this.listeners) listener(snapshot);
   }
 
   /**
@@ -162,7 +199,7 @@ export class LiveIngest {
   /** The live picture. Mirrors what a scenario tick carries, minus everything
    *  that only exists in simulation — there is no ground truth here to compare
    *  the estimate against, and the snapshot does not pretend otherwise. */
-  snapshot(now: number): LiveSnapshot {
+  snapshot(now: number, includeNodes = true): LiveSnapshot {
     for (const [id, held] of this.marks) if (now - held.received > (this.options.window_s ?? 30)) this.marks.delete(id);
     const state: VenueState = this.engine.snapshot(now, null);
     const zones = Object.keys(this.circuit.pack.zones ?? {});
@@ -177,9 +214,10 @@ export class LiveIngest {
       participation: this.options.participation,
       participation_provenance: 'assumed',
       state,
-      nodes: [...this.marks.values()].map(({ node }): NodeMark => ({
-        x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
-      })),
+      nodes: includeNodes ? [...this.marks.entries()].map(([personId, { node, source }]): NodeMark => ({
+        person_id: personId, x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
+        timestamp: node.timestamp, source,
+      })) : [],
       reporting_devices: this.marks.size,
       by_source: Object.fromEntries(this.sourceCounts) as Partial<Record<PositionSource, number>>,
       accepted_total: this.accepted,

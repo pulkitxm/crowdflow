@@ -9,6 +9,7 @@ export interface UseSensingOptions {
   baseUrl: string;
   source: CircuitSource;
   circuitId: string | null;
+  personId: number | null;
   enabled: boolean;
   mode?: 'device' | 'rehearsal';
 }
@@ -23,7 +24,7 @@ export interface Sensing {
 const NO_SURVEY = { anchors: 0, wifi: 0, ble: 0, surveyedAt: null as string | null };
 
 export function useSensing(options: UseSensingOptions): Sensing {
-  const { baseUrl, source, circuitId, enabled, mode = 'device' } = options;
+  const { baseUrl, source, circuitId, personId, enabled, mode = 'device' } = options;
   const [status, setStatus] = useState<SensingStatus | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState(0);
@@ -49,9 +50,9 @@ export function useSensing(options: UseSensingOptions): Sensing {
   }, [source, circuitId]);
 
   const engine = useMemo(() => {
-    if (!loaded) return null;
-    return new SensingEngine({ baseUrl, pack: loaded.pack, anchors: loaded.anchors, mode });
-  }, [baseUrl, loaded, mode]);
+    if (!loaded || personId == null) return null;
+    return new SensingEngine({ baseUrl, personId, pack: loaded.pack, anchors: loaded.anchors, mode });
+  }, [baseUrl, loaded, mode, personId]);
 
   useEffect(() => {
     if (!engine) { setStatus(null); setSurvey(NO_SURVEY); return; }

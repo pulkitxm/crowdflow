@@ -78,6 +78,19 @@ button {
     "metrics      metrics";
 }
 
+.console--map-focus {
+  display: block;
+  background: var(--ground);
+}
+
+.console--map-focus > :not(.panel--map) {
+  display: none;
+}
+
+.console--map-focus .panel--map {
+  height: 100vh;
+}
+
 /* ---------------------------------------------------------------- header -- */
 
 .strip--header {
@@ -258,6 +271,58 @@ button {
   cursor: crosshair;
 }
 
+.zoom-tools {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.zoom-tools__value {
+  min-width: 47px;
+  padding: 3px 7px;
+  color: var(--ink);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: var(--panel);
+}
+
+.zoom-tools .zoom-tools__button {
+  min-width: 27px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.crowd-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.crowd-view__select {
+  appearance: none;
+  min-width: 112px;
+  padding: 4px 22px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #16202b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a99a9'/%3E%3C/svg%3E") no-repeat right 7px center;
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.crowd-view__select:hover,
+.crowd-view__select:focus-visible { border-color: #35597f; outline: none; }
+
 .map__readout {
   position: absolute;
   top: 8px;
@@ -310,6 +375,15 @@ button {
 .legend__item--crossing .legend__glyph, .legend__item--crossing .legend__word,
 .legend__item--amenity .legend__glyph, .legend__item--amenity .legend__word,
 .legend__item--exit .legend__glyph, .legend__item--exit .legend__word { color: var(--unknown); }
+.legend__item--grid .legend__glyph, .legend__item--grid .legend__word,
+.legend__item--people .legend__glyph, .legend__item--people .legend__word { color: var(--info); }
+.legend__item--sectors .legend__glyph, .legend__item--sectors .legend__word { color: #79c7ff; }
+.legend__item--heatmap { align-items: center; }
+.legend__heat-gradient { width: 72px; height: 7px; border-radius: 999px; background: linear-gradient(90deg, #2b83f6, #18c886, #ffb11b, #ff4057); }
+.legend__item--heat-low .legend__glyph, .legend__item--heat-low .legend__word { color: #2b83f6; }
+.legend__item--heat-active .legend__glyph, .legend__item--heat-active .legend__word { color: #18c886; }
+.legend__item--heat-busy .legend__glyph, .legend__item--heat-busy .legend__word { color: #ffb11b; }
+.legend__item--heat-peak .legend__glyph, .legend__item--heat-peak .legend__word { color: #ff4057; }
 
 /* ------------------------------------------------------------ state atoms -- */
 
@@ -383,6 +457,7 @@ table.zones tbody tr:focus-visible { outline: 1px solid var(--info); outline-off
 }
 
 .zones__countnote { color: var(--ink-faint); }
+.sector-status { color: var(--nominal); letter-spacing: 0.1em; }
 
 /* ------------------------------------------------------------- prediction -- */
 

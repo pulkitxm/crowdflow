@@ -64,6 +64,7 @@ export interface RehearseOptions {
 }
 
 interface Walker {
+  personId: number;
   identity: NodeIdentity;
   fuser: PositionFuser;
   from: Position;
@@ -94,6 +95,7 @@ export async function rehearseLivePhones(options: RehearseOptions): Promise<Rehe
     walkers.push({
       // Each handset gets its own identity and its own ladder, which is what the
       // app builds per device — a shared fuser would arbitrate between phones.
+      personId: index + 1,
       identity: new NodeIdentity(Date.now() / 1000, undefined, (bytes) => hex(rng, bytes)),
       fuser: new PositionFuser(pack.frame),
       from, to, progress: rng.random(), legM: Math.max(1, distanceM(from, to)),
@@ -106,6 +108,8 @@ export async function rehearseLivePhones(options: RehearseOptions): Promise<Rehe
   };
   const errors: number[] = [];
   const problems = new Set<string>();
+
+  for (const walker of walkers) await loginPerson(api, options.circuitId, walker.personId);
 
   for (let tick = 0; tick < options.ticks; tick++) {
     const now = Date.now() / 1000;
@@ -143,7 +147,7 @@ export async function rehearseLivePhones(options: RehearseOptions): Promise<Rehe
       run.by_source[fix.source] = (run.by_source[fix.source] ?? 0) + 1;
       errors.push(distanceM(node.position, truth));
 
-      const ack = await postReport(api, options.circuitId, walker.identity, node, fix.source);
+      const ack = await postReport(api, options.circuitId, walker.personId, walker.identity, node, fix.source);
       run.accepted += ack.accepted;
       run.rejected += ack.rejected;
       for (const problem of ack.problems ?? []) problems.add(problem);
@@ -170,12 +174,12 @@ function offerRadio(
   return true;
 }
 
-async function postReport(api: string, circuitId: string, identity: NodeIdentity, node: CrowdNode, source: PositionSource): Promise<IngestAck> {
+async function postReport(api: string, circuitId: string, personId: number, identity: NodeIdentity, node: CrowdNode, source: PositionSource): Promise<IngestAck> {
   const response = await fetch(`${api}/api/nodes`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      node_id: identity.nodeId, epoch: identity.epoch, circuit_id: circuitId,
+      person_id: personId, node_id: identity.nodeId, epoch: identity.epoch, circuit_id: circuitId,
       // The rung that produced this batch. Without it the console cannot tell a
       // zone that emptied from a zone whose phones all lost their anchor map.
       consent_version: LOCATION_DISCLOSURE_VERSION, nodes: [node], sources: [source],
@@ -188,6 +192,15 @@ async function postReport(api: string, circuitId: string, identity: NodeIdentity
     throw new Error(`POST /api/nodes → ${response.status}: ${detail}`);
   }
   return await response.json() as IngestAck;
+}
+
+async function loginPerson(api: string, circuitId: string, personId: number): Promise<void> {
+  const response = await fetch(`${api}/api/people/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ person_id: personId, circuit_id: circuitId }),
+  });
+  if (!response.ok) throw new Error(`POST /api/people/login -> ${response.status}: ${await response.text()}`);
 }
 
 async function fetchJson<T>(url: string): Promise<T> {

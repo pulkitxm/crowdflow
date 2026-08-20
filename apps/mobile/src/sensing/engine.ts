@@ -18,6 +18,7 @@ const TICK_MS = 2000;
 
 export interface SensingConfig {
   baseUrl: string;
+  personId: number;
   pack: CircuitPack;
   anchors: AnchorPack;
   mode?: 'device' | 'rehearsal';
@@ -49,6 +50,7 @@ export class SensingEngine {
     this.uplink = new Uplink({
       baseUrl: config.baseUrl,
       circuitId: config.pack.id,
+      personId: config.personId,
       onStop: (reason) => { this.stopped = reason; void this.stop(); },
       onResult: () => this.emit(),
     });

@@ -9,10 +9,11 @@
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
 import "./style.css";
-import type { SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
-import { ConsoleLink, control, fetchGeometry, fetchLive } from "./client";
+import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
+import { readMapQuery, writeMapQuery, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
 import { FeedPanel } from "./panels/feed";
@@ -22,16 +23,23 @@ import { LivePanel } from "./panels/live";
 import { MapPanel } from "./panels/map";
 import { MetricsStrip } from "./panels/metrics";
 import { PredictionPanel } from "./panels/prediction";
-import { ZoneTable } from "./panels/table";
+import { SectorTable } from "./panels/table";
 
 const memory = new ZoneMemory();
 
 let geometry: VenueGeometry | null = null;
 let standards: StandardsReport | null = null;
 let latest: TickEnvelope | null = null;
+let latestLive: LiveSnapshot | null = null;
 let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
 let sessionId: string | null = null;
+let gridRequest = 0;
+let sectorGridRequest = 0;
+let sectorGrid: PeopleQueryResult | null = null;
+let cohortRefreshTimer: number | null = null;
+let cohortViewport: { coordinates: Position[]; zoom: number } | null = null;
+let mapState = readMapQuery(window.location.search);
 
 const link = new ConsoleLink({
   onFrame: (frame) => handleFrame(frame),
@@ -54,11 +62,17 @@ const map = new MapPanel(
   must("map-readout"),
   must("map-legend"),
   (zoneId) => select(zoneId),
+  (coordinates, zoom) => persistMapViewport(coordinates, zoom),
 );
+map.setOrientation(mapState.rotation);
+map.setKindView(mapState.layer === "kinds");
+map.setGridVisible(mapState.grid);
+map.setCrowdMode(mapState.crowd);
+map.setSectorVisible(mapState.sectors);
 
-const table = new ZoneTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
+const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => focusSector(zoneId));
 table.onResort(() => {
-  if (latest) redraw(latest);
+  if (latestLive && geometry) map.setSectors(table.update(latestLive, geometry, sectorGrid));
 });
 
 const prediction = new PredictionPanel(must("prediction-body"), must("prediction-model"));
@@ -68,6 +82,32 @@ const metrics = new MetricsStrip(must("metrics"));
 const live = new LivePanel(must("live-body"), must("live-status"));
 
 const mapControls = must("map-controls");
+const consoleElement = must("console");
+consoleElement.classList.toggle("console--map-focus", mapState.full);
+
+const zoomControls = document.createElement("div");
+zoomControls.className = "zoom-tools";
+const zoomValue = document.createElement("output");
+zoomValue.className = "zoom-tools__value";
+zoomValue.setAttribute("aria-label", "Map zoom scale");
+const updateZoomValue = () => { zoomValue.textContent = `${map.zoomRatio.toFixed(1)}×`; };
+must("map-canvas").addEventListener("mapzoom", updateZoomValue);
+const zoomOutButton = document.createElement("button");
+zoomOutButton.type = "button";
+zoomOutButton.className = "tool zoom-tools__button";
+zoomOutButton.textContent = "−";
+zoomOutButton.title = "Zoom out";
+zoomOutButton.setAttribute("aria-label", "Zoom out");
+zoomOutButton.addEventListener("click", () => { map.zoomBy(1 / 1.5); });
+const zoomInButton = document.createElement("button");
+zoomInButton.type = "button";
+zoomInButton.className = "tool zoom-tools__button";
+zoomInButton.textContent = "+";
+zoomInButton.title = "Zoom in";
+zoomInButton.setAttribute("aria-label", "Zoom in");
+zoomInButton.addEventListener("click", () => { map.zoomBy(1.5); });
+zoomControls.append(zoomValue, zoomOutButton, zoomInButton);
+mapControls.append(zoomControls);
 
 const portraitButton = document.createElement("button");
 portraitButton.type = "button";
@@ -75,6 +115,7 @@ portraitButton.className = "tool";
 portraitButton.title = "Toggle between landscape and portrait view";
 portraitButton.addEventListener("click", () => {
   const isPortrait = map.togglePortrait();
+  updateZoomValue();
   portraitButton.classList.toggle("tool--on", isPortrait);
   portraitButton.textContent = isPortrait ? "LANDSCAPE" : "PORTRAIT";
 });
@@ -90,6 +131,7 @@ rotateButton.textContent = "ROTATE";
 rotateButton.title = "Rotate circuit 90°";
 rotateButton.addEventListener("click", () => {
   const deg = map.rotate90();
+  updateZoomValue();
   portraitButton.classList.toggle("tool--on", deg === 90 || deg === 270);
   portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
 });
@@ -104,15 +146,96 @@ kindButton.addEventListener("click", () => {
   const showingKinds = map.toggleKindView();
   kindButton.classList.toggle("tool--on", showingKinds);
   kindButton.textContent = showingKinds ? "LIVE STATE" : "ZONE KINDS";
+  persistMapControls();
 });
+kindButton.classList.toggle("tool--on", map.kindView);
+kindButton.textContent = map.kindView ? "LIVE STATE" : "ZONE KINDS";
 mapControls.append(kindButton);
+
+const gridButton = document.createElement("button");
+gridButton.type = "button";
+gridButton.className = "tool";
+gridButton.title = "Show or hide the adaptive people grid";
+const updateGridButton = () => {
+  gridButton.classList.toggle("tool--on", map.gridVisible);
+  gridButton.textContent = map.gridVisible ? "GRID ON" : "GRID OFF";
+};
+gridButton.addEventListener("click", () => {
+  map.setGridVisible(!map.gridVisible);
+  updateGridButton();
+  persistMapControls();
+});
+updateGridButton();
+mapControls.append(gridButton);
+
+const crowdView = document.createElement("label");
+crowdView.className = "crowd-view";
+crowdView.append("CROWD VIEW");
+const crowdSelect = document.createElement("select");
+crowdSelect.className = "crowd-view__select";
+crowdSelect.setAttribute("aria-label", "Crowd view");
+for (const [value, label] of [["none", "NO VIEW"], ["cohorts", "COHORT VIEW"], ["heatmap", "HEAT MAP VIEW"]] as const) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  crowdSelect.append(option);
+}
+crowdSelect.value = map.crowdMode;
+crowdSelect.addEventListener("change", () => {
+  map.setCrowdMode(crowdSelect.value as CrowdLayer);
+  persistMapControls();
+});
+crowdView.append(crowdSelect);
+mapControls.append(crowdView);
+
+const sectorButton = document.createElement("button");
+sectorButton.type = "button";
+sectorButton.className = "tool";
+sectorButton.title = "Show or hide named circuit sectors and their live crowd";
+const updateSectorButton = () => {
+  sectorButton.classList.toggle("tool--on", map.sectorsVisible);
+  sectorButton.textContent = map.sectorsVisible ? "SECTORS ON" : "SECTORS OFF";
+};
+sectorButton.addEventListener("click", () => {
+  map.setSectorVisible(!map.sectorsVisible);
+  updateSectorButton();
+  persistMapControls();
+});
+updateSectorButton();
+mapControls.append(sectorButton);
 
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
 fitButton.textContent = "FIT";
-fitButton.addEventListener("click", () => map.fit());
+fitButton.addEventListener("click", () => { map.fit(); updateZoomValue(); });
 mapControls.append(fitButton);
+
+const focusButton = document.createElement("button");
+focusButton.type = "button";
+focusButton.className = "tool";
+focusButton.title = "Toggle full map. Press Escape to exit.";
+focusButton.setAttribute("aria-keyshortcuts", "Escape");
+focusButton.classList.toggle("tool--on", mapState.full);
+focusButton.textContent = mapState.full ? "EXIT FULL" : "FULL MAP";
+focusButton.addEventListener("click", () => {
+  setMapFocused(!consoleElement.classList.contains("console--map-focus"));
+  persistMapControls();
+});
+mapControls.append(focusButton);
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !consoleElement.classList.contains("console--map-focus")) return;
+  event.preventDefault();
+  setMapFocused(false);
+  persistMapControls();
+});
+updateZoomValue();
+
+function setMapFocused(focused: boolean): void {
+  consoleElement.classList.toggle("console--map-focus", focused);
+  focusButton.classList.toggle("tool--on", focused);
+  focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+}
 
 function zoneName(id: string): string {
   return geometry?.pack.zones?.[id]?.name ?? id;
@@ -124,11 +247,55 @@ function select(zoneId: string | null): void {
   table.setSelected(zoneId);
 }
 
+function focusSector(sectorId: string): void {
+  select(sectorId);
+  setMapFocused(true);
+  persistMapControls();
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => map.focusSector(sectorId));
+  });
+}
+
+function persistMapViewport(coordinates: Position[], zoom: number): void {
+  cohortViewport = { coordinates, zoom };
+  const center = coordinates.reduce(
+    (total, position) => ({ x: total.x + position.x / coordinates.length, y: total.y + position.y / coordinates.length }),
+    { x: 0, y: 0 },
+  );
+  mapState = { ...mapState, zoom, center };
+  updateZoomValue();
+  persistMapControls();
+  void loadGrid(coordinates, zoom);
+}
+
+function scheduleCohortRefresh(): void {
+  if (cohortRefreshTimer != null) window.clearTimeout(cohortRefreshTimer);
+  cohortRefreshTimer = window.setTimeout(() => {
+    cohortRefreshTimer = null;
+    const viewport = cohortViewport;
+    if (viewport) void loadGrid(viewport.coordinates, viewport.zoom);
+    void loadSectorGrid();
+  }, 250);
+}
+
+function persistMapControls(): void {
+  mapState = {
+    ...mapState,
+    full: consoleElement.classList.contains("console--map-focus"),
+    rotation: map.orientationDeg,
+    layer: map.kindView ? "kinds" : "live",
+    grid: map.gridVisible,
+    crowd: map.crowdMode,
+    sectors: map.sectorsVisible,
+  };
+  const search = writeMapQuery(window.location.search, mapState);
+  window.history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
+}
+
 function redraw(envelope: TickEnvelope): void {
   const rows: ZoneRow[] = buildRows(envelope, geometry, memory);
   const byId = new Map(rows.map((row) => [row.id, row]));
   map.update(envelope, rows);
-  table.update(envelope, rows);
   table.setSelected(selected);
   prediction.update(envelope, byId, zoneName);
   intervention.update(envelope, zoneName);
@@ -142,6 +309,9 @@ async function loadGeometry(circuitId: string): Promise<void> {
       `${geometry.pack.name.toUpperCase()} · ${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
       `${Object.keys(geometry.pack.edges ?? {}).length} EDGES`;
     map.setGeometry(geometry, standards);
+    map.restoreView(mapState.zoom, mapState.center);
+    if (latestLive) map.setSectors(table.update(latestLive, geometry, sectorGrid));
+    void loadSectorGrid();
     if ((geometry.integrity_problems ?? []).length > 0) {
       // Shown, never swallowed: a console rendering a broken pack while looking
       // healthy is the failure this whole screen is built against.
@@ -154,9 +324,55 @@ async function loadGeometry(circuitId: string): Promise<void> {
   }
 }
 
+async function loadSectorGrid(): Promise<void> {
+  const circuitId = latestSession?.circuit_id;
+  const venue = geometry;
+  if (!circuitId || !venue) return;
+  const request = ++sectorGridRequest;
+  const bounds = venue.pack.frame.venue_bounds_m;
+  const minX = Number(bounds[0]);
+  const minY = Number(bounds[1]);
+  const maxX = Number(bounds[2]);
+  const maxY = Number(bounds[3]);
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
+  const coordinates = [
+    { x: minX, y: minY },
+    { x: maxX, y: minY },
+    { x: maxX, y: maxY },
+    { x: minX, y: maxY },
+  ];
+  try {
+    const result = await fetchPeopleGrid(circuitId, coordinates, 1);
+    if (request !== sectorGridRequest) return;
+    sectorGrid = result;
+    if (latestLive) map.setSectors(table.update(latestLive, venue, result));
+  } catch (error) {
+    console.error("sector crowd unavailable", error);
+  }
+}
+
+async function loadGrid(coordinates: Position[], zoom: number): Promise<void> {
+  const circuitId = latestSession?.circuit_id;
+  if (!circuitId) return;
+  const request = ++gridRequest;
+  try {
+    const result = await fetchPeopleGrid(circuitId, coordinates, zoom);
+    if (request === gridRequest) map.setGrid(result);
+  } catch (error) {
+    console.error("grid unavailable", error);
+  }
+}
+
 function handleFrame(frame: SocketFrame): void {
   latestSession = frame.session;
   header.setSession(frame.session);
+  if (frame.live) {
+    latestLive = frame.live;
+    live.update(frame.live);
+    map.updateLive(frame.live);
+    if (geometry) map.setSectors(table.update(frame.live, geometry, sectorGrid));
+    scheduleCohortRefresh();
+  }
 
   if (frame.type === "hello") {
     if (frame.standards) standards = frame.standards;
@@ -194,20 +410,6 @@ function handleFrame(frame: SocketFrame): void {
  * running while the socket is down, which is exactly when an operator most needs
  * to know whether the phones are still talking.
  */
-const LIVE_POLL_MS = 1000;
-
-async function pollLive(): Promise<void> {
-  try {
-    const snapshot = await fetchLive();
-    if (snapshot) live.update(snapshot);
-    else live.setIdle();
-  } catch (error) {
-    live.setProblem(error instanceof Error ? error.message : "the live feed could not be read");
-  }
-}
-
 live.setIdle();
-void pollLive();
-setInterval(() => void pollLive(), LIVE_POLL_MS);
 
 link.connect();
