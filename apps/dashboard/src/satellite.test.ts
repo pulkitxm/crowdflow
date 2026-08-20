@@ -20,8 +20,8 @@ describe("satellite tiles", () => {
 
   it("chooses more detailed imagery as the venue scale increases", () => {
     expect(satelliteZoom(1, frame.origin_lat)).toBe(17);
-    expect(satelliteZoom(8, frame.origin_lat)).toBe(20);
-    expect(satelliteZoom(1_000_000, frame.origin_lat)).toBe(22);
+    expect(satelliteZoom(8, frame.origin_lat)).toBe(19);
+    expect(satelliteZoom(1_000_000, frame.origin_lat)).toBe(19);
   });
 
   it("covers the visible venue bounds with a bounded tile set", () => {

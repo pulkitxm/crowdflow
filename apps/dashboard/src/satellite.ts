@@ -4,6 +4,7 @@ import { toGeo, toVenue } from "@crowdflow/core/positioning";
 const TILE_SIZE = 256;
 const MAX_LATITUDE = 85.05112878;
 const METRES_PER_PIXEL_AT_EQUATOR = 156543.03392804097;
+const MAX_SILVERSTONE_IMAGERY_ZOOM = 19;
 
 export interface TileCoordinate {
   x: number;
@@ -18,7 +19,7 @@ export interface ScreenPoint {
 
 export function satelliteZoom(scale: number, latitude: number): number {
   const value = Math.log2(METRES_PER_PIXEL_AT_EQUATOR * Math.cos(latitude * Math.PI / 180) * Math.max(scale, 0.000001));
-  return Math.min(22, Math.max(0, Math.round(value)));
+  return Math.min(MAX_SILVERSTONE_IMAGERY_ZOOM, Math.max(0, Math.round(value)));
 }
 
 export function geoToWorldPixel(lat: number, lon: number, zoom: number): ScreenPoint {
@@ -40,16 +41,16 @@ export function worldPixelToGeo(x: number, y: number, zoom: number): { lat: numb
   };
 }
 
-export function visibleTiles(frame: CoordinateFrame, corners: Position[], zoom: number): TileCoordinate[] {
+export function visibleTiles(frame: CoordinateFrame, corners: Position[], zoom: number, padding = 0): TileCoordinate[] {
   const pixels = corners.map((position) => {
     const point = toGeo(frame, position);
     return geoToWorldPixel(point.lat, point.lon, zoom);
   });
   const limit = 2 ** zoom;
-  const minX = Math.max(0, Math.floor(Math.min(...pixels.map((point) => point.x)) / TILE_SIZE) - 1);
-  const maxX = Math.min(limit - 1, Math.floor(Math.max(...pixels.map((point) => point.x)) / TILE_SIZE) + 1);
-  const minY = Math.max(0, Math.floor(Math.min(...pixels.map((point) => point.y)) / TILE_SIZE) - 1);
-  const maxY = Math.min(limit - 1, Math.floor(Math.max(...pixels.map((point) => point.y)) / TILE_SIZE) + 1);
+  const minX = Math.max(0, Math.floor(Math.min(...pixels.map((point) => point.x)) / TILE_SIZE) - padding);
+  const maxX = Math.min(limit - 1, Math.floor(Math.max(...pixels.map((point) => point.x)) / TILE_SIZE) + padding);
+  const minY = Math.max(0, Math.floor(Math.min(...pixels.map((point) => point.y)) / TILE_SIZE) - padding);
+  const maxY = Math.min(limit - 1, Math.floor(Math.max(...pixels.map((point) => point.y)) / TILE_SIZE) + padding);
   const tiles: TileCoordinate[] = [];
   for (let y = minY; y <= maxY; y += 1) {
     for (let x = minX; x <= maxX; x += 1) tiles.push({ x, y, z: zoom });

@@ -25,7 +25,7 @@ import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
 import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
-import { easeOutCubic, revealProgress } from "../mapMotion";
+import { easeOutCubic, layerTransform, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 import { HEAT_BANDS, heatSpots } from "../heatmap";
@@ -119,6 +119,9 @@ export class MapPanel {
   private rotation: 0 | 90 | 180 | 270 = 270;
   private statics: HTMLCanvasElement | null = null;
   private staticKey = "";
+  private staticView: View | null = null;
+  private staticDpr = 1;
+  private staticRotation: 0 | 90 | 180 | 270 = 270;
   private selected: string | null = null;
   private hovered: string | null = null;
   private dragging: { x: number; y: number } | null = null;
@@ -141,6 +144,13 @@ export class MapPanel {
   private basemap: Basemap = "schematic";
   private theme: Theme = "dark";
   private tileImages = new Map<string, HTMLImageElement>();
+  private satelliteLayer: HTMLCanvasElement | null = null;
+  private satelliteKey = "";
+  private satelliteView: View | null = null;
+  private satelliteDpr = 1;
+  private satelliteRotation: 0 | 90 | 180 | 270 = 270;
+  private satelliteRevision = 0;
+  private satelliteRedrawFrame: number | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -241,7 +251,7 @@ export class MapPanel {
 
   setBasemap(basemap: Basemap): Basemap {
     this.basemap = basemap;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     return this.basemap;
   }
@@ -250,7 +260,7 @@ export class MapPanel {
 
   setTheme(theme: Theme): Theme {
     this.theme = theme;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     this.paintLegend();
     this.paintReadout();
@@ -258,6 +268,15 @@ export class MapPanel {
   }
 
   get themeMode(): Theme { return this.theme; }
+
+  private invalidateBaseLayers(): void {
+    this.statics = null;
+    this.satelliteLayer = null;
+  }
+
+  private get viewIsMoving(): boolean {
+    return this.dragging !== null || this.zoomFrame !== null;
+  }
 
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
@@ -287,14 +306,14 @@ export class MapPanel {
   setOrientation(deg: 0 | 90 | 180 | 270): void {
     if (this.rotation === deg) return;
     this.rotation = deg;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
   }
 
   /** Rotate orientation 90 degrees clockwise */
   rotate90(): number {
     this.rotation = ((this.rotation + 90) % 360) as 0 | 90 | 180 | 270;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
     return this.rotation;
   }
@@ -302,7 +321,7 @@ export class MapPanel {
   /** Toggle between Landscape (0°) and Portrait (90°) views */
   togglePortrait(): boolean {
     this.rotation = (this.rotation === 90 ? 0 : 90);
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
     return this.rotation === 90;
   }
@@ -383,7 +402,7 @@ export class MapPanel {
       offsetX: pad - minX * scale + (width - pad * 2 - (maxX - minX) * scale) / 2,
       offsetY: height - pad + minY * scale - (height - pad * 2 - (maxY - minY) * scale) / 2,
     };
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     this.emitZoom();
     this.notifyViewport();
@@ -420,13 +439,15 @@ export class MapPanel {
         offsetX: startView.offsetX + (targetView.offsetX - startView.offsetX) * progress,
         offsetY: startView.offsetY + (targetView.offsetY - startView.offsetY) * progress,
       };
-      this.statics = null;
-      this.draw();
-      this.emitZoom();
       if (progress < 1) {
+        this.draw();
+        this.emitZoom();
         this.zoomFrame = window.requestAnimationFrame(frame);
       } else {
         this.zoomFrame = null;
+        this.invalidateBaseLayers();
+        this.draw();
+        this.emitZoom();
         this.notifyViewport();
       }
     };
@@ -448,7 +469,7 @@ export class MapPanel {
       offsetX: width / 2 - rx * scale,
       offsetY: height / 2 + ry * scale,
     };
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     this.emitZoom();
     this.notifyViewport();
@@ -507,7 +528,7 @@ export class MapPanel {
     this.canvas.width = Math.round(width * dpr);
     this.canvas.height = Math.round(height * dpr);
     this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.statics = null;
+    this.invalidateBaseLayers();
     const firstSize = this.viewportWidth === 0 || this.viewportHeight === 0;
     this.viewportWidth = width;
     this.viewportHeight = height;
@@ -552,14 +573,16 @@ export class MapPanel {
         offsetX: px - rx * scale,
         offsetY: py + ry * scale,
       };
-      this.statics = null;
-      this.draw();
-      this.emitZoom();
       if (progress < 1) {
+        this.draw();
+        this.emitZoom();
         this.zoomFrame = window.requestAnimationFrame(frame);
       } else {
         this.zoomFrame = null;
         this.zoomTargetScale = null;
+        this.invalidateBaseLayers();
+        this.draw();
+        this.emitZoom();
         this.notifyViewport();
       }
     };
@@ -612,7 +635,6 @@ export class MapPanel {
         offsetX: this.view.offsetX + dx,
         offsetY: this.view.offsetY + dy,
       };
-      this.statics = null;
       this.draw();
       return;
     }
@@ -625,8 +647,13 @@ export class MapPanel {
   };
 
   private onPointerUp = (): void => {
-    if (this.dragging) this.notifyViewport();
+    const moved = this.dragging !== null;
     this.dragging = null;
+    if (moved) {
+      this.invalidateBaseLayers();
+      this.draw();
+      this.notifyViewport();
+    }
   };
 
   private pick(event: { clientX: number; clientY: number }): string | null {
@@ -654,6 +681,7 @@ export class MapPanel {
   private drawStatics(): HTMLCanvasElement {
     const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.showSectors}:${this.basemap}:${this.theme}`;
     if (this.statics && this.staticKey === key) return this.statics;
+    if (this.statics && this.staticView && this.viewIsMoving) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
     const layer = document.createElement("canvas");
@@ -664,6 +692,9 @@ export class MapPanel {
     if (!ctx || !geometry) {
       this.statics = layer;
       this.staticKey = key;
+      this.staticView = { ...this.view };
+      this.staticDpr = dpr;
+      this.staticRotation = this.rotation;
       return layer;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -737,6 +768,9 @@ export class MapPanel {
 
     this.statics = layer;
     this.staticKey = key;
+    this.staticView = { ...this.view };
+    this.staticDpr = dpr;
+    this.staticRotation = this.rotation;
     return layer;
   }
 
@@ -1042,13 +1076,18 @@ export class MapPanel {
     if (this.basemap === "satellite") {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      this.drawSatellite(ctx, width, height);
+      const satellite = this.drawSatelliteLayer(width, height);
+      if (this.satelliteView && this.satelliteRotation === this.rotation) {
+        this.drawCachedLayer(ctx, satellite, this.satelliteView, this.satelliteDpr);
+      }
       ctx.restore();
     }
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.drawStatics(), 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const statics = this.drawStatics();
+    if (this.staticView && this.staticRotation === this.rotation) {
+      this.drawCachedLayer(ctx, statics, this.staticView, this.staticDpr);
+    }
 
     const zones = this.geometry.pack.zones ?? {};
     const gridProgress = this.previousGrid
@@ -1082,7 +1121,43 @@ export class MapPanel {
     ctx.restore();
   }
 
-  private drawSatellite(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  private drawCachedLayer(
+    ctx: CanvasRenderingContext2D,
+    layer: HTMLCanvasElement,
+    sourceView: View,
+    sourceDpr: number,
+  ): void {
+    const transform = layerTransform(sourceView, this.view);
+    ctx.save();
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+    ctx.drawImage(layer, 0, 0, layer.width / sourceDpr, layer.height / sourceDpr);
+    ctx.restore();
+  }
+
+  private drawSatelliteLayer(width: number, height: number): HTMLCanvasElement {
+    const dpr = window.devicePixelRatio || 1;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.theme}:${this.satelliteRevision}`;
+    if (this.satelliteLayer && this.satelliteKey === key) return this.satelliteLayer;
+    if (this.satelliteLayer && this.satelliteView && this.viewIsMoving) return this.satelliteLayer;
+
+    const layer = document.createElement("canvas");
+    layer.width = this.canvas.width;
+    layer.height = this.canvas.height;
+    const ctx = layer.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.paintSatellite(ctx, width, height);
+    }
+    this.satelliteLayer = layer;
+    this.satelliteKey = key;
+    this.satelliteView = { ...this.view };
+    this.satelliteDpr = dpr;
+    this.satelliteRotation = this.rotation;
+    return layer;
+  }
+
+  private paintSatellite(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     const geometry = this.geometry;
     if (!geometry) return;
     const frame = geometry.pack.frame;
@@ -1114,7 +1189,11 @@ export class MapPanel {
   private tileImage(tile: TileCoordinate): HTMLImageElement {
     const key = `${tile.z}/${tile.y}/${tile.x}`;
     const cached = this.tileImages.get(key);
-    if (cached) return cached;
+    if (cached) {
+      this.tileImages.delete(key);
+      this.tileImages.set(key, cached);
+      return cached;
+    }
     if (this.tileImages.size >= 256) {
       const oldest = this.tileImages.keys().next().value;
       if (oldest) this.tileImages.delete(oldest);
@@ -1123,7 +1202,13 @@ export class MapPanel {
     image.crossOrigin = "anonymous";
     image.decoding = "async";
     image.addEventListener("load", () => {
-      if (this.basemap === "satellite") this.draw();
+      if (this.satelliteRedrawFrame != null) return;
+      this.satelliteRedrawFrame = window.requestAnimationFrame(() => {
+        this.satelliteRedrawFrame = null;
+        this.satelliteRevision += 1;
+        if (!this.viewIsMoving) this.satelliteLayer = null;
+        if (this.basemap === "satellite") this.draw();
+      });
     });
     image.src = satelliteTileUrl(tile);
     this.tileImages.set(key, image);
