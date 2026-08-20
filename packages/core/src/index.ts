@@ -17,6 +17,7 @@ export * from './intervention/whatif.js';
 export * from './loop.js';
 export * from './metrics.js';
 export * from './participation.js';
+export * from './positioning/index.js';
 export * from './refinement/trace.js';
 export * from './refinement/capacity.js';
 export * from './refinement/staleness.js';

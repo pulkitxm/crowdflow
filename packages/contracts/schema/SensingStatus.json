@@ -1,0 +1,144 @@
+{
+  "$ref": "#/$defs/SensingStatus",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Position": {
+      "additionalProperties": false,
+      "description": "A point in the venue's local metric frame, in metres.\n\nNever latitude/longitude. Lat/lon exists only at the circuit pack's origin and at the device's location adapter (plan.md section 10).",
+      "properties": {
+        "x": {
+          "description": "metres east of venue origin",
+          "type": "number"
+        },
+        "y": {
+          "description": "metres north of venue origin",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "PositionFix": {
+      "additionalProperties": false,
+      "description": "A resolved position, with the honesty attached.\n\n`accuracy_m` is a one-sigma radius, and `residual_m` is what the solve could not explain. They fail apart on purpose: a tight `accuracy_m` beside a large `residual_m` means the anchor map is wrong, not that the phone is confused, and that is the difference between recalibrating a venue and blaming a handset.",
+      "properties": {
+        "accuracy_m": {
+          "description": "positional one-sigma. Feeds Confidence; never zero.",
+          "type": "number"
+        },
+        "anchors_used": {
+          "description": "anchors that contributed. Zero for GNSS, and a two-anchor fix is a weighted centroid rather than a trilateration — the count is how a reader tells which.",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "degrees clockwise from north. Null when speed is below the noise floor, because the heading of a stationary phone is noise with a number on it.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "venue frame, metres"
+        },
+        "residual_m": {
+          "description": "RMS of the range residuals, metres. Null when the source does not solve (GNSS).",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/PositionSource"
+        },
+        "speed_ms": {
+          "description": "metres per second, from successive fixes. Null until there are two.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "position",
+        "accuracy_m",
+        "source",
+        "timestamp",
+        "anchors_used"
+      ],
+      "type": "object"
+    },
+    "PositionSource": {
+      "description": "Which radio produced a position.\n\nNot decorative and not merely diagnostic: accuracy differs by an order of magnitude between these, the confidence model weights on it, and an operator reading a sparse zone is entitled to know whether the dots there are GNSS fixes in the open or BLE fixes under a stand.",
+      "enum": [
+        "gnss",
+        "wifi",
+        "ble",
+        "fused",
+        "dead_reckoning"
+      ],
+      "type": "string"
+    },
+    "SensingStatus": {
+      "additionalProperties": false,
+      "description": "What one handset's sensing stack is doing, as the person is shown it.\n\nExists as a contract rather than app state because the app must be able to answer \"what are you doing with my phone right now\" in the same words the console uses. A settings screen that paraphrases is a settings screen that drifts.",
+      "properties": {
+        "active": {
+          "description": "whether the loop is running at all",
+          "type": "boolean"
+        },
+        "available": {
+          "description": "radios usable on this handset right now, best first",
+          "items": {
+            "$ref": "#/$defs/PositionSource"
+          },
+          "type": "array"
+        },
+        "blocked_by": {
+          "description": "why sensing is not running, in words a person can act on ('Bluetooth is off', not 'ERR_ADAPTER_STATE')",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "last_fix": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionFix"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queued": {
+          "description": "samples held because there is no uplink",
+          "type": "number"
+        },
+        "using": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "the source of the most recent accepted fix"
+        }
+      },
+      "required": [
+        "active",
+        "queued"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -2,8 +2,8 @@
 
 // Contract types are imported, never restated: one authored TypeScript
 // definition of ZoneState serves every runtime and UI.
-import type { Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, Edge, Forecast, InterventionCandidate, LOSBand, Position, Provenance, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "@crowdflow/contracts";
-export type { Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, Edge, Forecast, InterventionCandidate, LOSBand, Position, Provenance, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, Sourced, VenueState, Zone, ZoneKind, ZoneState };
+import type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "@crowdflow/contracts";
+export type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState };
 
 /**
  * Everything needed to draw the venue, sent once per console.
@@ -22,6 +22,54 @@ export interface VenueGeometry {
    * pack.validate_integrity() — shown, not hidden: a console that silently renders a broken pack is worse than one that says so
    */
   integrity_problems?: string[];
+}
+
+/**
+ * One row of the race picker.
+ *
+ * A race, not a circuit — which is how a spectator holds it. The circuit is
+ * carried because everything downstream is keyed on it, but nothing in the app
+ * asks somebody to recognise a circuit id.
+ *
+ * `has_map` is the field that matters. Most rounds of a season have no committed
+ * circuit pack, so the app can name the race and give the timetable but cannot
+ * route anybody through the venue. Serving the whole calendar with the gap marked
+ * is honest; serving only the guidable rounds would hide it.
+ */
+export interface RaceSummary {
+  /** season and round — unique, and stable once a season is published */
+  id: string;
+  round: number;
+  season: number;
+  /** as the sport names it: "British Grand Prix" */
+  name: string;
+  circuit_id: string;
+  locality: string;
+  country: string;
+  /** ISO 3166-1 alpha-3, where the source has one */
+  country_code?: string;
+  /** race day, ISO 8601 date */
+  date: string;
+  /** the venue's UTC offset over the weekend, as '+01:00' */
+  utc_offset?: string;
+  /**
+   * First session start and last session end. Derived, not published: a sprint
+   * weekend and a conventional one have different shapes, and neither source
+   * carries a "weekend starts" field.
+   */
+  starts_at: string | null;
+  ends_at: string | null;
+  sessions?: Session[];
+  /**
+   * Whether every session end came from a published timetable rather than a
+   * regulation duration. False means the whole weekend is an estimate — and the
+   * chequered flag is the biggest crowd-movement trigger of the day.
+   */
+  session_times_published: boolean;
+  /** whether a circuit pack is committed, i.e. whether this round can be guided */
+  has_map: boolean;
+  /** when the calendar was imported. A schedule is a snapshot; sessions move. */
+  calendar_generated_at: string;
 }
 
 /**
@@ -356,7 +404,7 @@ export interface ControlRequest {
   speed?: number | null;
 }
 
-export type FrameType = "hello" | "tick" | "status";
+export type FrameType = "hello" | "tick" | "status" | "live";
 
 /**
  * Every WebSocket message, one shape.
@@ -386,5 +434,69 @@ export interface SocketFrame {
    * on hello: the most recent tick, so the screen is never blank
    */
   last_tick?: TickEnvelope | null;
+  /**
+   * the live phone picture, on hello and on every `live` frame. Absent when no handset has ever reported — which is different from present-and-empty, and the console draws them differently.
+   */
+  live?: LiveSnapshot | null;
   note?: string | null;
+}
+
+/**
+ * What real handsets are reporting, right now.
+ *
+ * Not a `TickEnvelope`. A tick carries forecasts, candidates, verdicts and a
+ * ground-truth population, all of which exist because a simulation knows the
+ * answer. None of that is available from live phones, and a snapshot shaped like
+ * a tick would invite the console to draw an empty prediction panel as though
+ * the prediction were "nothing will happen".
+ *
+ * What it carries instead is the honesty layer: how many devices, over which
+ * radios, how stale, what was rejected and why, and whether the population
+ * figure rests on a measurement or an estimate.
+ */
+export interface LiveSnapshot {
+  circuit_id: string;
+  /**
+   * unix seconds, server clock. The console's staleness clock, and the phone's drift correction.
+   */
+  server_time: number;
+  /**
+   * seconds since the last accepted batch. Null before the first one. A live panel showing dots with no age beside them is a photograph presented as a window.
+   */
+  last_report_age_s: number | null;
+  participation: number;
+  /**
+   * where the participation rate came from. ASSUMED until a capture-recapture measurement exists — and `estimated_population` is observed devices divided by it, so this label decides how much the population number is worth.
+   */
+  participation_provenance: Provenance;
+  state: VenueState;
+  /**
+   * one mark per reporting device in the window, undownsampled
+   */
+  nodes?: NodeMark[];
+  reporting_devices: number;
+  /**
+   * batches by the radio that produced them. A zone going quiet as every phone in it drops from Wi-Fi to nothing looks identical to the zone emptying, unless this is on screen.
+   */
+  by_source?: Partial<Record<PositionSource, number>>;
+  accepted_total: number;
+  rejected_total: number;
+  /**
+   * rejection reasons by count, worst first. '3,400 rejected' is not actionable; '3,400 rejected: position outside venue bounds' is a wrong circuit id in a config file.
+   */
+  problems?: Record<string, number>;
+  coverage: CoverageReport;
+}
+
+/**
+ * Turn live ingest on for one circuit.
+ *
+ * `participation` is required and has no default. Defaulting it would put a
+ * plausible number behind `estimated_population` without anybody choosing it,
+ * and that number is the one an operator would act on.
+ */
+export interface LiveRequest {
+  circuit_id: string;
+  participation: number;
+  window_s?: number | null;
 }

@@ -106,6 +106,122 @@ export const CAPTURE_RECAPTURE_MIN_OVERLAP = 1;
 export const ASSUMED_PRIVATE_SKETCH_K = 32;
 export const ASSUMED_PRIVATE_SKETCH_EPSILON = 1;
 
+/**
+ * Radio positioning.
+ *
+ * Every number here is a starting value for a curve that must be walked before
+ * it can be trusted. `rssi_at_1m` and the path-loss exponent are the intercept
+ * and the slope of the same line, and the line is a property of one
+ * installation in one crowd — an anchor behind a metal panel and one on a mast
+ * share a datasheet and nothing else. So these are ASSUMED, they are the
+ * defaults a `RadioAnchor` overrides with its own Sourced values, and
+ * 'path_loss_exponent' is on the measured-not-assumed list below.
+ */
+
+/** Free-space reference for a 2.4 GHz AP at one metre. */
+export const ASSUMED_WIFI_RSSI_AT_1M_DBM = -40;
+/** The iBeacon convention, which is a one-metre reference and not a 2.4 GHz law. */
+export const ASSUMED_BLE_RSSI_AT_1M_DBM = -59;
+/** Free space is 2.0. Open paddock tarmac with line of sight sits just above it. */
+export const ASSUMED_PATH_LOSS_EXPONENT_OPEN = 2.2;
+/**
+ * A packed concourse. Water absorbs 2.4 GHz and a crowd is mostly water, so the
+ * exponent rises with the density it is measuring — which is why a fix degrades
+ * exactly where the system most needs one.
+ */
+export const ASSUMED_PATH_LOSS_EXPONENT_CROWD = 3.3;
+/** Under a grandstand: concrete, steel and no line of sight to anything. */
+export const ASSUMED_PATH_LOSS_EXPONENT_COVERED = 3.8;
+
+/** Below three, the geometry is not a fix. Two anchors give a weighted centroid, and the contract says so via PositionFix.anchors_used. */
+export const ASSUMED_MIN_ANCHORS_FOR_FIX = 3;
+/** An observation older than this describes where the phone was, not where it is. */
+export const ASSUMED_ANCHOR_OBSERVATION_TTL_S = 20;
+/**
+ * Android throttles foreground Wi-Fi scans to four per two minutes since 9
+ * (Pie). A platform fact, not a preference: ask for more and the extra calls
+ * return the previous results with old timestamps, which is worse than not
+ * asking. Everything about the Wi-Fi cadence follows from this one number.
+ */
+export const ANDROID_WIFI_SCAN_THROTTLE_PER_2_MIN = 4;
+export const ASSUMED_WIFI_SCAN_INTERVAL_S = 120 / ANDROID_WIFI_SCAN_THROTTLE_PER_2_MIN;
+/** A BLE scan window long enough to hear a beacon advertising at 1 Hz more than once. */
+export const ASSUMED_BLE_SCAN_WINDOW_S = 4;
+/** GNSS is cheap to sample and the fused provider caches, so this is the loop cadence rather than a duty cycle. */
+export const ASSUMED_GNSS_SAMPLE_INTERVAL_S = 10;
+
+/**
+ * A fix wider than this is not a position, it is a zone name with extra steps.
+ * Rejected outright rather than reported with a large sigma, because the state
+ * engine would place it in a zone and the operator would count it there.
+ */
+export const ASSUMED_FIX_ACCURACY_CEILING_M = 60;
+/** No radio solve can beat this; anything tighter is the solver flattering itself. */
+export const ASSUMED_FIX_ACCURACY_FLOOR_M = 3;
+/** After this, the last fix is history and the node stops reporting rather than repeating itself. */
+export const ASSUMED_FIX_STALE_S = 45;
+/**
+ * How much better a challenger must be before the fuser switches source.
+ * Without hysteresis two sources of similar quality trade the lead every tick,
+ * and the resulting position jitters between two solutions that are each fine —
+ * which reads on a console as a person vibrating.
+ */
+export const ASSUMED_SOURCE_SWITCH_HYSTERESIS = 1.25;
+/**
+ * How long a moving node may be carried on its last velocity with no new fix.
+ * Long enough to cross a Wi-Fi scan gap, short enough that it cannot walk a
+ * phone through a wall and into the next zone.
+ */
+export const ASSUMED_DEAD_RECKONING_MAX_S = 15;
+/** Below this, reported speed is sensor noise and heading is meaningless. */
+export const ASSUMED_HEADING_SPEED_FLOOR_MS = 0.3;
+/** Displacement smoothing across fixes: fully responsive is jitter, fully damped is a stale dot. */
+export const ASSUMED_VELOCITY_SMOOTHING = 0.4;
+
+/** How often the handset's pseudonym rotates. An id that outlives the walk is a trail. */
+export const ASSUMED_ID_ROTATION_S = 900;
+/** Samples per upload batch. Bounded so an uplink that has been unreachable for an hour cannot arrive as one enormous request. */
+export const ASSUMED_UPLINK_BATCH_MAX = 60;
+export const ASSUMED_UPLINK_INTERVAL_S = 30;
+/** Retained sensing beyond this is deleted, reported or not. The disclosure says 24 hours; this is that sentence in code. */
+export const RETENTION_MAX_S = 24 * 60 * 60;
+
+/**
+ * The disclosure a report cites.
+ *
+ * Versioned because the sentence people agreed to is part of the data. If the
+ * wording of what the app promises changes, reports gathered under the old
+ * wording are not retroactively covered by the new one — so the version travels
+ * with every batch and the server rejects an id it does not serve, rather than
+ * accepting the data and sorting the consent question out later.
+ */
+export const LOCATION_DISCLOSURE_VERSION = 'location-disclosure.v1';
+
+/** Disclosure versions still honoured. Withdraw one by removing it here: every
+ *  handset still citing it stops being accepted, and stops sensing, on the next
+ *  batch — because `IngestAck.stop` says so. */
+export const SERVED_DISCLOSURE_VERSIONS = [LOCATION_DISCLOSURE_VERSION] as const;
+
+/**
+ * How long a session lasts when nobody published an end time.
+ *
+ * Jolpica gives session START times only. An end has to come from somewhere, and
+ * these are the sporting regulations' scheduled durations — a practice hour, a
+ * qualifying hour, a race capped at two. They are ASSUMED because a session that
+ * is red-flagged, shortened for weather or run to the two-hour limit ends when it
+ * ends, and the chequered flag is the single largest crowd-movement trigger of
+ * the day. Every session built from these carries `end_provenance: 'assumed'` so
+ * nothing downstream mistakes the number for a schedule.
+ */
+export const ASSUMED_SESSION_MINUTES: Record<string, number> = {
+  practice: 60,
+  qualifying: 60,
+  sprint: 30,
+  race: 120,
+  support: 45,
+  ceremony: 30,
+};
+
 export const MEASURED_NOT_ASSUMED = [
   'participation_rate',
   'zone_capacity',
@@ -116,4 +232,7 @@ export const MEASURED_NOT_ASSUMED = [
   'radio_range',
   'hop_latency',
   'uplink_coverage',
+  'path_loss_exponent',
+  'anchor_position',
+  'fix_accuracy',
 ] as const;

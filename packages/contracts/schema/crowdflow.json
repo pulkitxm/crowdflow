@@ -33,6 +33,32 @@
       ],
       "type": "object"
     },
+    "AnchorPack": {
+      "additionalProperties": false,
+      "description": "A surveyed anchor map for one circuit.\n\nShipped beside the circuit pack rather than inside it because it decays on a different clock: the geography is good for a decade, the Wi-Fi estate is re-cabled between events.",
+      "properties": {
+        "anchors": {
+          "additionalProperties": {
+            "$ref": "#/$defs/RadioAnchor"
+          },
+          "type": "object"
+        },
+        "circuit_id": {
+          "type": "string"
+        },
+        "surveyed_at": {
+          "description": "when the survey was walked, ISO 8601. A fix from a year-old anchor map is a guess wearing a number.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "circuit_id"
+      ],
+      "type": "object"
+    },
     "ArrivalView": {
       "additionalProperties": false,
       "properties": {
@@ -435,20 +461,46 @@
         "circuit_id": {
           "type": "string"
         },
+        "country": {
+          "type": "string"
+        },
+        "country_code": {
+          "description": "ISO 3166-1 alpha-3, where the source gives one. For a flag, nothing more.",
+          "type": "string"
+        },
+        "date": {
+          "description": "Race day, ISO 8601 date. The weekend spans three days; this is the one that matters, and the one the chequered-flag egress trigger hangs off.",
+          "type": "string"
+        },
         "gates_open": {
           "type": [
             "string",
             "null"
           ]
         },
+        "locality": {
+          "description": "Town, then country. How a venue is found on a map and named in a ticket.",
+          "type": "string"
+        },
         "name": {
           "type": "string"
+        },
+        "round": {
+          "description": "Championship round. What a spectator actually says — \"round twelve\", not a circuit id — and the natural sort key for a season.",
+          "type": "number"
+        },
+        "season": {
+          "type": "number"
         },
         "sessions": {
           "items": {
             "$ref": "#/$defs/Session"
           },
           "type": "array"
+        },
+        "utc_offset": {
+          "description": "The venue's offset from UTC over the weekend, as '+01:00'.\n\nCarried because every timestamp in this contract is UTC and every session time a spectator reads is local. A phone at the circuit is on venue time anyway; a phone being used to plan the trip from another country is not, and that is exactly when somebody misreads a start time by an hour.",
+          "type": "string"
         }
       },
       "required": [
@@ -595,6 +647,40 @@
         "recommended_id",
         "headline",
         "because"
+      ],
+      "type": "object"
+    },
+    "IngestAck": {
+      "additionalProperties": false,
+      "description": "The server's answer to a batch.",
+      "properties": {
+        "accepted": {
+          "type": "number"
+        },
+        "problems": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rejected": {
+          "description": "samples dropped, with why in `problems`",
+          "type": "number"
+        },
+        "server_time": {
+          "description": "unix seconds, server clock. Lets a handset correct drift without a time API — timestamps decide the staleness window, so a phone six minutes fast reports nothing that counts.",
+          "type": "number"
+        },
+        "stop": {
+          "description": "Stop uploading and stop sensing. Set when the session has ended or the disclosure this report cites is no longer served. A phone that keeps sensing after the event is a battery complaint and a privacy problem.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "accepted",
+        "rejected",
+        "server_time",
+        "stop"
       ],
       "type": "object"
     },
@@ -754,6 +840,48 @@
       ],
       "type": "object"
     },
+    "NodeReport": {
+      "additionalProperties": false,
+      "description": "What a handset uploads.\n\nDeliberately made of CrowdNode and nothing else. There are no anchor ids here, no RSSI, no scan lists: those are resolved on the phone and dropped. A report is a position, a speed and a heading under a rotating pseudonym — enough to count a crowd, not enough to follow a person.\n\nBatched because uplinks are opportunistic (D7): a phone with no data connection keeps sensing and sends the backlog when it next has one.",
+      "properties": {
+        "circuit_id": {
+          "type": "string"
+        },
+        "consent_version": {
+          "description": "which disclosure this person actually agreed to. A report under an unknown consent version is rejected, not accepted-and-flagged.",
+          "type": "string"
+        },
+        "epoch": {
+          "type": "number"
+        },
+        "node_id": {
+          "description": "rotating pseudonym, valid within its epoch only",
+          "type": "string"
+        },
+        "nodes": {
+          "description": "one or more samples, oldest first",
+          "items": {
+            "$ref": "#/$defs/CrowdNode"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "description": "which radios were usable while this batch was formed. Explains a coverage gap: 'the zone is empty' and 'every phone in the zone lost its anchor map' look identical without it.",
+          "items": {
+            "$ref": "#/$defs/PositionSource"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "node_id",
+        "epoch",
+        "circuit_id",
+        "consent_version",
+        "nodes"
+      ],
+      "type": "object"
+    },
     "OfflineView": {
       "additionalProperties": false,
       "properties": {
@@ -795,6 +923,140 @@
       "required": [
         "x",
         "y"
+      ],
+      "type": "object"
+    },
+    "PositionFix": {
+      "additionalProperties": false,
+      "description": "A resolved position, with the honesty attached.\n\n`accuracy_m` is a one-sigma radius, and `residual_m` is what the solve could not explain. They fail apart on purpose: a tight `accuracy_m` beside a large `residual_m` means the anchor map is wrong, not that the phone is confused, and that is the difference between recalibrating a venue and blaming a handset.",
+      "properties": {
+        "accuracy_m": {
+          "description": "positional one-sigma. Feeds Confidence; never zero.",
+          "type": "number"
+        },
+        "anchors_used": {
+          "description": "anchors that contributed. Zero for GNSS, and a two-anchor fix is a weighted centroid rather than a trilateration — the count is how a reader tells which.",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "degrees clockwise from north. Null when speed is below the noise floor, because the heading of a stationary phone is noise with a number on it.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "venue frame, metres"
+        },
+        "residual_m": {
+          "description": "RMS of the range residuals, metres. Null when the source does not solve (GNSS).",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/PositionSource"
+        },
+        "speed_ms": {
+          "description": "metres per second, from successive fixes. Null until there are two.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "position",
+        "accuracy_m",
+        "source",
+        "timestamp",
+        "anchors_used"
+      ],
+      "type": "object"
+    },
+    "RadioAnchor": {
+      "additionalProperties": false,
+      "description": "One surveyed radio landmark at a known place in the venue.\n\n`anchor_id` is a digest of the hardware identifier (BSSID, or beacon UUID/major/minor), never the identifier itself. That is not a privacy measure — the MAC space is small enough to brute force — it is so that a pack committed to this repository does not publish a venue's Wi-Fi infrastructure inventory. The privacy measure is that anchor ids stay on the handset.\n\n`rssi_at_1m_dbm` and `path_loss_exponent` are per-anchor because they are properties of an installation, not of a radio standard: an AP behind a metal panel and one on a mast have the same chipset and different curves. Both are Sourced, so a pack can be honest that a given anchor was placed off a site plan (assumed) rather than walked (measured), and the solver can down-weight it accordingly.",
+      "properties": {
+        "anchor_id": {
+          "description": "digest of the hardware identifier, never the identifier",
+          "type": "string"
+        },
+        "floor": {
+          "description": "for multi-level venues; null in a single-level frame",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AnchorKind"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path_loss_exponent": {
+          "$ref": "#/$defs/Sourced",
+          "description": "the exponent of the log-distance model. Free space is 2; a packed concourse is nearer 3.5 because bodies absorb 2.4 GHz."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "venue frame, metres"
+        },
+        "rssi_at_1m_dbm": {
+          "$ref": "#/$defs/Sourced",
+          "description": "calibrated received strength at one metre — the intercept of the range curve"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "kind",
+        "position",
+        "rssi_at_1m_dbm",
+        "path_loss_exponent"
+      ],
+      "type": "object"
+    },
+    "RadioObservation": {
+      "additionalProperties": false,
+      "description": "One radio heard once. Never leaves the handset except in an operator survey.",
+      "properties": {
+        "anchor_id": {
+          "type": "string"
+        },
+        "frequency_mhz": {
+          "description": "2.4 GHz and 5 GHz attenuate differently; the solver uses it to pick the exponent when the anchor does not supply one",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AnchorKind"
+        },
+        "rssi_dbm": {
+          "description": "received signal strength, dBm. Negative; closer to zero is stronger.",
+          "type": "number"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "kind",
+        "rssi_dbm",
+        "timestamp"
       ],
       "type": "object"
     },
@@ -1043,17 +1305,79 @@
       ],
       "type": "object"
     },
+    "SensingStatus": {
+      "additionalProperties": false,
+      "description": "What one handset's sensing stack is doing, as the person is shown it.\n\nExists as a contract rather than app state because the app must be able to answer \"what are you doing with my phone right now\" in the same words the console uses. A settings screen that paraphrases is a settings screen that drifts.",
+      "properties": {
+        "active": {
+          "description": "whether the loop is running at all",
+          "type": "boolean"
+        },
+        "available": {
+          "description": "radios usable on this handset right now, best first",
+          "items": {
+            "$ref": "#/$defs/PositionSource"
+          },
+          "type": "array"
+        },
+        "blocked_by": {
+          "description": "why sensing is not running, in words a person can act on ('Bluetooth is off', not 'ERR_ADAPTER_STATE')",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "last_fix": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionFix"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queued": {
+          "description": "samples held because there is no uplink",
+          "type": "number"
+        },
+        "using": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "the source of the most recent accepted fix"
+        }
+      },
+      "required": [
+        "active",
+        "queued"
+      ],
+      "type": "object"
+    },
     "Session": {
       "additionalProperties": false,
       "properties": {
         "end": {
           "type": "string"
         },
+        "end_provenance": {
+          "$ref": "#/$defs/Provenance",
+          "description": "Whether the end time was published or inferred.\n\nSession ends move — a race runs long, a session is red-flagged — and the egress prediction hangs off the end of the race more than anything else in this system. An assumed end is a guess about the largest crowd-movement trigger of the day, and it must not read like a schedule."
+        },
         "id": {
           "type": "string"
         },
         "kind": {
           "description": "practice | qualifying | sprint | race | support | ceremony",
+          "type": "string"
+        },
+        "name": {
+          "description": "As the sport names it: 'Practice 1', 'Sprint Qualifying', 'Race'.",
           "type": "string"
         },
         "start": {
@@ -1156,6 +1480,58 @@
         "to",
         "walk_s",
         "way_ahead"
+      ],
+      "type": "object"
+    },
+    "SurveyReport": {
+      "additionalProperties": false,
+      "description": "An operator walk test: observations WITH their positions, to build an anchor map.\n\nThe one path where raw radio observations legitimately leave a device, and it is a staff device on a surveying job, not a spectator's phone. Separate contract, separate endpoint, separate consent — so that no amount of refactoring can quietly widen the spectator path into this one.",
+      "properties": {
+        "circuit_id": {
+          "type": "string"
+        },
+        "samples": {
+          "items": {
+            "$ref": "#/$defs/SurveySample"
+          },
+          "type": "array"
+        },
+        "surveyor": {
+          "description": "who walked it; a staff identifier, not a pseudonym",
+          "type": "string"
+        }
+      },
+      "required": [
+        "circuit_id",
+        "surveyor"
+      ],
+      "type": "object"
+    },
+    "SurveySample": {
+      "additionalProperties": false,
+      "properties": {
+        "accuracy_m": {
+          "description": "how well the surveyor knew where they were standing",
+          "type": "number"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/RadioObservation"
+          },
+          "type": "array"
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "ground truth for this sample, venue frame"
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "position",
+        "accuracy_m",
+        "timestamp"
       ],
       "type": "object"
     },

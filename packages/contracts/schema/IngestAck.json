@@ -1,0 +1,40 @@
+{
+  "$ref": "#/$defs/IngestAck",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "IngestAck": {
+      "additionalProperties": false,
+      "description": "The server's answer to a batch.",
+      "properties": {
+        "accepted": {
+          "type": "number"
+        },
+        "problems": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rejected": {
+          "description": "samples dropped, with why in `problems`",
+          "type": "number"
+        },
+        "server_time": {
+          "description": "unix seconds, server clock. Lets a handset correct drift without a time API — timestamps decide the staleness window, so a phone six minutes fast reports nothing that counts.",
+          "type": "number"
+        },
+        "stop": {
+          "description": "Stop uploading and stop sensing. Set when the session has ended or the disclosure this report cites is no longer served. A phone that keeps sensing after the event is a battery complaint and a privacy problem.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "accepted",
+        "rejected",
+        "server_time",
+        "stop"
+      ],
+      "type": "object"
+    }
+  }
+}

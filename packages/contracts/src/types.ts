@@ -411,6 +411,17 @@ export interface Session {
    */
   start: string;
   end: string;
+  /** As the sport names it: 'Practice 1', 'Sprint Qualifying', 'Race'. */
+  name?: string;
+  /**
+   * Whether the end time was published or inferred.
+   *
+   * Session ends move — a race runs long, a session is red-flagged — and the
+   * egress prediction hangs off the end of the race more than anything else in
+   * this system. An assumed end is a guess about the largest crowd-movement
+   * trigger of the day, and it must not read like a schedule.
+   */
+  end_provenance?: Provenance;
 }
 
 /**
@@ -424,6 +435,31 @@ export interface EventProfile {
   name: string;
   sessions?: Session[];
   gates_open?: string | null;
+  /**
+   * Championship round. What a spectator actually says — "round twelve", not a
+   * circuit id — and the natural sort key for a season.
+   */
+  round?: number;
+  season?: number;
+  /**
+   * Race day, ISO 8601 date. The weekend spans three days; this is the one that
+   * matters, and the one the chequered-flag egress trigger hangs off.
+   */
+  date?: string;
+  /** Town, then country. How a venue is found on a map and named in a ticket. */
+  locality?: string;
+  country?: string;
+  /** ISO 3166-1 alpha-3, where the source gives one. For a flag, nothing more. */
+  country_code?: string;
+  /**
+   * The venue's offset from UTC over the weekend, as '+01:00'.
+   *
+   * Carried because every timestamp in this contract is UTC and every session
+   * time a spectator reads is local. A phone at the circuit is on venue time
+   * anyway; a phone being used to plan the trip from another country is not, and
+   * that is exactly when somebody misreads a start time by an hour.
+   */
+  utc_offset?: string;
 }
 
 /**
@@ -723,4 +759,280 @@ export interface VenueState {
    * Zones with no reporting device. MUST render as unknown, never as empty. Under D7 uplinks are opportunistic, so coverage genuinely varies.
    */
   unobserved_zones?: string[];
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Radio positioning
+ * ---------------------------------------------------------------------------
+ *
+ * How a handset answers "where am I, in venue metres" when GNSS alone is not
+ * enough. Three radios, one ladder, in this order of preference:
+ *
+ *   Wi-Fi   scan the access points in range, range each one from its RSSI,
+ *           trilaterate against a surveyed anchor map. Android only — iOS has
+ *           no public AP-scan API and never has.
+ *   BLE     the same solve against beacon anchors. Works on both platforms,
+ *           shorter range, so it wins indoors and under stands where the Wi-Fi
+ *           anchor map is thin.
+ *   GNSS    lat/lon from the platform's fused provider, projected into the
+ *           venue frame. At an open circuit this is usually the best of the
+ *           three; under a grandstand it is the worst.
+ *
+ * The ladder is a preference, not a hierarchy of trust: the fuser picks on
+ * measured accuracy, and every fix carries the radio that produced it so a
+ * console can say "this dot came from Bluetooth" rather than implying all dots
+ * are equal.
+ *
+ * What crosses the network is the OUTPUT of this, never the input. Radio
+ * observations name the access points and beacons around a person, which is a
+ * location by another name and a far more identifying one; they are resolved
+ * to a position on the handset and discarded there. The only exception is an
+ * explicit operator survey (see SurveyReport), which is a walk test by staff,
+ * not a spectator's phone.
+ */
+
+/**
+ * Which radio produced a position.
+ *
+ * Not decorative and not merely diagnostic: accuracy differs by an order of
+ * magnitude between these, the confidence model weights on it, and an operator
+ * reading a sparse zone is entitled to know whether the dots there are GNSS
+ * fixes in the open or BLE fixes under a stand.
+ */
+export type PositionSource = "gnss" | "wifi" | "ble" | "fused" | "dead_reckoning";
+
+export type AnchorKind = "wifi_ap" | "ble_beacon";
+
+/**
+ * One surveyed radio landmark at a known place in the venue.
+ *
+ * `anchor_id` is a digest of the hardware identifier (BSSID, or beacon
+ * UUID/major/minor), never the identifier itself. That is not a privacy
+ * measure — the MAC space is small enough to brute force — it is so that a
+ * pack committed to this repository does not publish a venue's Wi-Fi
+ * infrastructure inventory. The privacy measure is that anchor ids stay on the
+ * handset.
+ *
+ * `rssi_at_1m_dbm` and `path_loss_exponent` are per-anchor because they are
+ * properties of an installation, not of a radio standard: an AP behind a metal
+ * panel and one on a mast have the same chipset and different curves. Both are
+ * Sourced, so a pack can be honest that a given anchor was placed off a site
+ * plan (assumed) rather than walked (measured), and the solver can down-weight
+ * it accordingly.
+ */
+export interface RadioAnchor {
+  /**
+   * digest of the hardware identifier, never the identifier
+   */
+  anchor_id: string;
+  kind: AnchorKind;
+  /**
+   * venue frame, metres
+   */
+  position: Position;
+  /**
+   * calibrated received strength at one metre — the intercept of the range curve
+   */
+  rssi_at_1m_dbm: Sourced;
+  /**
+   * the exponent of the log-distance model. Free space is 2; a packed concourse is nearer 3.5 because bodies absorb 2.4 GHz.
+   */
+  path_loss_exponent: Sourced;
+  /**
+   * for multi-level venues; null in a single-level frame
+   */
+  floor?: number | null;
+  note?: string | null;
+}
+
+/**
+ * A surveyed anchor map for one circuit.
+ *
+ * Shipped beside the circuit pack rather than inside it because it decays on a
+ * different clock: the geography is good for a decade, the Wi-Fi estate is
+ * re-cabled between events.
+ */
+export interface AnchorPack {
+  circuit_id: string;
+  /**
+   * when the survey was walked, ISO 8601. A fix from a year-old anchor map is a guess wearing a number.
+   */
+  surveyed_at?: string | null;
+  anchors?: Record<string, RadioAnchor>;
+}
+
+/**
+ * One radio heard once. Never leaves the handset except in an operator survey.
+ */
+export interface RadioObservation {
+  anchor_id: string;
+  kind: AnchorKind;
+  /**
+   * received signal strength, dBm. Negative; closer to zero is stronger.
+   */
+  rssi_dbm: number;
+  /**
+   * unix seconds
+   */
+  timestamp: number;
+  /**
+   * 2.4 GHz and 5 GHz attenuate differently; the solver uses it to pick the exponent when the anchor does not supply one
+   */
+  frequency_mhz?: number | null;
+}
+
+/**
+ * A resolved position, with the honesty attached.
+ *
+ * `accuracy_m` is a one-sigma radius, and `residual_m` is what the solve could
+ * not explain. They fail apart on purpose: a tight `accuracy_m` beside a large
+ * `residual_m` means the anchor map is wrong, not that the phone is confused,
+ * and that is the difference between recalibrating a venue and blaming a
+ * handset.
+ */
+export interface PositionFix {
+  /**
+   * venue frame, metres
+   */
+  position: Position;
+  /**
+   * positional one-sigma. Feeds Confidence; never zero.
+   */
+  accuracy_m: number;
+  source: PositionSource;
+  /**
+   * unix seconds
+   */
+  timestamp: number;
+  /**
+   * anchors that contributed. Zero for GNSS, and a two-anchor fix is a weighted centroid rather than a trilateration — the count is how a reader tells which.
+   */
+  anchors_used: number;
+  /**
+   * RMS of the range residuals, metres. Null when the source does not solve (GNSS).
+   */
+  residual_m?: number | null;
+  /**
+   * metres per second, from successive fixes. Null until there are two.
+   */
+  speed_ms?: number | null;
+  /**
+   * degrees clockwise from north. Null when speed is below the noise floor, because the heading of a stationary phone is noise with a number on it.
+   */
+  heading_deg?: number | null;
+}
+
+/**
+ * What a handset uploads.
+ *
+ * Deliberately made of CrowdNode and nothing else. There are no anchor ids
+ * here, no RSSI, no scan lists: those are resolved on the phone and dropped.
+ * A report is a position, a speed and a heading under a rotating pseudonym —
+ * enough to count a crowd, not enough to follow a person.
+ *
+ * Batched because uplinks are opportunistic (D7): a phone with no data
+ * connection keeps sensing and sends the backlog when it next has one.
+ */
+export interface NodeReport {
+  /**
+   * rotating pseudonym, valid within its epoch only
+   */
+  node_id: string;
+  epoch: number;
+  circuit_id: string;
+  /**
+   * which disclosure this person actually agreed to. A report under an unknown consent version is rejected, not accepted-and-flagged.
+   */
+  consent_version: string;
+  /**
+   * one or more samples, oldest first
+   */
+  nodes: CrowdNode[];
+  /**
+   * which radios were usable while this batch was formed. Explains a coverage gap: 'the zone is empty' and 'every phone in the zone lost its anchor map' look identical without it.
+   */
+  sources?: PositionSource[];
+}
+
+/**
+ * The server's answer to a batch.
+ */
+export interface IngestAck {
+  accepted: number;
+  /**
+   * samples dropped, with why in `problems`
+   */
+  rejected: number;
+  problems?: string[];
+  /**
+   * unix seconds, server clock. Lets a handset correct drift without a time API — timestamps decide the staleness window, so a phone six minutes fast reports nothing that counts.
+   */
+  server_time: number;
+  /**
+   * Stop uploading and stop sensing. Set when the session has ended or the disclosure this report cites is no longer served. A phone that keeps sensing after the event is a battery complaint and a privacy problem.
+   */
+  stop: boolean;
+}
+
+/**
+ * An operator walk test: observations WITH their positions, to build an anchor map.
+ *
+ * The one path where raw radio observations legitimately leave a device, and it
+ * is a staff device on a surveying job, not a spectator's phone. Separate
+ * contract, separate endpoint, separate consent — so that no amount of
+ * refactoring can quietly widen the spectator path into this one.
+ */
+export interface SurveyReport {
+  circuit_id: string;
+  /**
+   * who walked it; a staff identifier, not a pseudonym
+   */
+  surveyor: string;
+  samples?: SurveySample[];
+}
+
+export interface SurveySample {
+  /**
+   * ground truth for this sample, venue frame
+   */
+  position: Position;
+  /**
+   * how well the surveyor knew where they were standing
+   */
+  accuracy_m: number;
+  timestamp: number;
+  observations?: RadioObservation[];
+}
+
+/**
+ * What one handset's sensing stack is doing, as the person is shown it.
+ *
+ * Exists as a contract rather than app state because the app must be able to
+ * answer "what are you doing with my phone right now" in the same words the
+ * console uses. A settings screen that paraphrases is a settings screen that
+ * drifts.
+ */
+export interface SensingStatus {
+  /**
+   * whether the loop is running at all
+   */
+  active: boolean;
+  /**
+   * radios usable on this handset right now, best first
+   */
+  available?: PositionSource[];
+  /**
+   * the source of the most recent accepted fix
+   */
+  using?: PositionSource | null;
+  last_fix?: PositionFix | null;
+  /**
+   * samples held because there is no uplink
+   */
+  queued: number;
+  /**
+   * why sensing is not running, in words a person can act on ('Bluetooth is off', not 'ERR_ADAPTER_STATE')
+   */
+  blocked_by?: string[];
 }

@@ -10,7 +10,7 @@
  */
 import "./style.css";
 import type { SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
-import { ConsoleLink, control, fetchGeometry } from "./client";
+import { ConsoleLink, control, fetchGeometry, fetchLive } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
 import { ZoneMemory, buildRows } from "./model";
@@ -18,6 +18,7 @@ import type { ZoneRow } from "./model";
 import { FeedPanel } from "./panels/feed";
 import { HeaderPanel } from "./panels/header";
 import { InterventionPanel } from "./panels/intervention";
+import { LivePanel } from "./panels/live";
 import { MapPanel } from "./panels/map";
 import { MetricsStrip } from "./panels/metrics";
 import { PredictionPanel } from "./panels/prediction";
@@ -64,6 +65,7 @@ const prediction = new PredictionPanel(must("prediction-body"), must("prediction
 const intervention = new InterventionPanel(must("intervention-body"), must("intervention-status"));
 const feed = new FeedPanel(must("feed-body"), must("feed-count"));
 const metrics = new MetricsStrip(must("metrics"));
+const live = new LivePanel(must("live-body"), must("live-status"));
 
 const fitButton = document.createElement("button");
 fitButton.type = "button";
@@ -141,5 +143,31 @@ function handleFrame(frame: SocketFrame): void {
     redraw(frame.tick);
   }
 }
+
+/**
+ * The live phone feed, polled.
+ *
+ * Deliberately not on the WebSocket. That socket belongs to a scenario session,
+ * and live ingest exists independently of one — a venue with handsets reporting
+ * must be watchable without somebody starting a simulation of it. Once a second
+ * is well inside the cadence a crowd changes at, and the polling loop keeps
+ * running while the socket is down, which is exactly when an operator most needs
+ * to know whether the phones are still talking.
+ */
+const LIVE_POLL_MS = 1000;
+
+async function pollLive(): Promise<void> {
+  try {
+    const snapshot = await fetchLive();
+    if (snapshot) live.update(snapshot);
+    else live.setIdle();
+  } catch (error) {
+    live.setProblem(error instanceof Error ? error.message : "the live feed could not be read");
+  }
+}
+
+live.setIdle();
+void pollLive();
+setInterval(() => void pollLive(), LIVE_POLL_MS);
 
 link.connect();

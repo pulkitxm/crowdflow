@@ -1,0 +1,47 @@
+{
+  "$ref": "#/$defs/RadioObservation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AnchorKind": {
+      "enum": [
+        "wifi_ap",
+        "ble_beacon"
+      ],
+      "type": "string"
+    },
+    "RadioObservation": {
+      "additionalProperties": false,
+      "description": "One radio heard once. Never leaves the handset except in an operator survey.",
+      "properties": {
+        "anchor_id": {
+          "type": "string"
+        },
+        "frequency_mhz": {
+          "description": "2.4 GHz and 5 GHz attenuate differently; the solver uses it to pick the exponent when the anchor does not supply one",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/AnchorKind"
+        },
+        "rssi_dbm": {
+          "description": "received signal strength, dBm. Negative; closer to zero is stronger.",
+          "type": "number"
+        },
+        "timestamp": {
+          "description": "unix seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "kind",
+        "rssi_dbm",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  }
+}

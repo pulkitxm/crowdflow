@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { ScenarioOption, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
+import type { LiveRequest, LiveSnapshot, ScenarioOption, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 
@@ -45,6 +45,34 @@ export function control(action: string, speed?: number): Promise<SessionInfo> {
 
 export function startSession(request: Record<string, unknown>): Promise<SessionInfo> {
   return json<SessionInfo>("/api/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * The live phone picture.
+ *
+ * Polled rather than pushed, and the reason is worth stating: the WebSocket
+ * belongs to a scenario session, and live ingest deliberately does not. A venue
+ * with real handsets reporting must be watchable without somebody starting a
+ * simulation of it, so the two feeds stay independent — and once a second over
+ * HTTP is well inside the cadence a crowd changes at.
+ *
+ * A 404 is not an error here: it means live ingest has not been armed, which is
+ * the normal state of a console watching a scenario. Null means "not running",
+ * which the panel renders differently from "running and nobody has reported".
+ */
+export async function fetchLive(): Promise<LiveSnapshot | null> {
+  const response = await fetch("/api/live");
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`GET /api/live → ${response.status}`);
+  return (await response.json()) as LiveSnapshot;
+}
+
+export function startLive(request: LiveRequest): Promise<LiveSnapshot> {
+  return json<LiveSnapshot>("/api/live", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(request),
