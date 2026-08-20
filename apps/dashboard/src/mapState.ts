@@ -2,6 +2,8 @@ import type { Position } from "@crowdflow/contracts";
 
 export type MapLayer = "live" | "kinds";
 export type CrowdLayer = "none" | "cohorts" | "heatmap";
+export type Basemap = "schematic" | "satellite";
+export type Theme = "dark" | "light";
 export type MapRotation = 0 | 90 | 180 | 270;
 
 export interface MapQueryState {
@@ -13,6 +15,8 @@ export interface MapQueryState {
   grid: boolean;
   crowd: CrowdLayer;
   sectors: boolean;
+  basemap: Basemap;
+  theme: Theme;
 }
 
 export function readMapQuery(search: string): MapQueryState {
@@ -38,6 +42,8 @@ export function readMapQuery(search: string): MapQueryState {
     grid: query.get("grid") === "on",
     crowd: query.get("crowd") === "heatmap" ? "heatmap" : query.get("crowd") === "none" ? "none" : "cohorts",
     sectors: query.get("sectors") !== "off",
+    basemap: query.get("basemap") === "satellite" ? "satellite" : "schematic",
+    theme: query.get("theme") === "light" ? "light" : "dark",
   };
 }
 
@@ -54,6 +60,10 @@ export function writeMapQuery(search: string, state: MapQueryState): string {
   else query.set("crowd", state.crowd);
   if (state.sectors) query.delete("sectors");
   else query.set("sectors", "off");
+  if (state.basemap === "schematic") query.delete("basemap");
+  else query.set("basemap", state.basemap);
+  if (state.theme === "dark") query.delete("theme");
+  else query.set("theme", state.theme);
   if (state.center) {
     query.set("cx", compact(state.center.x, 1));
     query.set("cy", compact(state.center.y, 1));
