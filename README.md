@@ -58,8 +58,14 @@ make dashboard
 Run the spectator app:
 
 ```sh
+EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:8099 \
 bun run --filter crowdflow-spectator start
 ```
+
+The first screen accepts a positive sequential person ID. The app registers that ID against the
+selected circuit, asks for location permissions, then uploads the latest position resolved from
+GPS, Wi-Fi, or Bluetooth. The operator dashboard receives joins and position updates over its
+WebSocket connection.
 
 Live mobile guidance requires all three values:
 
@@ -71,6 +77,33 @@ bun run --filter crowdflow-spectator start
 ```
 
 Without them, the app uses its deterministic demonstration feed.
+
+## Live crowd simulator
+
+With `make console` running in another terminal, populate the circuit from several connected gates:
+
+```sh
+make simulator SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
+```
+
+`SIM_RATE` is the number of new people per second, `SIM_TICK_MS` controls movement update frequency,
+`SIM_START_ID` sets the first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate
+IDs. If no gates are supplied, the simulator chooses up to six connected gates. People and their
+current locations are stored locally in `.data/crowdflow.sqlite`.
+
+The dashboard starts with 100 m cells and switches through 50 m and 25 m cells down to a minimum
+10 m grid as the map is enlarged. `FULL MAP` expands the circuit to the viewport.
+
+Query a four-corner area with a result limit and zoom level:
+
+```sh
+curl -sS http://127.0.0.1:8099/api/circuits/silverstone/people/query \
+  -H 'content-type: application/json' \
+  -d '{"coordinates":[{"x":0,"y":0},{"x":1000,"y":0},{"x":1000,"y":1800},{"x":0,"y":1800}],"zoom":8,"count":100}'
+```
+
+The response contains exact current person-location JSON in `people`, the total polygon match in
+`matched_count`, the limited result count in `returned_count`, and occupied cells in `cells`.
 
 ## Quality gates
 
