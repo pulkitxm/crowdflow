@@ -13,6 +13,7 @@ import type { Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope,
 import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
+import { readMapQuery, writeMapQuery } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
 import { FeedPanel } from "./panels/feed";
@@ -33,6 +34,7 @@ let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
 let sessionId: string | null = null;
 let gridRequest = 0;
+let mapState = readMapQuery(window.location.search);
 
 const link = new ConsoleLink({
   onFrame: (frame) => handleFrame(frame),
@@ -55,8 +57,11 @@ const map = new MapPanel(
   must("map-readout"),
   must("map-legend"),
   (zoneId) => select(zoneId),
-  (coordinates, zoom) => void loadGrid(coordinates, zoom),
+  (coordinates, zoom) => persistMapViewport(coordinates, zoom),
 );
+map.setOrientation(mapState.rotation);
+map.setKindView(mapState.layer === "kinds");
+map.setGridVisible(mapState.grid);
 
 const table = new ZoneTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
 table.onResort(() => {
@@ -70,6 +75,8 @@ const metrics = new MetricsStrip(must("metrics"));
 const live = new LivePanel(must("live-body"), must("live-status"));
 
 const mapControls = must("map-controls");
+const consoleElement = must("console");
+consoleElement.classList.toggle("console--map-focus", mapState.full);
 
 const zoomControls = document.createElement("div");
 zoomControls.className = "zoom-tools";
@@ -132,8 +139,27 @@ kindButton.addEventListener("click", () => {
   const showingKinds = map.toggleKindView();
   kindButton.classList.toggle("tool--on", showingKinds);
   kindButton.textContent = showingKinds ? "LIVE STATE" : "ZONE KINDS";
+  persistMapControls();
 });
+kindButton.classList.toggle("tool--on", map.kindView);
+kindButton.textContent = map.kindView ? "LIVE STATE" : "ZONE KINDS";
 mapControls.append(kindButton);
+
+const gridButton = document.createElement("button");
+gridButton.type = "button";
+gridButton.className = "tool";
+gridButton.title = "Show or hide the adaptive people grid";
+const updateGridButton = () => {
+  gridButton.classList.toggle("tool--on", map.gridVisible);
+  gridButton.textContent = map.gridVisible ? "GRID ON" : "GRID OFF";
+};
+gridButton.addEventListener("click", () => {
+  map.setGridVisible(!map.gridVisible);
+  updateGridButton();
+  persistMapControls();
+});
+updateGridButton();
+mapControls.append(gridButton);
 
 const fitButton = document.createElement("button");
 fitButton.type = "button";
@@ -145,11 +171,13 @@ mapControls.append(fitButton);
 const focusButton = document.createElement("button");
 focusButton.type = "button";
 focusButton.className = "tool";
-focusButton.textContent = "FULL MAP";
+focusButton.classList.toggle("tool--on", mapState.full);
+focusButton.textContent = mapState.full ? "EXIT FULL" : "FULL MAP";
 focusButton.addEventListener("click", () => {
-  const focused = must("console").classList.toggle("console--map-focus");
+  const focused = consoleElement.classList.toggle("console--map-focus");
   focusButton.classList.toggle("tool--on", focused);
   focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+  persistMapControls();
 });
 mapControls.append(focusButton);
 updateZoomValue();
@@ -162,6 +190,29 @@ function select(zoneId: string | null): void {
   selected = zoneId;
   map.setSelected(zoneId);
   table.setSelected(zoneId);
+}
+
+function persistMapViewport(coordinates: Position[], zoom: number): void {
+  const center = coordinates.reduce(
+    (total, position) => ({ x: total.x + position.x / coordinates.length, y: total.y + position.y / coordinates.length }),
+    { x: 0, y: 0 },
+  );
+  mapState = { ...mapState, zoom, center };
+  updateZoomValue();
+  persistMapControls();
+  void loadGrid(coordinates, zoom);
+}
+
+function persistMapControls(): void {
+  mapState = {
+    ...mapState,
+    full: consoleElement.classList.contains("console--map-focus"),
+    rotation: map.orientationDeg,
+    layer: map.kindView ? "kinds" : "live",
+    grid: map.gridVisible,
+  };
+  const search = writeMapQuery(window.location.search, mapState);
+  window.history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
 }
 
 function redraw(envelope: TickEnvelope): void {
@@ -182,6 +233,7 @@ async function loadGeometry(circuitId: string): Promise<void> {
       `${geometry.pack.name.toUpperCase()} · ${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
       `${Object.keys(geometry.pack.edges ?? {}).length} EDGES`;
     map.setGeometry(geometry, standards);
+    map.restoreView(mapState.zoom, mapState.center);
     if ((geometry.integrity_problems ?? []).length > 0) {
       // Shown, never swallowed: a console rendering a broken pack while looking
       // healthy is the failure this whole screen is built against.

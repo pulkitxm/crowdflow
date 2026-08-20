@@ -116,7 +116,10 @@ export class MapPanel {
   private showKinds = false;
   private live: LiveSnapshot | null = null;
   private grid: PeopleQueryResult | null = null;
+  private showGrid = false;
   private viewportTimer: number | null = null;
+  private viewportWidth = 0;
+  private viewportHeight = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -168,6 +171,16 @@ export class MapPanel {
     this.paintLegend();
   }
 
+  setGridVisible(showGrid: boolean): boolean {
+    this.showGrid = showGrid;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.showGrid;
+  }
+
+  get gridVisible(): boolean { return this.showGrid; }
+
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
    * silent, unknown) and a zone-kind view (concourse/gate/parking/stand) that
@@ -175,11 +188,17 @@ export class MapPanel {
    * currently reporting.
    */
   toggleKindView(): boolean {
-    this.showKinds = !this.showKinds;
+    return this.setKindView(!this.showKinds);
+  }
+
+  setKindView(showKinds: boolean): boolean {
+    this.showKinds = showKinds;
     this.draw();
     this.paintLegend();
     return this.showKinds;
   }
+
+  get kindView(): boolean { return this.showKinds; }
 
 
   /**
@@ -210,7 +229,7 @@ export class MapPanel {
     return this.rotation === 90;
   }
 
-  get orientationDeg(): number { return this.rotation; }
+  get orientationDeg(): 0 | 90 | 180 | 270 { return this.rotation; }
 
   /** Rotate world coordinates by the current orientation angle. */
   private rotateCoord(x: number, y: number): [number, number] {
@@ -299,6 +318,25 @@ export class MapPanel {
     return this.zoomRatio;
   }
 
+  restoreView(zoom: number, center: Position | null): void {
+    if (!this.geometry) return;
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    if (width <= 0 || height <= 0) return;
+    const ratio = Math.min(Math.max(zoom, 0.5), 50);
+    const scale = this.fitScale * ratio;
+    const target = center ?? this.fromScreen(width / 2, height / 2);
+    const [rx, ry] = this.rotateCoord(target.x, target.y);
+    this.view = {
+      scale,
+      offsetX: width / 2 - rx * scale,
+      offsetY: height / 2 + ry * scale,
+    };
+    this.statics = null;
+    this.draw();
+    this.notifyViewport();
+  }
+
   private toScreen(x: number, y: number): [number, number] {
     // Venue y is metres north; canvas y grows downward, so it is inverted here
     // and nowhere else.
@@ -344,13 +382,24 @@ export class MapPanel {
     // it is a frame that has not happened yet — so nothing is drawn until the
     // observer reports real dimensions.
     if (width <= 0 || height <= 0) return;
+    const previousCenter = this.geometry && this.viewportWidth > 0 && this.viewportHeight > 0
+      ? this.fromScreen(this.viewportWidth / 2, this.viewportHeight / 2)
+      : null;
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.canvas.width = Math.round(width * dpr);
     this.canvas.height = Math.round(height * dpr);
     this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.statics = null;
-    if (this.view.scale === 1) this.fit();
+    const firstSize = this.viewportWidth === 0 || this.viewportHeight === 0;
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+    if (previousCenter) {
+      const [rx, ry] = this.rotateCoord(previousCenter.x, previousCenter.y);
+      this.view.offsetX = width / 2 - rx * this.view.scale;
+      this.view.offsetY = height / 2 + ry * this.view.scale;
+    }
+    if (firstSize) this.fit();
     else {
       this.draw();
       this.notifyViewport();
@@ -368,7 +417,7 @@ export class MapPanel {
 
   private zoomAt(factor: number, px: number, py: number): void {
     const minScale = this.fitScale * 0.5;
-    const scale = Math.min(Math.max(this.view.scale * factor, minScale), 20);
+    const scale = Math.min(Math.max(this.view.scale * factor, minScale), this.fitScale * 50);
     this.view = {
       scale,
       offsetX: px - ((px - this.view.offsetX) / this.view.scale) * scale,
@@ -743,7 +792,7 @@ export class MapPanel {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const zones = this.geometry.pack.zones ?? {};
-    this.drawGrid(ctx);
+    if (this.showGrid) this.drawGrid(ctx);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
     this.drawPeople(ctx, width, height);
@@ -774,7 +823,7 @@ export class MapPanel {
       this.readout.append(
         el("div", { class: "readout__hint", text: "drag to pan · wheel to zoom · click a zone" }),
       );
-      if (this.grid) {
+      if (this.grid && this.showGrid) {
         this.readout.append(
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
@@ -860,7 +909,8 @@ export class MapPanel {
   private paintLiveLegend(): void {
     const grid = this.grid;
     const people = this.live?.nodes?.length ?? 0;
-    this.legend.append(
+    if (this.showGrid) {
+      this.legend.append(
       el(
         "div",
         { class: "legend__item legend__item--grid" },
@@ -868,7 +918,9 @@ export class MapPanel {
         el("span", { class: "legend__word", text: grid ? `${grid.grid_size_m} M GRID` : "GRID" }),
         el("span", { class: "legend__count", text: grid ? integer(grid.matched_count) : "0" }),
         el("span", { class: "legend__note", text: "people in viewport" }),
-      ),
+      ));
+    }
+    this.legend.append(
       el(
         "div",
         { class: "legend__item legend__item--people" },

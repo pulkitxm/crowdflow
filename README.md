@@ -91,8 +91,10 @@ make simulator SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
 IDs. If no gates are supplied, the simulator chooses up to six connected gates. People and their
 current locations are stored locally in `.data/crowdflow.sqlite`.
 
-The dashboard starts with 100 m cells and switches through 50 m and 25 m cells down to a minimum
-10 m grid as the map is enlarged. `FULL MAP` expands the circuit to the viewport.
+The dashboard starts with the grid hidden. `GRID OFF` enables it at 100 m, then it switches through
+50 m and 25 m cells down to a minimum 10 m grid as the map is enlarged. `FULL MAP` expands the
+circuit to the viewport. Full-map mode, zoom, map center, orientation, layer, and grid visibility
+are kept in the URL query string and restored after reload.
 
 Query a four-corner area with a result limit and zoom level:
 
