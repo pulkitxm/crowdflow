@@ -31,7 +31,7 @@ export interface CrowdSimulatorResult extends CrowdSimulatorTick {
   removed: number;
 }
 
-interface Walker {
+export interface SimulatedWalker {
   personId: number;
   gateId: string;
   path: Position[];
@@ -40,6 +40,16 @@ interface Walker {
   speed: number;
   lateralOffset: number;
   destinationOffset: Position;
+  motionTime: number;
+  roamTime: number;
+  swayPhase: number;
+  swayRate: number;
+  swayAmplitude: number;
+  roamPhase: number;
+  roamRateX: number;
+  roamRateY: number;
+  roamRadiusX: number;
+  roamRadiusY: number;
 }
 
 export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise<CrowdSimulatorResult> {
@@ -57,7 +67,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
   if (!destinations.length) throw new Error(`${options.circuitId} has no viewing zones`);
   const gates = selectGates(pack, graph, destinations, options.gates);
 
-  const walkers: Walker[] = [];
+  const walkers: SimulatedWalker[] = [];
   const tickSeconds = options.tickMs / 1000;
   const minimumDuration = options.people / options.ratePerSecond;
   const duration = Math.max(options.durationS, minimumDuration);
@@ -70,7 +80,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
     spawnBudget += options.ratePerSecond * tickSeconds;
     const spawnCount = Math.min(options.people - joined, Math.floor(spawnBudget));
     spawnBudget -= spawnCount;
-    const newcomers: Walker[] = [];
+    const newcomers: SimulatedWalker[] = [];
     for (let index = 0; index < spawnCount; index++) {
       const personId = options.startPersonId + joined + index;
       const gateId = gates[(joined + index) % gates.length]!;
@@ -117,22 +127,22 @@ function selectGates(pack: CircuitPack, graph: VenueGraph, destinations: Array<{
   return Array.from({ length: count }, (_, index) => available[Math.floor(index * available.length / count)]!);
 }
 
-function buildWalker(
+export function buildWalker(
   personId: number,
   gateId: string,
   pack: CircuitPack,
   graph: VenueGraph,
   destinations: Array<{ id: string }>,
   rng: Random,
-): Walker {
+): SimulatedWalker {
   const reachable = graph.reachable(gateId);
   const candidates = destinations.filter((zone) => reachable.has(zone.id));
   if (!candidates.length) throw new Error(`gate ${gateId} has no route to a viewing zone`);
-  const target = candidates[personId % candidates.length]!.id;
+  const target = candidates[Math.floor(rng.random() * candidates.length)]!.id;
   const route = graph.route(gateId, target);
   if (route.path.length < 2) throw new Error(`gate ${gateId} cannot route to ${target}`);
   const angle = rng.random() * Math.PI * 2;
-  const radius = 8 + Math.sqrt(rng.random()) * 24;
+  const radius = 6 + Math.sqrt(rng.random()) * 42;
   return {
     personId,
     gateId,
@@ -140,13 +150,26 @@ function buildWalker(
     segment: 0,
     progress: 0,
     speed: 1.05 + rng.random() * 0.65,
-    lateralOffset: (rng.random() - 0.5) * 8,
+    lateralOffset: (rng.random() - 0.5) * 18,
     destinationOffset: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
+    motionTime: 0,
+    roamTime: 0,
+    swayPhase: rng.random() * Math.PI * 2,
+    swayRate: 0.025 + rng.random() * 0.055,
+    swayAmplitude: 2 + rng.random() * 7,
+    roamPhase: rng.random() * Math.PI * 2,
+    roamRateX: 0.025 + rng.random() * 0.045,
+    roamRateY: 0.018 + rng.random() * 0.052,
+    roamRadiusX: 4 + rng.random() * 18,
+    roamRadiusY: 4 + rng.random() * 18,
   };
 }
 
-function reportFor(walker: Walker, circuitId: string, now: number, deltaS: number, movementScale: number): NodeReport {
-  let remaining = walker.speed * deltaS * movementScale;
+export function reportFor(walker: SimulatedWalker, circuitId: string, now: number, deltaS: number, movementScale: number): NodeReport {
+  const simulatedDelta = deltaS * movementScale;
+  walker.motionTime += simulatedDelta;
+  walker.roamTime += deltaS;
+  let remaining = walker.speed * simulatedDelta;
   while (remaining > 0 && walker.segment < walker.path.length - 1) {
     const from = walker.path[walker.segment]!;
     const to = walker.path[walker.segment + 1]!;
@@ -167,11 +190,16 @@ function reportFor(walker: Walker, circuitId: string, now: number, deltaS: numbe
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy);
+  const lateral = walker.lateralOffset + Math.sin(walker.motionTime * walker.swayRate + walker.swayPhase) * walker.swayAmplitude;
+  const center = { x: from.x + walker.destinationOffset.x, y: from.y + walker.destinationOffset.y };
   const position = arrived
-    ? { x: from.x + walker.destinationOffset.x, y: from.y + walker.destinationOffset.y }
+    ? {
+        x: center.x + Math.cos(walker.roamTime * walker.roamRateX + walker.roamPhase) * walker.roamRadiusX + Math.sin(walker.roamTime * walker.roamRateY * 0.41 + walker.swayPhase) * walker.roamRadiusX * 0.28,
+        y: center.y + Math.sin(walker.roamTime * walker.roamRateY + walker.roamPhase) * walker.roamRadiusY + Math.cos(walker.roamTime * walker.roamRateX * 0.37 + walker.swayPhase) * walker.roamRadiusY * 0.28,
+      }
     : {
-        x: from.x + dx * walker.progress - dy / Math.max(length, 0.01) * walker.lateralOffset,
-        y: from.y + dy * walker.progress + dx / Math.max(length, 0.01) * walker.lateralOffset,
+        x: from.x + dx * walker.progress - dy / Math.max(length, 0.01) * lateral,
+        y: from.y + dy * walker.progress + dx / Math.max(length, 0.01) * lateral,
       };
   const heading = (Math.atan2(to.x - from.x, to.y - from.y) * 180 / Math.PI + 360) % 360;
   const epoch = Math.floor(now / ASSUMED_ID_ROTATION_S);
@@ -189,7 +217,7 @@ function reportFor(walker: Walker, circuitId: string, now: number, deltaS: numbe
       epoch,
       timestamp: now,
       position,
-      speed_ms: arrived ? 0 : walker.speed,
+      speed_ms: arrived ? Math.max(0.25, walker.speed * 0.45) : walker.speed,
       heading_deg: heading,
       accuracy_m: 4,
     }],

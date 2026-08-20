@@ -104,7 +104,10 @@ make simulator SIM_RESET=1 SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
 first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate IDs. If no gates are
 supplied, the simulator chooses up to six gates with routes to viewing areas. People enter through
 those gates, walk toward viewing zones distributed around the circuit, and gather near their chosen
-stand. `--reset` deletes
+stand. Each person has independent speed, route choice, path drift, and viewing-area movement. Every
+active person's location is sent on every simulator tick for the full `--duration`, including after
+arrival, so the WebSocket-driven cohorts, sectors, grids, and heat map continue changing throughout
+the race. `--reset` deletes
 the selected circuit's people and current locations, clears its live WebSocket state, then starts
 again from person ID 1 unless `--start-id` is supplied. People and their current locations are stored
 locally in `.data/crowdflow.sqlite`.
