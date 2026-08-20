@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LiveSnapshot, PeopleQueryResult, VenueGeometry, ZoneState } from "@crowdflow/api/wire";
-import { buildSectorRows, sortSectorRows } from "./sectors";
+import { buildSectorAreas, buildSectorRows, sortSectorRows } from "./sectors";
 
 function state(id: string, density: number, nodes: number): ZoneState {
   return {
@@ -57,5 +57,12 @@ describe("live sectors", () => {
   it("updates and sorts live crowd independently of the scenario tick", () => {
     const rows = buildSectorRows(live(), geometry, grid(20, 180));
     expect(sortSectorRows(rows, { key: "people", descending: true })[0]).toMatchObject({ id: "east", people: 180 });
+  });
+
+  it("builds a map area around every named sector anchor", () => {
+    const areas = buildSectorAreas(geometry);
+    expect(areas).toHaveLength(2);
+    expect(areas.find((area) => area.id === "west")?.polygon).toContainEqual({ x: 500, y: 0 });
+    expect(areas.find((area) => area.id === "east")?.polygon).toContainEqual({ x: 500, y: 100 });
   });
 });

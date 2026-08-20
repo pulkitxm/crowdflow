@@ -29,11 +29,15 @@ export interface SectorSort {
   descending: boolean;
 }
 
-interface SectorAnchor {
+export interface SectorAnchor {
   id: string;
   name: string;
   x: number;
   y: number;
+}
+
+export interface SectorArea extends SectorAnchor {
+  polygon: Array<{ x: number; y: number }>;
 }
 
 export function buildSectorRows(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
@@ -75,13 +79,54 @@ export function sortSectorRows(rows: SectorRow[], sort: SectorSort): SectorRow[]
   });
 }
 
-function sectorAnchors(geometry: VenueGeometry): SectorAnchor[] {
+export function sectorAnchors(geometry: VenueGeometry): SectorAnchor[] {
   const zones = Object.values(geometry.pack.zones ?? {});
   const viewing = zones.filter((zone) => zone.kind === "viewing" && zone.name);
   const candidates = viewing.length ? viewing : zones.filter((zone) => zone.name);
   return candidates
     .map((zone) => ({ id: zone.id, name: zone.name ?? zone.id, x: zone.position.x, y: zone.position.y }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function buildSectorAreas(geometry: VenueGeometry): SectorArea[] {
+  const anchors = sectorAnchors(geometry);
+  const [minX, minY, maxX, maxY] = geometry.pack.frame.venue_bounds_m.map(Number);
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return [];
+  const bounds = [
+    { x: minX!, y: minY! },
+    { x: maxX!, y: minY! },
+    { x: maxX!, y: maxY! },
+    { x: minX!, y: maxY! },
+  ];
+  return anchors.map((anchor) => {
+    let polygon = bounds;
+    for (const other of anchors) {
+      if (other.id === anchor.id) continue;
+      const a = 2 * (other.x - anchor.x);
+      const b = 2 * (other.y - anchor.y);
+      const c = other.x ** 2 + other.y ** 2 - anchor.x ** 2 - anchor.y ** 2;
+      polygon = clipHalfPlane(polygon, a, b, c);
+      if (!polygon.length) break;
+    }
+    return { ...anchor, polygon };
+  });
+}
+
+function clipHalfPlane(polygon: Array<{ x: number; y: number }>, a: number, b: number, c: number): Array<{ x: number; y: number }> {
+  const result: Array<{ x: number; y: number }> = [];
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index]!;
+    const end = polygon[(index + 1) % polygon.length]!;
+    const startValue = a * start.x + b * start.y - c;
+    const endValue = a * end.x + b * end.y - c;
+    const startInside = startValue <= 0.000001;
+    const endInside = endValue <= 0.000001;
+    if (startInside) result.push(start);
+    if (startInside === endInside) continue;
+    const ratio = startValue / (startValue - endValue);
+    result.push({ x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio });
+  }
+  return result;
 }
 
 function anchorPoint(x: number, y: number): { x: number; y: number } {
