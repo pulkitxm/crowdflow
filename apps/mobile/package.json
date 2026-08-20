@@ -4,10 +4,10 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "bunx --bun expo start",
-    "web": "bunx --bun expo start --web",
-    "ios": "bunx --bun expo start --ios",
-    "android": "bunx --bun expo start --android",
+    "start": "bunx expo start",
+    "web": "bunx expo start --web",
+    "ios": "bunx expo start --ios",
+    "android": "bunx expo start --android",
     "typecheck": "bunx --bun tsc --noEmit",
     "test": "bunx vitest run"
   },
