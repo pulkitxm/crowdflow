@@ -409,7 +409,7 @@ export interface ControlRequest {
   speed?: number | null;
 }
 
-export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined";
+export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" | "people_joined";
 
 /**
  * Every WebSocket message, one shape.
@@ -444,6 +444,7 @@ export interface SocketFrame {
    */
   live?: LiveSnapshot | null;
   person?: PersonRecord | null;
+  people?: PersonRecord[];
   note?: string | null;
 }
 

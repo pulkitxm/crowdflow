@@ -92,6 +92,25 @@ export class LiveIngest {
    * on the console from a quiet venue, and the two call for opposite responses.
    */
   report(report: NodeReport, now: number): IngestAck {
+    const ack = this.process(report, now);
+    this.emit(now);
+    return ack;
+  }
+
+  reportMany(reports: NodeReport[], now: number): IngestAck {
+    if (!reports.length || reports.length > 1000) throw new Error('reports must contain from 1 to 1000 items');
+    const acknowledgements = reports.map((report) => this.process(report, now));
+    this.emit(now);
+    return {
+      accepted: acknowledgements.reduce((sum, ack) => sum + ack.accepted, 0),
+      rejected: acknowledgements.reduce((sum, ack) => sum + ack.rejected, 0),
+      problems: [...new Set(acknowledgements.flatMap((ack) => ack.problems ?? []))],
+      server_time: now,
+      stop: acknowledgements.some((ack) => ack.stop),
+    };
+  }
+
+  private process(report: NodeReport, now: number): IngestAck {
     const problems: string[] = [];
     const fail = (reason: string, count = 1): IngestAck => {
       this.rejected += count;
@@ -145,10 +164,12 @@ export class LiveIngest {
     this.rejected += dropped + (usable.length - kept);
     if (usable.length > kept) problems.push('outside the reporting window');
     this.lastReportAt = now;
-    const ack: IngestAck = { accepted: kept, rejected: dropped + (usable.length - kept), problems, server_time: now, stop: false };
+    return { accepted: kept, rejected: dropped + (usable.length - kept), problems, server_time: now, stop: false };
+  }
+
+  private emit(now: number): void {
     const snapshot = this.snapshot(now);
     for (const listener of this.listeners) listener(snapshot);
-    return ack;
   }
 
   /**

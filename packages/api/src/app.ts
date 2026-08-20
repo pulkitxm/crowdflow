@@ -124,6 +124,16 @@ export class CrowdFlowServer {
         if (this.session) this.broadcast({ type: 'person_joined', session: this.session.info(), person, live: this.live?.snapshot(Date.now() / 1000) ?? null });
         return json(response, 200, person);
       }
+      if (request.method === 'POST' && path === '/api/people/login/batch') {
+        const command = await body(request) as { people?: PersonLoginRequest[] };
+        if (!command.people?.length || command.people.length > 1000) throw new Error('people must contain from 1 to 1000 items');
+        const joined = command.people.map((item) => {
+          this.load(item.circuit_id);
+          return this.people.login(item.person_id, item.circuit_id, Date.now() / 1000);
+        });
+        if (this.session) this.broadcast({ type: 'people_joined', session: this.session.info(), people: joined, live: this.live?.snapshot(Date.now() / 1000) ?? null });
+        return json(response, 200, { count: joined.length, people: joined });
+      }
       const queryMatch = path.match(/^\/api\/circuits\/([^/]+)\/people\/query$/);
       if (request.method === 'POST' && queryMatch) {
         this.load(queryMatch[1]!);
@@ -145,6 +155,11 @@ export class CrowdFlowServer {
         // second is an ack with a reason it must act on.
         if (!this.live) return json(response, 503, { detail: 'live ingest is not running' });
         return json(response, 200, this.live.report(await body(request) as NodeReport, Date.now() / 1000));
+      }
+      if (request.method === 'POST' && path === '/api/nodes/batch') {
+        if (!this.live) return json(response, 503, { detail: 'live ingest is not running' });
+        const command = await body(request) as { reports?: NodeReport[] };
+        return json(response, 200, this.live.reportMany(command.reports ?? [], Date.now() / 1000));
       }
       if (request.method === 'POST' && path === '/api/session') return json(response, 200, this.startSession(await body(request)).info());
       if (request.method === 'POST' && path === '/api/session/control') { if (!this.session) return json(response, 404, { detail: 'no session started' }); const command = await body(request) as { action: 'play' | 'pause' | 'step' | 'speed'; speed?: number }; return json(response, 200, this.session.control(command.action, command.speed)); }

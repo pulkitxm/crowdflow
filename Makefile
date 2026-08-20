@@ -6,12 +6,19 @@ SCENARIO ?= egress
 POPULATION ?= 2500
 SEED ?= 42
 SPEED ?= 4
+SIM_PEOPLE ?= 500
+SIM_RATE ?= 50
+SIM_TICK_MS ?= 500
+SIM_DURATION ?= 30
+SIM_START_ID ?= 1
+SIM_GATES ?=
 
-.PHONY: help install console api dashboard comments lint test typecheck codegen build check gate clean
+.PHONY: help install console api dashboard simulator comments lint test typecheck codegen build check gate clean
 help:
 	@echo "make console     Bun API + dashboard -> http://127.0.0.1:$(UI_PORT)"
 	@echo "make api         Bun API only        -> http://127.0.0.1:$(API_PORT)"
 	@echo "make dashboard   operator console only"
+	@echo "make simulator   populate live people through circuit gates"
 	@echo "make comments    reject new source comments"
 	@echo "make lint        project lint rules"
 	@echo "make test        every Vitest suite + TypeScript check"
@@ -35,6 +42,9 @@ api:
 
 dashboard:
 	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT)
+
+simulator:
+	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(API_PORT) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
 
 comments:
 	bun run comments:check

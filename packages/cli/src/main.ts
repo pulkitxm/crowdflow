@@ -12,6 +12,7 @@ import { abTest, buildPack, comparePolicies, egress, parseOsm, refine, renderSvg
 import { planAnchors, positioningAccuracy, type AnchorPlanOptions } from '@crowdflow/core/positioning';
 import type { AnchorPack } from '@crowdflow/contracts';
 import { rehearseLivePhones } from './rehearse.js';
+import { simulateLiveCrowd } from './simulator.js';
 import { importCalendar, type CalendarFile } from './calendar.js';
 import { createHfPredictor, downloadHubText, ensureRepo, FEATURE_NAMES, labelStates, renderModelCard, uploadHubFiles, writeDataset } from '@crowdflow/hf';
 import { bboxForTrack, fetchOsm, loadTrackGeometry, readPack, readTraceFragments, readTrack, writePack, writeTraceFragments } from './ingest.js';
@@ -42,6 +43,7 @@ try {
   else if (words[0] === 'anchors' && words[1] === 'plan') anchorsPlan(words[2] ?? 'silverstone', options);
   else if (words[0] === 'anchors' && words[1] === 'accuracy') anchorsAccuracy(words[2] ?? 'silverstone', options);
   else if (words[0] === 'live' && words[1] === 'rehearse') await liveRehearse(words[2] ?? 'silverstone', options);
+  else if (words[0] === 'live' && words[1] === 'simulate') await liveSimulate(words[2] ?? 'silverstone', options);
   else if (words[0] === 'calendar' && words[1] === 'import') await calendarImport(options);
   else if (words[0] === 'calendar' && words[1] === 'show') calendarShow(options);
   else if (words[0] === 'hf' && words[1] === 'predict') await hfPredict(words[2] ?? 'silverstone', options);
@@ -143,6 +145,29 @@ async function liveRehearse(id: string, opts: Options): Promise<void> {
   if (run.rejected > run.accepted) { console.log('\n  WARNING: more samples were rejected than accepted.'); process.exitCode = 1; }
 }
 
+async function liveSimulate(id: string, opts: Options): Promise<void> {
+  const people = number(opts, 'people', 500);
+  const rate = number(opts, 'rate', 50);
+  const tickMs = number(opts, 'tick-ms', 500);
+  const durationS = number(opts, 'duration', Math.max(30, people / rate));
+  const selectedGates = string(opts, 'gates')?.split(',').map((gate) => gate.trim()).filter(Boolean);
+  const result = await simulateLiveCrowd({
+    api: string(opts, 'api') ?? 'http://127.0.0.1:8099',
+    circuitId: id,
+    people,
+    ratePerSecond: rate,
+    tickMs,
+    durationS,
+    seed: number(opts, 'seed', 42),
+    startPersonId: number(opts, 'start-id', 1),
+    ...(selectedGates?.length ? { gates: selectedGates } : {}),
+    onTick: (state) => {
+      if (state.tick === 1 || state.joined === people || state.tick % 10 === 0) console.log(`tick ${state.tick}: ${state.joined}/${people} joined, ${state.reports} locations sent`);
+    },
+  });
+  console.log(`${result.joined} people populated through ${result.gates.length} gates in ${result.duration_s.toFixed(1)}s`);
+}
+
 function calendarPath(season: number): string { return join(root(), 'circuits', `calendar.${season}.json`); }
 
 async function calendarImport(opts: Options): Promise<void> {
@@ -188,4 +213,5 @@ function hfFeatures(): void { console.log(`CrowdFlow tabular feature contract ($
 function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
   crowdflow anchors show|plan|accuracy [id] [--spacing M --write --samples N --sigma dB --kinds wifi_ap,ble_beacon]
   crowdflow live rehearse [id] [--api URL --phones N --ticks N --interval S --radios wifi,ble,gnss]
+  crowdflow live simulate [id] [--api URL --people N --rate N --tick-ms N --duration S --start-id N --gates id,id]
   crowdflow calendar import|show [--season 2026 --write --jolpica-only]\n  crowdflow hf predict|export-dataset|upload|download|features`); }
