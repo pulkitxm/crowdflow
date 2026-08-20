@@ -169,6 +169,7 @@ export class MapPanel {
     this.grid = grid;
     this.draw();
     this.paintLegend();
+    this.paintReadout();
   }
 
   setGridVisible(showGrid: boolean): boolean {
