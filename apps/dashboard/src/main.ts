@@ -211,16 +211,28 @@ mapControls.append(fitButton);
 const focusButton = document.createElement("button");
 focusButton.type = "button";
 focusButton.className = "tool";
+focusButton.title = "Toggle full map. Press Escape to exit.";
+focusButton.setAttribute("aria-keyshortcuts", "Escape");
 focusButton.classList.toggle("tool--on", mapState.full);
 focusButton.textContent = mapState.full ? "EXIT FULL" : "FULL MAP";
 focusButton.addEventListener("click", () => {
-  const focused = consoleElement.classList.toggle("console--map-focus");
-  focusButton.classList.toggle("tool--on", focused);
-  focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+  setMapFocused(!consoleElement.classList.contains("console--map-focus"));
   persistMapControls();
 });
 mapControls.append(focusButton);
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !consoleElement.classList.contains("console--map-focus")) return;
+  event.preventDefault();
+  setMapFocused(false);
+  persistMapControls();
+});
 updateZoomValue();
+
+function setMapFocused(focused: boolean): void {
+  consoleElement.classList.toggle("console--map-focus", focused);
+  focusButton.classList.toggle("tool--on", focused);
+  focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+}
 
 function zoneName(id: string): string {
   return geometry?.pack.zones?.[id]?.name ?? id;
@@ -234,9 +246,7 @@ function select(zoneId: string | null): void {
 
 function focusSector(sectorId: string): void {
   select(sectorId);
-  consoleElement.classList.add("console--map-focus");
-  focusButton.classList.add("tool--on");
-  focusButton.textContent = "EXIT FULL";
+  setMapFocused(true);
   persistMapControls();
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => map.focusSector(sectorId));
