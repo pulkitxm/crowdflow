@@ -25,6 +25,7 @@ import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
 import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
+import { easeOutCubic, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 
@@ -80,7 +81,10 @@ const KIND_LABEL: Record<ZoneKind, string> = {
  * in just stacks duplicate text, so it waits for room to breathe.
  */
 const STAND_LABEL_MIN_RATIO = 0;
-const PARK_LABEL_MIN_RATIO = 2.5;
+const PARK_LABEL_FADE_START = 1.8;
+const PARK_LABEL_FADE_END = 3;
+const ZOOM_ANIMATION_MS = 260;
+const GRID_FADE_MS = 220;
 
 /** Screen radius of a zone glyph, in CSS pixels. Not a threshold — a size. */
 const GLYPH_R = 3.2;
@@ -117,10 +121,15 @@ export class MapPanel {
   private showKinds = false;
   private live: LiveSnapshot | null = null;
   private grid: PeopleQueryResult | null = null;
+  private previousGrid: PeopleQueryResult | null = null;
   private showGrid = false;
   private viewportTimer: number | null = null;
   private viewportWidth = 0;
   private viewportHeight = 0;
+  private zoomFrame: number | null = null;
+  private zoomTargetScale: number | null = null;
+  private gridFrame: number | null = null;
+  private gridFadeStarted = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -167,7 +176,15 @@ export class MapPanel {
   }
 
   setGrid(grid: PeopleQueryResult): void {
+    const previous = this.grid;
     this.grid = grid;
+    if (previous && previous.grid_size_m !== grid.grid_size_m) {
+      this.previousGrid = previous;
+      this.gridFadeStarted = performance.now();
+      this.animateGridFade();
+    } else {
+      this.previousGrid = null;
+    }
     this.draw();
     this.paintLegend();
     this.paintReadout();
@@ -292,6 +309,7 @@ export class MapPanel {
   fit(): void {
     const geometry = this.geometry;
     if (!geometry) return;
+    this.cancelZoom();
     const [minX, minY, maxX, maxY] = this.contentBounds();
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
@@ -308,6 +326,7 @@ export class MapPanel {
     };
     this.statics = null;
     this.draw();
+    this.emitZoom();
     this.notifyViewport();
   }
 
@@ -316,12 +335,12 @@ export class MapPanel {
   }
 
   zoomBy(factor: number): number {
-    this.zoomAt(factor, this.canvas.clientWidth / 2, this.canvas.clientHeight / 2);
-    return this.zoomRatio;
+    return this.animateZoom(factor, this.canvas.clientWidth / 2, this.canvas.clientHeight / 2);
   }
 
   restoreView(zoom: number, center: Position | null): void {
     if (!this.geometry) return;
+    this.cancelZoom();
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
     if (width <= 0 || height <= 0) return;
@@ -336,6 +355,7 @@ export class MapPanel {
     };
     this.statics = null;
     this.draw();
+    this.emitZoom();
     this.notifyViewport();
   }
 
@@ -414,23 +434,71 @@ export class MapPanel {
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
     const factor = Math.exp(-event.deltaY * 0.0015);
-    this.zoomAt(factor, px, py);
+    this.animateZoom(factor, px, py);
   };
 
-  private zoomAt(factor: number, px: number, py: number): void {
+  private animateZoom(factor: number, px: number, py: number): number {
     const minScale = this.fitScale * 0.5;
-    const scale = Math.min(Math.max(this.view.scale * factor, minScale), this.fitScale * 50);
-    this.view = {
-      scale,
-      offsetX: px - ((px - this.view.offsetX) / this.view.scale) * scale,
-      offsetY: py + ((this.view.offsetY - py) / this.view.scale) * scale,
+    const baseScale = this.zoomTargetScale ?? this.view.scale;
+    const targetScale = Math.min(Math.max(baseScale * factor, minScale), this.fitScale * 50);
+    this.zoomTargetScale = targetScale;
+    const startView = { ...this.view };
+    const target = this.fromScreen(px, py);
+    const [rx, ry] = this.rotateCoord(target.x, target.y);
+    if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
+    if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
+    const started = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = (now: number): void => {
+      const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
+      const scale = startView.scale + (targetScale - startView.scale) * progress;
+      this.view = {
+        scale,
+        offsetX: px - rx * scale,
+        offsetY: py + ry * scale,
+      };
+      this.statics = null;
+      this.draw();
+      this.emitZoom();
+      if (progress < 1) {
+        this.zoomFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.zoomFrame = null;
+        this.zoomTargetScale = null;
+        this.notifyViewport();
+      }
     };
-    this.statics = null;
-    this.draw();
-    this.notifyViewport();
+    this.zoomFrame = window.requestAnimationFrame(frame);
+    return targetScale / Math.max(this.fitScale, 0.0001);
+  }
+
+  private cancelZoom(): void {
+    if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
+    this.zoomFrame = null;
+    this.zoomTargetScale = null;
+  }
+
+  private emitZoom(): void {
+    this.canvas.dispatchEvent(new CustomEvent("mapzoom", { detail: this.zoomRatio }));
+  }
+
+  private animateGridFade(): void {
+    if (this.gridFrame != null) window.cancelAnimationFrame(this.gridFrame);
+    const frame = (now: number): void => {
+      this.draw();
+      if (now - this.gridFadeStarted < GRID_FADE_MS) {
+        this.gridFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.gridFrame = null;
+        this.previousGrid = null;
+        this.draw();
+      }
+    };
+    this.gridFrame = window.requestAnimationFrame(frame);
   }
 
   private onPointerDown = (event: PointerEvent): void => {
+    this.cancelZoom();
     this.dragging = { x: event.clientX, y: event.clientY };
     const picked = this.pick(event);
     this.selected = picked;
@@ -543,7 +611,9 @@ export class MapPanel {
 
     ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textBaseline = "middle";
-    const placeLabels = (kind: "viewing" | "parking", colour: string): void => {
+    const placeLabels = (kind: "viewing" | "parking", colour: string, opacity = 1): void => {
+      ctx.save();
+      ctx.globalAlpha = opacity;
       for (const zone of Object.values(zones)) {
         if (zone.kind !== kind || !zone.name) continue;
         const [x, y] = this.toScreen(zone.position.x, zone.position.y);
@@ -564,9 +634,11 @@ export class MapPanel {
         ctx.fillStyle = colour;
         ctx.fillText(zone.name, x + 7, y);
       }
+      ctx.restore();
     };
     if (zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
-    if (zoomRatio >= PARK_LABEL_MIN_RATIO) placeLabels("parking", PARK_COLOUR);
+    const parkingOpacity = revealProgress(zoomRatio, PARK_LABEL_FADE_START, PARK_LABEL_FADE_END);
+    if (parkingOpacity > 0) placeLabels("parking", PARK_COLOUR, parkingOpacity);
 
     this.statics = layer;
     this.staticKey = key;
@@ -687,9 +759,7 @@ export class MapPanel {
     }
   }
 
-  private drawGrid(ctx: CanvasRenderingContext2D): void {
-    const grid = this.grid;
-    if (!grid) return;
+  private drawGrid(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, opacity = 1): void {
     const size = grid.grid_size_m;
     const xs = grid.coordinates.map((position) => position.x);
     const ys = grid.coordinates.map((position) => position.y);
@@ -698,6 +768,7 @@ export class MapPanel {
     const minY = Math.floor(Math.min(...ys) / size) * size;
     const maxY = Math.ceil(Math.max(...ys) / size) * size;
     ctx.save();
+    ctx.globalAlpha = opacity;
     for (const cell of grid.cells) {
       const corners = [
         this.toScreen(cell.min_x, cell.min_y),
@@ -740,9 +811,10 @@ export class MapPanel {
     ctx.restore();
   }
 
-  private drawCohorts(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const cohorts = buildPeopleCohorts(this.grid);
+  private drawCohorts(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+    const cohorts = buildPeopleCohorts(grid);
     ctx.save();
+    ctx.globalAlpha = opacity;
     for (const cohort of cohorts) {
       const [x, y] = this.toScreen(cohort.x, cohort.y);
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
@@ -782,10 +854,15 @@ export class MapPanel {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const zones = this.geometry.pack.zones ?? {};
-    if (this.showGrid) this.drawGrid(ctx);
+    const gridProgress = this.previousGrid
+      ? revealProgress(performance.now(), this.gridFadeStarted, this.gridFadeStarted + GRID_FADE_MS)
+      : 1;
+    if (this.showGrid && this.previousGrid) this.drawGrid(ctx, this.previousGrid, 1 - gridProgress);
+    if (this.showGrid && this.grid) this.drawGrid(ctx, this.grid, gridProgress);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
-    this.drawCohorts(ctx, width, height);
+    if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
+    if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
