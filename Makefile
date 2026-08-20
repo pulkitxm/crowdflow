@@ -11,6 +11,7 @@ SIM_RATE ?= 50
 SIM_TICK_MS ?= 500
 SIM_DURATION ?= 30
 SIM_START_ID ?= 1
+SIM_MOVEMENT_SCALE ?= 90
 SIM_GATES ?=
 SIM_RESET ?=
 
@@ -45,7 +46,7 @@ dashboard:
 	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT)
 
 simulator:
-	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(API_PORT) $(if $(SIM_RESET),--reset,) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
+	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(API_PORT) $(if $(SIM_RESET),--reset,) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --movement-scale $(SIM_MOVEMENT_SCALE) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
 
 comments:
 	bun run comments:check

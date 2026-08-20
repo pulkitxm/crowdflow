@@ -100,8 +100,11 @@ make simulator SIM_RESET=1 SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
 ```
 
 `SIM_RATE` is the number of new people per second, `SIM_TICK_MS` controls movement update frequency,
-`SIM_START_ID` sets the first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate
-IDs. If no gates are supplied, the simulator chooses up to six connected gates. `--reset` deletes
+`SIM_MOVEMENT_SCALE` accelerates walking through the race-event timeline, `SIM_START_ID` sets the
+first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate IDs. If no gates are
+supplied, the simulator chooses up to six gates with routes to viewing areas. People enter through
+those gates, walk toward viewing zones distributed around the circuit, and gather near their chosen
+stand. `--reset` deletes
 the selected circuit's people and current locations, clears its live WebSocket state, then starts
 again from person ID 1 unless `--start-id` is supplied. People and their current locations are stored
 locally in `.data/crowdflow.sqlite`.

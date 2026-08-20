@@ -119,6 +119,33 @@ describe('people locations', () => {
     expect(server.people.list('silverstone', 20).map((person) => person.person_id)).toEqual(Array.from({ length: 12 }, (_, index) => index + 1));
     expect(server.live?.snapshot(Date.now() / 1000).reporting_devices).toBe(12);
   });
+
+  it('distributes a completed race arrival wave across circuit viewing areas', async () => {
+    server = new CrowdFlowServer(root, { databasePath: ':memory:' });
+    server.startSession({ population: 20, intervene: false });
+    server.startLive({ circuit_id: 'silverstone', participation: 1 });
+    await server.listen(0);
+    const address = server.server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+    await simulateLiveCrowd({
+      api: `http://127.0.0.1:${port}`,
+      circuitId: 'silverstone',
+      people: 102,
+      ratePerSecond: 1000,
+      tickMs: 20,
+      durationS: 0.12,
+      seed: 19,
+      startPersonId: 1,
+      movementScale: 100_000,
+    });
+    const people = server.people.list('silverstone', 200);
+    const occupied = new Set(people.map((person) => `${Math.floor(person.position.x / 100)}:${Math.floor(person.position.y / 100)}`));
+    const xs = people.map((person) => person.position.x);
+    const ys = people.map((person) => person.position.y);
+    expect(occupied.size).toBeGreaterThanOrEqual(12);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(900);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(1000);
+  });
 });
 
 function send(port: number, path: string, payload: unknown): Promise<{ status: number; body: unknown }> {

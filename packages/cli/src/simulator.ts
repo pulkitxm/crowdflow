@@ -11,6 +11,7 @@ export interface CrowdSimulatorOptions {
   durationS: number;
   seed: number;
   startPersonId: number;
+  movementScale?: number;
   reset?: boolean;
   gates?: string[];
   onTick?: (state: CrowdSimulatorTick) => void;
@@ -37,6 +38,8 @@ interface Walker {
   segment: number;
   progress: number;
   speed: number;
+  lateralOffset: number;
+  destinationOffset: Position;
 }
 
 export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise<CrowdSimulatorResult> {
@@ -50,9 +53,9 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
   const pack = geometry.pack;
   const graph = new VenueGraph(pack);
   const rng = new Random(options.seed);
-  const gates = selectGates(pack, graph, options.gates);
-  const destinations = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'viewing');
+  const destinations = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'viewing').sort((a, b) => a.id.localeCompare(b.id));
   if (!destinations.length) throw new Error(`${options.circuitId} has no viewing zones`);
+  const gates = selectGates(pack, graph, destinations, options.gates);
 
   const walkers: Walker[] = [];
   const tickSeconds = options.tickMs / 1000;
@@ -82,7 +85,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
     }
 
     const now = Date.now() / 1000;
-    const batch = walkers.map((walker) => reportFor(walker, options.circuitId, now, tickSeconds));
+    const batch = walkers.map((walker) => reportFor(walker, options.circuitId, now, tickSeconds, options.movementScale ?? 90));
     for (let offset = 0; offset < batch.length; offset += 1000) {
       const chunk = batch.slice(offset, offset + 1000);
       const ack = await postJson<{ accepted: number; rejected: number; problems?: string[] }>(`${api}/api/nodes/batch`, { reports: chunk });
@@ -98,14 +101,18 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
   return { tick: ticks, joined, active: walkers.length, reports, gates, duration_s: duration, reset, removed };
 }
 
-function selectGates(pack: CircuitPack, graph: VenueGraph, requested?: string[]): string[] {
+function selectGates(pack: CircuitPack, graph: VenueGraph, destinations: Array<{ id: string }>, requested?: string[]): string[] {
+  const reachesViewing = (id: string) => {
+    const reachable = graph.reachable(id);
+    return destinations.some((zone) => reachable.has(zone.id));
+  };
   if (requested?.length) {
-    const unknown = requested.filter((id) => pack.zones?.[id]?.kind !== 'gate' || graph.neighbours(id).length === 0);
-    if (unknown.length) throw new Error(`unknown or disconnected gates: ${unknown.join(', ')}`);
+    const unknown = requested.filter((id) => pack.zones?.[id]?.kind !== 'gate' || graph.neighbours(id).length === 0 || !reachesViewing(id));
+    if (unknown.length) throw new Error(`unknown gates or gates without a viewing route: ${unknown.join(', ')}`);
     return [...new Set(requested)];
   }
-  const available = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'gate' && graph.neighbours(zone.id).length > 0).map((zone) => zone.id).sort();
-  if (!available.length) throw new Error(`${pack.id} has no connected gates`);
+  const available = Object.values(pack.zones ?? {}).filter((zone) => zone.kind === 'gate' && graph.neighbours(zone.id).length > 0 && reachesViewing(zone.id)).map((zone) => zone.id).sort();
+  if (!available.length) throw new Error(`${pack.id} has no gates connected to viewing zones`);
   const count = Math.min(6, available.length);
   return Array.from({ length: count }, (_, index) => available[Math.floor(index * available.length / count)]!);
 }
@@ -120,12 +127,12 @@ function buildWalker(
 ): Walker {
   const reachable = graph.reachable(gateId);
   const candidates = destinations.filter((zone) => reachable.has(zone.id));
-  const fallback = [...reachable].filter((id) => id !== gateId);
-  const targetPool = candidates.length ? candidates.map((zone) => zone.id) : fallback;
-  if (!targetPool.length) throw new Error(`gate ${gateId} has nowhere to route people`);
-  const target = targetPool[Math.floor(rng.random() * targetPool.length)]!;
+  if (!candidates.length) throw new Error(`gate ${gateId} has no route to a viewing zone`);
+  const target = candidates[personId % candidates.length]!.id;
   const route = graph.route(gateId, target);
   if (route.path.length < 2) throw new Error(`gate ${gateId} cannot route to ${target}`);
+  const angle = rng.random() * Math.PI * 2;
+  const radius = 8 + Math.sqrt(rng.random()) * 24;
   return {
     personId,
     gateId,
@@ -133,11 +140,13 @@ function buildWalker(
     segment: 0,
     progress: 0,
     speed: 1.05 + rng.random() * 0.65,
+    lateralOffset: (rng.random() - 0.5) * 8,
+    destinationOffset: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
   };
 }
 
-function reportFor(walker: Walker, circuitId: string, now: number, deltaS: number): NodeReport {
-  let remaining = walker.speed * deltaS;
+function reportFor(walker: Walker, circuitId: string, now: number, deltaS: number, movementScale: number): NodeReport {
+  let remaining = walker.speed * deltaS * movementScale;
   while (remaining > 0 && walker.segment < walker.path.length - 1) {
     const from = walker.path[walker.segment]!;
     const to = walker.path[walker.segment + 1]!;
@@ -154,10 +163,16 @@ function reportFor(walker: Walker, circuitId: string, now: number, deltaS: numbe
   }
   const from = walker.path[Math.min(walker.segment, walker.path.length - 1)]!;
   const to = walker.path[Math.min(walker.segment + 1, walker.path.length - 1)]!;
-  const position = {
-    x: from.x + (to.x - from.x) * walker.progress,
-    y: from.y + (to.y - from.y) * walker.progress,
-  };
+  const arrived = walker.segment >= walker.path.length - 1;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const position = arrived
+    ? { x: from.x + walker.destinationOffset.x, y: from.y + walker.destinationOffset.y }
+    : {
+        x: from.x + dx * walker.progress - dy / Math.max(length, 0.01) * walker.lateralOffset,
+        y: from.y + dy * walker.progress + dx / Math.max(length, 0.01) * walker.lateralOffset,
+      };
   const heading = (Math.atan2(to.x - from.x, to.y - from.y) * 180 / Math.PI + 360) % 360;
   const epoch = Math.floor(now / ASSUMED_ID_ROTATION_S);
   const nodeId = `sim-${walker.personId}`;
@@ -174,7 +189,7 @@ function reportFor(walker: Walker, circuitId: string, now: number, deltaS: numbe
       epoch,
       timestamp: now,
       position,
-      speed_ms: walker.segment >= walker.path.length - 1 ? 0 : walker.speed,
+      speed_ms: arrived ? 0 : walker.speed,
       heading_deg: heading,
       accuracy_m: 4,
     }],
@@ -187,6 +202,7 @@ function validate(options: CrowdSimulatorOptions): void {
   if (!Number.isSafeInteger(options.tickMs) || options.tickMs < 20) throw new Error('tick-ms must be an integer of at least 20');
   if (!(options.durationS > 0)) throw new Error('duration must be positive');
   if (!Number.isSafeInteger(options.startPersonId) || options.startPersonId < 1) throw new Error('start-id must be a positive integer');
+  if (options.movementScale != null && !(options.movementScale > 0)) throw new Error('movement-scale must be positive');
 }
 
 async function getJson<T>(url: string): Promise<T> {
