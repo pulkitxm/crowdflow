@@ -25,6 +25,7 @@ export interface PeopleQuery {
   coordinates: Position[];
   zoom: number;
   count?: number;
+  since?: number;
 }
 
 export interface GridCell {

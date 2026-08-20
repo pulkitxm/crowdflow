@@ -112,7 +112,9 @@ locally in `.data/crowdflow.sqlite`.
 The dashboard starts with the grid hidden. `GRID OFF` enables it at 100 m, then it switches through
 50 m and 25 m cells down to a minimum 10 m grid as the map is enlarged. `FULL MAP` expands the
 circuit to the viewport. Full-map mode, zoom, map center, orientation, layer, and grid visibility
-are kept in the URL query string and restored after reload.
+are kept in the URL query string and restored after reload. People are rendered as cohorts of at
+most 50 inside the current spatial cells, never as individual map markers. The exact reporting total
+remains visible in the live metrics while WebSocket updates refresh the cohort query.
 
 Query a four-corner area with a result limit and zoom level:
 

@@ -97,10 +97,10 @@ export class LiveIngest {
     return ack;
   }
 
-  reportMany(reports: NodeReport[], now: number): IngestAck {
+  reportMany(reports: NodeReport[], now: number, emit = true): IngestAck {
     if (!reports.length || reports.length > 1000) throw new Error('reports must contain from 1 to 1000 items');
     const acknowledgements = reports.map((report) => this.process(report, now));
-    this.emit(now);
+    if (emit) this.emit(now);
     return {
       accepted: acknowledgements.reduce((sum, ack) => sum + ack.accepted, 0),
       rejected: acknowledgements.reduce((sum, ack) => sum + ack.rejected, 0),
@@ -168,7 +168,7 @@ export class LiveIngest {
   }
 
   private emit(now: number): void {
-    const snapshot = this.snapshot(now);
+    const snapshot = this.snapshot(now, false);
     for (const listener of this.listeners) listener(snapshot);
   }
 
@@ -199,7 +199,7 @@ export class LiveIngest {
   /** The live picture. Mirrors what a scenario tick carries, minus everything
    *  that only exists in simulation — there is no ground truth here to compare
    *  the estimate against, and the snapshot does not pretend otherwise. */
-  snapshot(now: number): LiveSnapshot {
+  snapshot(now: number, includeNodes = true): LiveSnapshot {
     for (const [id, held] of this.marks) if (now - held.received > (this.options.window_s ?? 30)) this.marks.delete(id);
     const state: VenueState = this.engine.snapshot(now, null);
     const zones = Object.keys(this.circuit.pack.zones ?? {});
@@ -214,10 +214,10 @@ export class LiveIngest {
       participation: this.options.participation,
       participation_provenance: 'assumed',
       state,
-      nodes: [...this.marks.entries()].map(([personId, { node, source }]): NodeMark => ({
+      nodes: includeNodes ? [...this.marks.entries()].map(([personId, { node, source }]): NodeMark => ({
         person_id: personId, x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
         timestamp: node.timestamp, source,
-      })),
+      })) : [],
       reporting_devices: this.marks.size,
       by_source: Object.fromEntries(this.sourceCounts) as Partial<Record<PositionSource, number>>,
       accepted_total: this.accepted,

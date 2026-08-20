@@ -88,7 +88,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
     const batch = walkers.map((walker) => reportFor(walker, options.circuitId, now, tickSeconds, options.movementScale ?? 90));
     for (let offset = 0; offset < batch.length; offset += 1000) {
       const chunk = batch.slice(offset, offset + 1000);
-      const ack = await postJson<{ accepted: number; rejected: number; problems?: string[] }>(`${api}/api/nodes/batch`, { reports: chunk });
+      const ack = await postJson<{ accepted: number; rejected: number; problems?: string[] }>(`${api}/api/nodes/batch`, { reports: chunk, emit: offset + 1000 >= batch.length });
       if (ack.rejected) throw new Error(`simulator reports rejected: ${(ack.problems ?? []).join(', ')}`);
       reports += ack.accepted;
     }

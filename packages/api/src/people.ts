@@ -147,8 +147,20 @@ export class PeopleStore {
 
   query(circuitId: string, request: PeopleQuery): PeopleQueryResult {
     validateCoordinates(request.coordinates);
+    if (request.since != null && !Number.isFinite(request.since)) throw new Error('since must be a finite Unix timestamp');
     const size = gridSizeForZoom(request.zoom);
-    const matches = this.list(circuitId, 100_000).filter((person) => pointInPolygon(person.position, request.coordinates));
+    const xs = request.coordinates.map((position) => position.x);
+    const ys = request.coordinates.map((position) => position.y);
+    const bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)] as const;
+    const base = `SELECT p.person_id, p.circuit_id, p.joined_at, p.last_seen_at, p.status,
+                         l.x, l.y, l.speed_ms, l.accuracy_m, l.source, l.gate_id
+                  FROM people p JOIN locations l ON l.person_id = p.person_id
+                  WHERE p.circuit_id = ? AND p.status = 'active'
+                    AND l.x BETWEEN ? AND ? AND l.y BETWEEN ? AND ?`;
+    const candidates = request.since == null
+      ? this.database.query<LocationRow, [string, number, number, number, number]>(base).all(circuitId, ...bounds)
+      : this.database.query<LocationRow, [string, number, number, number, number, number]>(`${base} AND p.last_seen_at >= ?`).all(circuitId, ...bounds, request.since);
+    const matches = candidates.map(toLocation).filter((person) => pointInPolygon(person.position, request.coordinates));
     const people = matches.slice(0, validateCount(request.count ?? 1000));
     const cells = new Map<string, GridCell>();
     for (const person of matches) {

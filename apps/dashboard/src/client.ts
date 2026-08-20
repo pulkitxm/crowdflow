@@ -31,11 +31,11 @@ export function fetchGeometry(circuitId: string): Promise<VenueGeometry> {
   return json<VenueGeometry>(`/api/circuits/${circuitId}/geometry`);
 }
 
-export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom: number, count = 5000): Promise<PeopleQueryResult> {
+export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom: number, count = 1): Promise<PeopleQueryResult> {
   return json<PeopleQueryResult>(`/api/circuits/${circuitId}/people/query`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ coordinates, zoom, count }),
+    body: JSON.stringify({ coordinates, zoom, count, since: Date.now() / 1000 - 30 }),
   });
 }
 

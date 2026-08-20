@@ -42,6 +42,22 @@ describe('people locations', () => {
     store.close();
   });
 
+  it('can limit a coordinate query to recently reporting people', () => {
+    const store = new PeopleStore(':memory:');
+    for (let personId = 1; personId <= 3; personId++) {
+      store.login(personId, 'silverstone', 1000);
+      store.updateLocation(personId, 'silverstone', { x: personId * 10, y: personId * 10 }, 1, 4, 'gnss', 1100 + personId);
+    }
+    const result = store.query('silverstone', {
+      coordinates: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }, { x: 0, y: 40 }],
+      zoom: 8,
+      since: 1102,
+    });
+    expect(result.people.map((person) => person.person_id)).toEqual([2, 3]);
+    expect(result.matched_count).toBe(2);
+    store.close();
+  });
+
   it('logs in, updates, queries, and broadcasts a person over the API', async () => {
     server = new CrowdFlowServer(root, { databasePath: ':memory:' });
     server.startSession({ population: 20, intervene: false });

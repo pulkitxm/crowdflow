@@ -26,6 +26,7 @@ import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, Ve
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
 import type { ZoneRow } from "../model";
+import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
   nominal: "#37d67a",
@@ -739,37 +740,25 @@ export class MapPanel {
     ctx.restore();
   }
 
-  private drawPeople(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const nodes = this.live?.nodes ?? [];
-    const zoom = this.view.scale / Math.max(this.fitScale, 0.0001);
-    const label = zoom >= 4 || nodes.length <= 80;
-    const placed: Array<[number, number, number, number]> = [];
+  private drawCohorts(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const cohorts = buildPeopleCohorts(this.grid);
     ctx.save();
-    for (const node of nodes) {
-      const [x, y] = this.toScreen(node.x, node.y);
+    for (const cohort of cohorts) {
+      const [x, y] = this.toScreen(cohort.x, cohort.y);
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
-      ctx.strokeStyle = "rgba(88, 182, 255, 0.28)";
-      ctx.lineWidth = 1;
+      const radius = 9 + Math.sqrt(cohort.count / COHORT_CAPACITY) * 5;
+      ctx.fillStyle = "rgba(20, 91, 145, 0.92)";
+      ctx.strokeStyle = "#79c7ff";
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(x, y, Math.max(3, Math.min(18, node.accuracy_m * this.view.scale)), 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "#58b6ff";
-      ctx.beginPath();
-      ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
-      if (label && node.person_id != null) {
-        ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "bottom";
-        const text = `#${node.person_id}`;
-        const box: [number, number, number, number] = [x + 4, y - 15, ctx.measureText(text).width + 4, 12];
-        const overlaps = placed.some(([left, top, boxWidth, boxHeight]) => box[0] < left + boxWidth && box[0] + box[2] > left && box[1] < top + boxHeight && box[1] + box[3] > top);
-        if (!overlaps) {
-          placed.push(box);
-          ctx.fillStyle = "#cfe6ff";
-          ctx.fillText(text, x + 5, y - 3);
-        }
-      }
+      ctx.stroke();
+      ctx.fillStyle = "#f4fbff";
+      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(cohort.count), x, y);
     }
     ctx.restore();
   }
@@ -796,7 +785,7 @@ export class MapPanel {
     if (this.showGrid) this.drawGrid(ctx);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
-    this.drawPeople(ctx, width, height);
+    this.drawCohorts(ctx, width, height);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -824,10 +813,13 @@ export class MapPanel {
       this.readout.append(
         el("div", { class: "readout__hint", text: "drag to pan · wheel to zoom · click a zone" }),
       );
-      if (this.grid && this.showGrid) {
+      if (this.grid) {
         this.readout.append(
-          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "COHORT" }), el("span", { class: "readout__value", text: `≤ ${COHORT_CAPACITY}` })),
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
+        );
+        if (this.showGrid) this.readout.append(
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
         );
       }
       return;
@@ -909,7 +901,8 @@ export class MapPanel {
 
   private paintLiveLegend(): void {
     const grid = this.grid;
-    const people = this.live?.nodes?.length ?? 0;
+    const people = this.live?.reporting_devices ?? 0;
+    const cohorts = buildPeopleCohorts(grid).length;
     if (this.showGrid) {
       this.legend.append(
       el(
@@ -926,9 +919,17 @@ export class MapPanel {
         "div",
         { class: "legend__item legend__item--people" },
         el("span", { class: "legend__glyph", text: "●" }),
+        el("span", { class: "legend__word", text: "COHORTS" }),
+        el("span", { class: "legend__count", text: integer(cohorts) }),
+        el("span", { class: "legend__note", text: `up to ${COHORT_CAPACITY} people each` }),
+      ),
+      el(
+        "div",
+        { class: "legend__item legend__item--people" },
+        el("span", { class: "legend__glyph", text: "Σ" }),
         el("span", { class: "legend__word", text: "LIVE PEOPLE" }),
         el("span", { class: "legend__count", text: integer(people) }),
-        el("span", { class: "legend__note", text: "WebSocket locations" }),
+        el("span", { class: "legend__note", text: "exact reporting total" }),
       ),
     );
   }

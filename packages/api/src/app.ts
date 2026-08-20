@@ -50,7 +50,7 @@ export class CrowdFlowServer {
     this.sockets.on('connection', (socket) => {
       if (!this.session) { socket.close(1013, 'no session started'); return; }
       const session = this.session;
-      const hello: SocketFrame = { type: 'hello', session: session.info(), standards: standardsReport(), geometry_url: `/api/circuits/${session.circuit.pack.id}/geometry`, backlog: session.events, last_tick: session.lastEnvelope, live: this.live?.snapshot(Date.now() / 1000) ?? null };
+      const hello: SocketFrame = { type: 'hello', session: session.info(), standards: standardsReport(), geometry_url: `/api/circuits/${session.circuit.pack.id}/geometry`, backlog: session.events, last_tick: session.lastEnvelope, live: this.live?.snapshot(Date.now() / 1000, false) ?? null };
       socket.send(JSON.stringify(hello));
       const unsubscribe = session.subscribe((tick) => socket.send(JSON.stringify({ type: 'tick', session: session.info(), tick } satisfies SocketFrame)));
       const heartbeat = setInterval(() => socket.send(JSON.stringify({ type: 'status', session: session.info() } satisfies SocketFrame)), 500);
@@ -121,7 +121,7 @@ export class CrowdFlowServer {
         const command = await body(request) as PersonLoginRequest;
         this.load(command.circuit_id);
         const person = this.people.login(command.person_id, command.circuit_id, Date.now() / 1000);
-        if (this.session) this.broadcast({ type: 'person_joined', session: this.session.info(), person, live: this.live?.snapshot(Date.now() / 1000) ?? null });
+        if (this.session) this.broadcast({ type: 'person_joined', session: this.session.info(), person, live: this.live?.snapshot(Date.now() / 1000, false) ?? null });
         return json(response, 200, person);
       }
       if (request.method === 'POST' && path === '/api/people/login/batch') {
@@ -131,7 +131,7 @@ export class CrowdFlowServer {
           this.load(item.circuit_id);
           return this.people.login(item.person_id, item.circuit_id, Date.now() / 1000);
         });
-        if (this.session) this.broadcast({ type: 'people_joined', session: this.session.info(), people: joined, live: this.live?.snapshot(Date.now() / 1000) ?? null });
+        if (this.session) this.broadcast({ type: 'people_joined', session: this.session.info(), people: joined, live: this.live?.snapshot(Date.now() / 1000, false) ?? null });
         return json(response, 200, { count: joined.length, people: joined });
       }
       const queryMatch = path.match(/^\/api\/circuits\/([^/]+)\/people\/query$/);
@@ -145,7 +145,7 @@ export class CrowdFlowServer {
         this.load(circuitId);
         const removed = this.people.reset(circuitId);
         if (this.live?.circuit.pack.id === circuitId) this.live.clear();
-        const live = this.live?.snapshot(Date.now() / 1000) ?? null;
+        const live = this.live?.snapshot(Date.now() / 1000, false) ?? null;
         if (this.session) this.broadcast({ type: 'live', session: this.session.info(), live });
         return json(response, 200, { circuit_id: circuitId, removed, count: 0, live });
       }
@@ -167,8 +167,8 @@ export class CrowdFlowServer {
       }
       if (request.method === 'POST' && path === '/api/nodes/batch') {
         if (!this.live) return json(response, 503, { detail: 'live ingest is not running' });
-        const command = await body(request) as { reports?: NodeReport[] };
-        return json(response, 200, this.live.reportMany(command.reports ?? [], Date.now() / 1000));
+        const command = await body(request) as { reports?: NodeReport[]; emit?: boolean };
+        return json(response, 200, this.live.reportMany(command.reports ?? [], Date.now() / 1000, command.emit !== false));
       }
       if (request.method === 'POST' && path === '/api/session') return json(response, 200, this.startSession(await body(request)).info());
       if (request.method === 'POST' && path === '/api/session/control') { if (!this.session) return json(response, 404, { detail: 'no session started' }); const command = await body(request) as { action: 'play' | 'pause' | 'step' | 'speed'; speed?: number }; return json(response, 200, this.session.control(command.action, command.speed)); }

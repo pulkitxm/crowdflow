@@ -34,6 +34,8 @@ let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
 let sessionId: string | null = null;
 let gridRequest = 0;
+let cohortRefreshTimer: number | null = null;
+let cohortViewport: { coordinates: Position[]; zoom: number } | null = null;
 let mapState = readMapQuery(window.location.search);
 
 const link = new ConsoleLink({
@@ -193,6 +195,7 @@ function select(zoneId: string | null): void {
 }
 
 function persistMapViewport(coordinates: Position[], zoom: number): void {
+  cohortViewport = { coordinates, zoom };
   const center = coordinates.reduce(
     (total, position) => ({ x: total.x + position.x / coordinates.length, y: total.y + position.y / coordinates.length }),
     { x: 0, y: 0 },
@@ -201,6 +204,16 @@ function persistMapViewport(coordinates: Position[], zoom: number): void {
   updateZoomValue();
   persistMapControls();
   void loadGrid(coordinates, zoom);
+}
+
+function scheduleCohortRefresh(): void {
+  if (!cohortViewport) return;
+  if (cohortRefreshTimer != null) window.clearTimeout(cohortRefreshTimer);
+  cohortRefreshTimer = window.setTimeout(() => {
+    cohortRefreshTimer = null;
+    const viewport = cohortViewport;
+    if (viewport) void loadGrid(viewport.coordinates, viewport.zoom);
+  }, 250);
 }
 
 function persistMapControls(): void {
@@ -264,6 +277,7 @@ function handleFrame(frame: SocketFrame): void {
   if (frame.live) {
     live.update(frame.live);
     map.updateLive(frame.live);
+    scheduleCohortRefresh();
   }
 
   if (frame.type === "hello") {
