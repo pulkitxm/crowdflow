@@ -71,12 +71,37 @@ const live = new LivePanel(must("live-body"), must("live-status"));
 
 const mapControls = must("map-controls");
 
+const zoomControls = document.createElement("div");
+zoomControls.className = "zoom-tools";
+const zoomValue = document.createElement("output");
+zoomValue.className = "zoom-tools__value";
+zoomValue.setAttribute("aria-label", "Map zoom scale");
+const updateZoomValue = () => { zoomValue.textContent = `${map.zoomRatio.toFixed(1)}×`; };
+must("map-canvas").addEventListener("wheel", updateZoomValue);
+const zoomOutButton = document.createElement("button");
+zoomOutButton.type = "button";
+zoomOutButton.className = "tool zoom-tools__button";
+zoomOutButton.textContent = "−";
+zoomOutButton.title = "Zoom out";
+zoomOutButton.setAttribute("aria-label", "Zoom out");
+zoomOutButton.addEventListener("click", () => { map.zoomBy(1 / 1.5); updateZoomValue(); });
+const zoomInButton = document.createElement("button");
+zoomInButton.type = "button";
+zoomInButton.className = "tool zoom-tools__button";
+zoomInButton.textContent = "+";
+zoomInButton.title = "Zoom in";
+zoomInButton.setAttribute("aria-label", "Zoom in");
+zoomInButton.addEventListener("click", () => { map.zoomBy(1.5); updateZoomValue(); });
+zoomControls.append(zoomValue, zoomOutButton, zoomInButton);
+mapControls.append(zoomControls);
+
 const portraitButton = document.createElement("button");
 portraitButton.type = "button";
 portraitButton.className = "tool";
 portraitButton.title = "Toggle between landscape and portrait view";
 portraitButton.addEventListener("click", () => {
   const isPortrait = map.togglePortrait();
+  updateZoomValue();
   portraitButton.classList.toggle("tool--on", isPortrait);
   portraitButton.textContent = isPortrait ? "LANDSCAPE" : "PORTRAIT";
 });
@@ -92,6 +117,7 @@ rotateButton.textContent = "ROTATE";
 rotateButton.title = "Rotate circuit 90°";
 rotateButton.addEventListener("click", () => {
   const deg = map.rotate90();
+  updateZoomValue();
   portraitButton.classList.toggle("tool--on", deg === 90 || deg === 270);
   portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
 });
@@ -113,7 +139,7 @@ const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
 fitButton.textContent = "FIT";
-fitButton.addEventListener("click", () => map.fit());
+fitButton.addEventListener("click", () => { map.fit(); updateZoomValue(); });
 mapControls.append(fitButton);
 
 const focusButton = document.createElement("button");
@@ -126,6 +152,7 @@ focusButton.addEventListener("click", () => {
   focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
 });
 mapControls.append(focusButton);
+updateZoomValue();
 
 function zoneName(id: string): string {
   return geometry?.pack.zones?.[id]?.name ?? id;

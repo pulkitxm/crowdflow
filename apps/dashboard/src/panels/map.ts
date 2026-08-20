@@ -290,6 +290,15 @@ export class MapPanel {
     this.notifyViewport();
   }
 
+  get zoomRatio(): number {
+    return this.view.scale / Math.max(this.fitScale, 0.0001);
+  }
+
+  zoomBy(factor: number): number {
+    this.zoomAt(factor, this.canvas.clientWidth / 2, this.canvas.clientHeight / 2);
+    return this.zoomRatio;
+  }
+
   private toScreen(x: number, y: number): [number, number] {
     // Venue y is metres north; canvas y grows downward, so it is inverted here
     // and nowhere else.
@@ -354,11 +363,12 @@ export class MapPanel {
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
     const factor = Math.exp(-event.deltaY * 0.0015);
-    // Floor is half the fit scale — enough to see extra context but not
-    // shrink the venue to an unreadable dot. Ceiling stays generous.
+    this.zoomAt(factor, px, py);
+  };
+
+  private zoomAt(factor: number, px: number, py: number): void {
     const minScale = this.fitScale * 0.5;
     const scale = Math.min(Math.max(this.view.scale * factor, minScale), 20);
-    // Keep the point under the cursor fixed while zooming.
     this.view = {
       scale,
       offsetX: px - ((px - this.view.offsetX) / this.view.scale) * scale,
@@ -367,7 +377,7 @@ export class MapPanel {
     this.statics = null;
     this.draw();
     this.notifyViewport();
-  };
+  }
 
   private onPointerDown = (event: PointerEvent): void => {
     this.dragging = { x: event.clientX, y: event.clientY };

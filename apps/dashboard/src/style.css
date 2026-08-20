@@ -271,6 +271,33 @@ button {
   cursor: crosshair;
 }
 
+.zoom-tools {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.zoom-tools__value {
+  min-width: 47px;
+  padding: 3px 7px;
+  color: var(--ink);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: var(--panel);
+}
+
+.zoom-tools .zoom-tools__button {
+  min-width: 27px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
 .map__readout {
   position: absolute;
   top: 8px;
