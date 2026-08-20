@@ -1,22 +1,3 @@
-/**
- * The screen that opens the app: what this app does with the visitor's position,
- * in plain words, before it does any of it.
- *
- * Two stages, and the order is the whole design. Stage one is the disclosure and
- * asks the OS for nothing. Stage two asks, one permission at a time, with the
- * reason next to each request. An app that fires three system dialogs on launch
- * gets denied three times by someone who has no idea what they just refused —
- * and on Android a denied location permission does not merely disable GPS, it
- * silently empties the Wi-Fi and Bluetooth scan results too, so the app appears
- * broken rather than restricted.
- *
- * The copy is checked against what the code actually does. Every line below is a
- * claim some file has to keep: the trail stopping at the boundary is
- * `insideVenue` in the fuser, the identifier changing is `NodeIdentity`, the
- * network names never leaving the phone is `SensingEngine.sampleRadio` resolving
- * observations locally and `NodeReport` having nowhere to put them. A disclosure
- * screen is the one place in an app where prose is a specification.
- */
 
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -39,10 +20,7 @@ const POINTS = [
 interface Ask {
   key: 'location' | 'bluetooth' | 'background';
   label: string;
-  /** Why the app is asking, in terms of what the person gets. */
   why: string;
-  /** What happens if they say no — stated, because a request without a stated
-   *  cost reads as a request that cannot be refused. */
   ifDeclined: string;
   granted(state: PermissionState): boolean;
   request(): Promise<PermissionState>;
@@ -121,10 +99,6 @@ export function LocationConsent({ onDone }: { onDone: () => void }) {
     );
   }
 
-  // The location permission gates the other two on Android, so it is the only
-  // one that has to be resolved before continuing — and "resolved" includes
-  // being refused. A screen that will not let someone past until they say yes is
-  // not asking.
   const locationSettled = asked.has('location');
 
   return (

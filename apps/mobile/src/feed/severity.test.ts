@@ -13,13 +13,10 @@ describe('a route is as good as its worst leg', () => {
   });
 
   it('reports the jam, not the average', () => {
-    // The failure mode: three clear legs and one jammed one averaging out to a
-    // green headline shown to someone who is standing still.
     expect(worstOf([step('nominal'), step('critical'), step('nominal', 'n2')])).toBe('critical');
   });
 
   it('does not call an unreported stretch clear', () => {
-    // Invariant 5. Silence is not good news.
     expect(worstOf([step('nominal'), step('unknown')])).toBe('unknown');
   });
 

@@ -18,9 +18,6 @@ describe('journeys round to nearest', () => {
 });
 
 describe('costs round up', () => {
-  // The failure this exists to prevent: a redirect that really costs 3m10s being
-  // sold as "3 min". The user accepts the price before they can see the walk, so
-  // the rounding error has to land in their favour or the app stops being trusted.
   it('never understates what it is asking for', () => {
     expect(costMinutes(190)).toBe(4);
     expect(costText(190)).toBe('+4 min');
@@ -48,8 +45,6 @@ describe('countdowns', () => {
   });
 
   it('reads a passed time as now, never as a negative', () => {
-    // A crossing whose stated closing time has gone by while the phone was out of
-    // contact must not render "closes in -3 min".
     expect(minutesUntil(now - 200, now)).toBe(0);
     expect(untilText(now - 200, now)).toBe('now');
   });

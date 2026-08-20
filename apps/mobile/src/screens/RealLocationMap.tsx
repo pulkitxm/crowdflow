@@ -1,30 +1,3 @@
-/**
- * TEMPORARY — a real map, for checking that the location is actually right.
- * Deleted together with `LocationCheck.tsx`; nothing else imports it.
- *
- * Raster tiles from OpenStreetMap, positioned by hand. No `react-native-maps`,
- * no WebView, no API key, no new native module — which is the whole reason it
- * is built this way. A map library here would mean a native dependency added for
- * a screen that is going to be deleted, and it would not work in a browser,
- * which is the one place this can be tested with no build at all.
- *
- * The mechanism is the standard slippy-map projection: Web Mercator turns a
- * coordinate into a pixel position in a flat world image whose size is
- * 256 * 2^zoom, tiles are 256-pixel squares cut out of that image, and drawing a
- * map is working out which squares overlap the viewport and where each one lands.
- * It is about thirty lines and it is exact.
- *
- * Two honest notes:
- *
- * - The accuracy ring is drawn to scale, from metres per pixel at this latitude.
- *   It is the point of the screen, not decoration: a dot alone claims a precision
- *   no phone has, and the difference between a five-metre fix and a
- *   fifty-metre one is the difference between "this works" and "this does not".
- * - Tiles come from OpenStreetMap's public servers. Fine for a handful of
- *   requests while testing, not for anything shipped — their tile policy asks
- *   for a real User-Agent and rate limits, and a phone's `Image` loader sets
- *   neither. Another reason this screen is temporary.
- */
 
 import React, { useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
@@ -70,9 +43,7 @@ export function RealLocationMap({
           />
         ))}
 
-        {/* The accuracy ring, to scale. Drawn under the dot so the dot stays
-            legible when the ring is small. Hidden when it would be smaller than
-            the dot itself, because a ring inside the marker says nothing. */}
+        {}
         {ringPx > 18 ? (
           <View
             pointerEvents="none"
@@ -104,9 +75,7 @@ export function RealLocationMap({
         <Zoom label="+" onPress={() => setZoom((z) => Math.min(MAX_ZOOM, z + 1))} />
       </View>
 
-      {/* The independent check. If the pin here and the pin on osm.org land in
-          the same place, the coordinate is right and nothing in this app is
-          flattering itself. */}
+      {}
       <Pressable
         accessibilityRole="link"
         onPress={() => void Linking.openURL(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`)}

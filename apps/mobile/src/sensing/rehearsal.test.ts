@@ -7,20 +7,6 @@ import { demoSource } from '../circuits/registry';
 import { DEMO_GEOMETRY } from '../circuits/demo';
 import { RehearsalGnss, RehearsalRadio, Walk } from './rehearsal';
 
-/**
- * The app with NO server configured.
- *
- * This is the path somebody takes first — `bun run web`, no API, no venue — and
- * it is the one path where the anchor map is generated in the app rather than
- * downloaded. If it produces nothing, rehearsal mode shows "placed by nothing"
- * forever and looks like a broken feature rather than a missing server.
- *
- * The assertions are deliberately about the JOIN between layers: that the
- * bundled pack has enough zones for a plan, that the plan's spacing is tight
- * enough to solve against, that the walk stays inside the venue bounds the
- * fuser enforces, and that a fix survives `crowdNodeFrom`'s boundary and
- * rounding checks. Each layer passes its own tests; this is the seam.
- */
 
 const pack = DEMO_GEOMETRY.pack as unknown as CircuitPack;
 const START = 1_000_000;
@@ -31,7 +17,6 @@ describe('rehearsal with no server', () => {
     const all = Object.values(anchors.anchors ?? {});
     expect(all.length).toBeGreaterThan(50);
     expect(all.some((anchor) => anchor.kind === 'wifi_ap')).toBe(true);
-    // A plan, not a survey — and every consumer reads this field to know which.
     expect(anchors.surveyed_at).toBeNull();
     expect(all.every((anchor) => anchor.path_loss_exponent.provenance === 'assumed')).toBe(true);
   });
@@ -64,8 +49,6 @@ describe('rehearsal with no server', () => {
       if (!fix) continue;
       fixes += 1;
       errors.push(distanceM(fix.position, truth));
-      // Null here would mean the walk left the venue bounds, or the fix had no
-      // usable accuracy — both are silent failures on a status screen.
       if (crowdNodeFrom(fix, identity, pack)) reportable += 1;
     }
 

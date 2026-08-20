@@ -1,15 +1,3 @@
-/**
- * The app itself: one function from a `SpectatorView` to a screen.
- *
- * There is no navigation stack, no tab bar and no home screen, because there is
- * no browsing to do. The system knows where you are and what is about to happen
- * there; the app's job is to show the one screen that answers it. Anything a
- * user would have to navigate to find is, by definition, not urgent enough to be
- * in this app.
- *
- * The switch is exhaustive over the union and ends in a `never`, so a new state
- * of the day cannot be added upstream without a screen being written for it.
- */
 
 import React from 'react';
 
@@ -50,9 +38,6 @@ export function SpectatorApp({
     case 'hold':
       return <HoldScreen view={view} onSelectOption={onSelectOption} />;
     default:
-      // The union makes this unreachable for trusted TypeScript callers, but a
-      // view decoded from an untrusted peer can still be malformed at runtime.
-      // Fail blank rather than returning the raw object and crashing React.
       return null;
   }
 }

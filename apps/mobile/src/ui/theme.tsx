@@ -1,8 +1,3 @@
-/**
- * Theme plumbing. Light by default because this is a daylight product; the
- * device's own setting wins, and the demo shell can force either one so a
- * reviewer can check both without changing their OS.
- */
 
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';

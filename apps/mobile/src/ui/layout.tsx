@@ -1,21 +1,3 @@
-/**
- * The structural vocabulary: a page, a section, a row, a chip.
- *
- * `atoms.tsx` owns what things LOOK like — six text sizes, a card, a status
- * pill, two buttons. This file owns how a screen is ASSEMBLED, and it exists
- * because every screen had been assembling itself: each one repeated the same
- * SafeAreaView, the same ScrollView, the same 24dp padding, the same sticky
- * footer, and each one had drifted a few pixels from the others. Six screens
- * with six slightly different paddings does not read as six screens, it reads as
- * an unfinished product — and the app's own design brief says beauty is a
- * functional requirement, because a spectator app nobody opens is a sensor
- * network with no sensors.
- *
- * Nothing here is decorative. `Page` guarantees the footer is reachable
- * one-handed. `ListRow` guarantees a 64dp target, because the brief's minimum is
- * 48 and this is pressed while walking. `MetaRow` puts a label and its value on
- * one baseline so a column of them can be scanned rather than read.
- */
 
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -25,14 +7,6 @@ import { MIN_TOUCH, radius, space, type } from '../theme';
 import { Body, Eyebrow, Label, Title } from './atoms';
 import { usePalette } from './theme';
 
-/**
- * The frame for any screen that is not live guidance.
- *
- * A back affordance, a title block, a scrolling body and an optional pinned
- * footer. The footer is pinned rather than placed at the end of the scroll
- * because the ask must be reachable without reading to the bottom — somebody
- * standing in a moving crowd should not have to scroll to continue.
- */
 export function Page({
   eyebrow,
   title,
@@ -45,14 +19,11 @@ export function Page({
 }: {
   eyebrow?: string;
   title?: string;
-  /** One sentence under the title. Two is a paragraph, and a paragraph on a
-   *  phone held at arm's length does not get read. */
   lede?: string;
   onBack?: () => void;
   backLabel?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  /** Off when the body is its own list, which scrolls itself. */
   scroll?: boolean;
 }) {
   const palette = usePalette();
@@ -87,8 +58,6 @@ export function Page({
   );
 }
 
-/** A labelled group. The label is a signpost, not a heading — small, quiet, and
- *  always followed by the thing it names. */
 export function Section({
   label,
   note,
@@ -109,14 +78,6 @@ export function Section({
   );
 }
 
-/**
- * A label and its value, on one baseline.
- *
- * The value is right-aligned and tabular so a column of these can be scanned
- * down the numbers rather than read line by line — the same reason the operator
- * console is monospaced, applied to the four or five figures the app is willing
- * to show.
- */
 export function MetaRow({ label, value, note, emphasis }: { label: string; value: string; note?: string; emphasis?: boolean }) {
   const palette = usePalette();
   return (
@@ -142,13 +103,6 @@ export function MetaRow({ label, value, note, emphasis }: { label: string; value
 
 export type ChipTone = 'quiet' | 'strong' | 'warn';
 
-/**
- * A short fact, boxed.
- *
- * Used for a round number, a country, whether a venue has a map. Never for a
- * status that carries meaning — that is `StatusPill`, which enforces the
- * word-plus-colour rule. A chip is a label, and a label may be quiet.
- */
 export function Chip({ label, tone = 'quiet' }: { label: string; tone?: ChipTone }) {
   const palette = usePalette();
   const colors = tone === 'strong'
@@ -165,14 +119,6 @@ export function Chip({ label, tone = 'quiet' }: { label: string; tone?: ChipTone
   );
 }
 
-/**
- * One tappable row of a list.
- *
- * `lead` is a fixed-width slot so titles align down the list however wide the
- * badges are — a ragged left edge is what makes a list of races look like a
- * dump of data rather than a table of them. `disabled` still renders and still
- * explains itself: a row greyed out with no reason is a dead end.
- */
 export function ListRow({
   lead,
   title,
@@ -216,8 +162,6 @@ export function ListRow({
   );
 }
 
-/** A round number, in a fixed-width box. The one piece of F1 vocabulary the app
- *  borrows outright, because everybody at a circuit already reads it. */
 export function RoundBadge({ round }: { round: number }) {
   const palette = usePalette();
   return (

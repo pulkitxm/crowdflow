@@ -44,23 +44,16 @@ describe('the safety gate, enforced on the client', () => {
   });
 
   it('refuses a modified command', () => {
-    // A `modified` verdict means the safety engine changed the routing. The
-    // command in hand is the version safety declined to issue; showing it would
-    // put a person on the route the gate exists to prevent.
     expect(showableOffer(offer({ outcome: 'modified', dispatchable: false }))).toBeNull();
   });
 
   it('refuses a verdict that belongs to a different command', () => {
-    // The realistic attack and the realistic bug are the same shape: an approval
-    // for a harmless command arriving stapled to a different one.
     expect(showableOffer(offer({ command_id: 'cmd-other' }))).toBeNull();
   });
 });
 
 describe('expiry', () => {
   it('treats a command past its expiry as gone', () => {
-    // Stale routing is worse than none: diverting people around a crossing that
-    // reopened five minutes ago builds the queue it was meant to prevent.
     expect(isExpired(offer({}, -1), NOW)).toBe(true);
     expect(isExpired(offer({}, 300), NOW)).toBe(false);
   });

@@ -1,16 +1,3 @@
-/**
- * Redirected.
- *
- * The old route stays on screen, struck through. That costs a third of the
- * screen and it is worth it: a route that silently changes reads as a bug or a
- * betrayal, and the user has already walked part of the old one. Showing what
- * was replaced makes the change legible in one glance — this, not that, and here
- * is what it cost you.
- *
- * The cost is repeated in plain words after the fact, not only before. Someone
- * who tapped while walking may not have read it, and finding out later that a
- * redirect cost four minutes is how trust in a routing app ends.
- */
 
 import React from 'react';
 import { View } from 'react-native';
@@ -35,7 +22,7 @@ export function ReroutedScreen({
       view={view}
       footer={
         <View style={{ paddingBottom: space.sm }}>
-          {/* The user can always go back. The system recommends; it never traps. */}
+          {}
           <SecondaryAction label="Go back to the old way" onPress={onUndo} />
         </View>
       }

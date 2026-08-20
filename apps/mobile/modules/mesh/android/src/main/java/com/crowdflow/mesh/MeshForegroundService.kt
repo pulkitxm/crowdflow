@@ -9,14 +9,6 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
-/**
- * Host process for native relay work while the JS runtime is suspended.
- *
- * The current in-memory transport has no radios to pump, but the lifecycle is
- * real: start reaches the foreground immediately, stop is available from the
- * persistent notification, and an implementation cannot report success while
- * Android is free to kill it in the background.
- */
 class MeshForegroundService : Service() {
 
     companion object {

@@ -33,9 +33,6 @@ describe('the day is complete', () => {
 
 describe('journey totals are honest', () => {
   it('never claims a journey is shorter than the sum of its legs', () => {
-    // The engine's total includes waits at crossings and slower walking in a busy
-    // corridor, so it may exceed the legs. A total BELOW the legs would mean the
-    // screen is quoting a walk nobody can achieve.
     for (const view of Object.values(day)) {
       for (const route of routesOf(view)) {
         const legs = route.steps.reduce((sum, step) => sum + step.walk_s, 0);
@@ -60,8 +57,6 @@ describe('the price of a redirect matches the walk it buys', () => {
     if (ahead.kind !== 'ahead') throw new Error('expected the ahead view');
     const showable = showableOffer(ahead.offer);
     expect(showable).not.toBeNull();
-    // If these ever disagree, the button says "+4 min" while the route it leads
-    // to costs six — the single most damaging thing this screen could do.
     expect(showable!.cost_s).toBe(ahead.offer.instead.total_walk_s - ahead.route.total_walk_s);
   });
 
@@ -71,7 +66,6 @@ describe('the price of a redirect matches the walk it buys', () => {
     if (ahead.kind !== 'ahead' || rerouted.kind !== 'rerouted') throw new Error('bad fixture');
     expect(rerouted.added_s).toBe(ahead.offer.command.expected_cost_s);
     expect(rerouted.route.id).toBe(ahead.offer.instead.id);
-    // The abandoned route is kept so the change stays legible on screen.
     expect(rerouted.instead_of.id).toBe(ahead.route.id);
   });
 });
@@ -82,8 +76,6 @@ describe('the warning fires while the way is still walkable', () => {
     if (ahead.kind !== 'ahead') throw new Error('expected the ahead view');
     const step = ahead.route.steps.find((s) => s.id === ahead.step_id);
     expect(step).toBeDefined();
-    // Critical here would mean the app spoke too late; nominal would mean it had
-    // nothing to say. The product lives entirely in the middle band.
     expect(step!.way_ahead).toBe('building');
     expect(step!.crossing?.state.open).toBe(true);
   });
@@ -119,8 +111,6 @@ describe('after the race the app is willing to say wait', () => {
     const hold = day.hold;
     if (hold.kind !== 'hold') throw new Error('expected the hold view');
     const best = [...hold.options].sort((a, b) => a.total_s - b.total_s)[0]!;
-    // Waiting is only defensible if the arithmetic supports it. If leaving now
-    // were quicker this screen would have to say so.
     expect(hold.recommended_id).toBe(best.id);
     expect(hold.recommended_id).toBe('wait');
     expect(best.recommendation_note).toContain('Quickest');
@@ -146,7 +136,6 @@ describe('after the race the app is willing to say wait', () => {
     const hold = day.hold;
     if (hold.kind !== 'hold') throw new Error('expected the hold view');
     expect(hold.because.length).toBeGreaterThan(0);
-    // The advice must not simply repeat the option's label back at the user.
     expect(hold.headline).not.toBe(hold.options.find((o) => o.id === hold.recommended_id)?.label);
   });
 });
@@ -157,7 +146,6 @@ describe('the gate choice is a real choice', () => {
     if (arrival.kind !== 'arrival') throw new Error('expected the arrival view');
     const nearest = [...arrival.gates].sort((a, b) => a.walk_s - b.walk_s)[0]!;
     expect(nearest.way_ahead).not.toBe('nominal');
-    // ...and there is somewhere clear to send people, or the screen is just bad news.
     expect(arrival.gates.some((g) => g.way_ahead === 'nominal')).toBe(true);
     expect(arrival.gates.filter((gate) => gate.selected)).toHaveLength(1);
   });
