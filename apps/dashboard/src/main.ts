@@ -9,7 +9,7 @@
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
 import "./style.css";
-import type { Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
@@ -23,17 +23,20 @@ import { LivePanel } from "./panels/live";
 import { MapPanel } from "./panels/map";
 import { MetricsStrip } from "./panels/metrics";
 import { PredictionPanel } from "./panels/prediction";
-import { ZoneTable } from "./panels/table";
+import { SectorTable } from "./panels/table";
 
 const memory = new ZoneMemory();
 
 let geometry: VenueGeometry | null = null;
 let standards: StandardsReport | null = null;
 let latest: TickEnvelope | null = null;
+let latestLive: LiveSnapshot | null = null;
 let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
 let sessionId: string | null = null;
 let gridRequest = 0;
+let sectorGridRequest = 0;
+let sectorGrid: PeopleQueryResult | null = null;
 let cohortRefreshTimer: number | null = null;
 let cohortViewport: { coordinates: Position[]; zoom: number } | null = null;
 let mapState = readMapQuery(window.location.search);
@@ -66,9 +69,9 @@ map.setKindView(mapState.layer === "kinds");
 map.setGridVisible(mapState.grid);
 map.setCrowdMode(mapState.crowd);
 
-const table = new ZoneTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
+const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
 table.onResort(() => {
-  if (latest) redraw(latest);
+  if (latestLive && geometry) table.update(latestLive, geometry, sectorGrid);
 });
 
 const prediction = new PredictionPanel(must("prediction-body"), must("prediction-model"));
@@ -225,12 +228,12 @@ function persistMapViewport(coordinates: Position[], zoom: number): void {
 }
 
 function scheduleCohortRefresh(): void {
-  if (!cohortViewport) return;
   if (cohortRefreshTimer != null) window.clearTimeout(cohortRefreshTimer);
   cohortRefreshTimer = window.setTimeout(() => {
     cohortRefreshTimer = null;
     const viewport = cohortViewport;
     if (viewport) void loadGrid(viewport.coordinates, viewport.zoom);
+    void loadSectorGrid();
   }, 250);
 }
 
@@ -251,7 +254,6 @@ function redraw(envelope: TickEnvelope): void {
   const rows: ZoneRow[] = buildRows(envelope, geometry, memory);
   const byId = new Map(rows.map((row) => [row.id, row]));
   map.update(envelope, rows);
-  table.update(envelope, rows);
   table.setSelected(selected);
   prediction.update(envelope, byId, zoneName);
   intervention.update(envelope, zoneName);
@@ -266,6 +268,8 @@ async function loadGeometry(circuitId: string): Promise<void> {
       `${Object.keys(geometry.pack.edges ?? {}).length} EDGES`;
     map.setGeometry(geometry, standards);
     map.restoreView(mapState.zoom, mapState.center);
+    if (latestLive) table.update(latestLive, geometry, sectorGrid);
+    void loadSectorGrid();
     if ((geometry.integrity_problems ?? []).length > 0) {
       // Shown, never swallowed: a console rendering a broken pack while looking
       // healthy is the failure this whole screen is built against.
@@ -275,6 +279,33 @@ async function loadGeometry(circuitId: string): Promise<void> {
   } catch (error) {
     console.error("geometry unavailable", error);
     must("map-circuit").textContent = "GEOMETRY UNAVAILABLE";
+  }
+}
+
+async function loadSectorGrid(): Promise<void> {
+  const circuitId = latestSession?.circuit_id;
+  const venue = geometry;
+  if (!circuitId || !venue) return;
+  const request = ++sectorGridRequest;
+  const bounds = venue.pack.frame.venue_bounds_m;
+  const minX = Number(bounds[0]);
+  const minY = Number(bounds[1]);
+  const maxX = Number(bounds[2]);
+  const maxY = Number(bounds[3]);
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
+  const coordinates = [
+    { x: minX, y: minY },
+    { x: maxX, y: minY },
+    { x: maxX, y: maxY },
+    { x: minX, y: maxY },
+  ];
+  try {
+    const result = await fetchPeopleGrid(circuitId, coordinates, 1);
+    if (request !== sectorGridRequest) return;
+    sectorGrid = result;
+    if (latestLive) table.update(latestLive, venue, result);
+  } catch (error) {
+    console.error("sector crowd unavailable", error);
   }
 }
 
@@ -294,8 +325,10 @@ function handleFrame(frame: SocketFrame): void {
   latestSession = frame.session;
   header.setSession(frame.session);
   if (frame.live) {
+    latestLive = frame.live;
     live.update(frame.live);
     map.updateLive(frame.live);
+    if (geometry) table.update(frame.live, geometry, sectorGrid);
     scheduleCohortRefresh();
   }
 

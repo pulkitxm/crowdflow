@@ -118,6 +118,10 @@ remains visible in the live metrics while WebSocket updates refresh the cohort q
 `HEAT MAP` switches to a live weighted radial density view with stable people-per-square-metre labels;
 the default remains fixed cohorts. The selected crowd view is also restored from the URL.
 
+The `SECTORS` table groups every venue zone around its nearest named viewing area. It refreshes from
+the live WebSocket feed and shows exact current crowd, reporting-zone coverage, density state, flow,
+LOS, reporting devices, speed, net flow, queue, and confidence for each circuit sector.
+
 Query a four-corner area with a result limit and zoom level:
 
 ```sh

@@ -431,6 +431,7 @@ table.zones tbody tr:focus-visible { outline: 1px solid var(--info); outline-off
 }
 
 .zones__countnote { color: var(--ink-faint); }
+.sector-status { color: var(--nominal); letter-spacing: 0.1em; }
 
 /* ------------------------------------------------------------- prediction -- */
 
