@@ -160,11 +160,13 @@ async function liveSimulate(id: string, opts: Options): Promise<void> {
     durationS,
     seed: number(opts, 'seed', 42),
     startPersonId: number(opts, 'start-id', 1),
+    reset: opts.reset === true,
     ...(selectedGates?.length ? { gates: selectedGates } : {}),
     onTick: (state) => {
       if (state.tick === 1 || state.joined === people || state.tick % 10 === 0) console.log(`tick ${state.tick}: ${state.joined}/${people} joined, ${state.reports} locations sent`);
     },
   });
+  if (result.reset) console.log(`${result.removed} stored people cleared before simulation`);
   console.log(`${result.joined} people populated through ${result.gates.length} gates in ${result.duration_s.toFixed(1)}s`);
 }
 
@@ -213,5 +215,5 @@ function hfFeatures(): void { console.log(`CrowdFlow tabular feature contract ($
 function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
   crowdflow anchors show|plan|accuracy [id] [--spacing M --write --samples N --sigma dB --kinds wifi_ap,ble_beacon]
   crowdflow live rehearse [id] [--api URL --phones N --ticks N --interval S --radios wifi,ble,gnss]
-  crowdflow live simulate [id] [--api URL --people N --rate N --tick-ms N --duration S --start-id N --gates id,id]
+  crowdflow live simulate [id] [--api URL --reset --people N --rate N --tick-ms N --duration S --start-id N --gates id,id]
   crowdflow calendar import|show [--season 2026 --write --jolpica-only]\n  crowdflow hf predict|export-dataset|upload|download|features`); }

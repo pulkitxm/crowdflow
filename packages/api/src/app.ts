@@ -140,6 +140,15 @@ export class CrowdFlowServer {
         return json(response, 200, this.people.query(queryMatch[1]!, await body(request) as PeopleQuery));
       }
       const peopleMatch = path.match(/^\/api\/circuits\/([^/]+)\/people$/);
+      if (request.method === 'DELETE' && peopleMatch) {
+        const circuitId = peopleMatch[1]!;
+        this.load(circuitId);
+        const removed = this.people.reset(circuitId);
+        if (this.live?.circuit.pack.id === circuitId) this.live.clear();
+        const live = this.live?.snapshot(Date.now() / 1000) ?? null;
+        if (this.session) this.broadcast({ type: 'live', session: this.session.info(), live });
+        return json(response, 200, { circuit_id: circuitId, removed, count: 0, live });
+      }
       if (request.method === 'GET' && peopleMatch) {
         this.load(peopleMatch[1]!);
         const count = Number(url.searchParams.get('count') ?? 1000);

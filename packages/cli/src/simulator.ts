@@ -11,6 +11,7 @@ export interface CrowdSimulatorOptions {
   durationS: number;
   seed: number;
   startPersonId: number;
+  reset?: boolean;
   gates?: string[];
   onTick?: (state: CrowdSimulatorTick) => void;
 }
@@ -25,6 +26,8 @@ export interface CrowdSimulatorTick {
 export interface CrowdSimulatorResult extends CrowdSimulatorTick {
   gates: string[];
   duration_s: number;
+  reset: boolean;
+  removed: number;
 }
 
 interface Walker {
@@ -39,6 +42,10 @@ interface Walker {
 export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise<CrowdSimulatorResult> {
   validate(options);
   const api = options.api.replace(/\/$/, '');
+  const reset = options.reset === true;
+  const removed = reset
+    ? (await deleteJson<{ removed: number }>(`${api}/api/circuits/${options.circuitId}/people`)).removed
+    : 0;
   const geometry = await getJson<{ pack: CircuitPack }>(`${api}/api/circuits/${options.circuitId}/geometry`);
   const pack = geometry.pack;
   const graph = new VenueGraph(pack);
@@ -88,7 +95,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
     if (tick < ticks) await sleep(options.tickMs);
   }
 
-  return { tick: ticks, joined, active: walkers.length, reports, gates, duration_s: duration };
+  return { tick: ticks, joined, active: walkers.length, reports, gates, duration_s: duration, reset, removed };
 }
 
 function selectGates(pack: CircuitPack, graph: VenueGraph, requested?: string[]): string[] {
@@ -191,6 +198,12 @@ async function getJson<T>(url: string): Promise<T> {
 async function postJson<T = unknown>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`POST ${url} -> ${response.status}: ${await response.text()}`);
+  return await response.json() as T;
+}
+
+async function deleteJson<T = unknown>(url: string): Promise<T> {
+  const response = await fetch(url, { method: 'DELETE' });
+  if (!response.ok) throw new Error(`DELETE ${url} -> ${response.status}: ${await response.text()}`);
   return await response.json() as T;
 }
 

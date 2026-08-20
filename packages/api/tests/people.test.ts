@@ -91,6 +91,16 @@ describe('people locations', () => {
     await server.listen(0);
     const address = server.server.address();
     const port = typeof address === 'object' && address ? address.port : 0;
+    await simulateLiveCrowd({
+      api: `http://127.0.0.1:${port}`,
+      circuitId: 'silverstone',
+      people: 3,
+      ratePerSecond: 100,
+      tickMs: 20,
+      durationS: 0.03,
+      seed: 8,
+      startPersonId: 900,
+    });
     const result = await simulateLiveCrowd({
       api: `http://127.0.0.1:${port}`,
       circuitId: 'silverstone',
@@ -99,11 +109,14 @@ describe('people locations', () => {
       tickMs: 20,
       durationS: 0.12,
       seed: 9,
-      startPersonId: 21,
+      startPersonId: 1,
+      reset: true,
     });
     expect(result.joined).toBe(12);
+    expect(result.reset).toBe(true);
+    expect(result.removed).toBe(3);
     expect(result.gates.length).toBeGreaterThan(1);
-    expect(server.people.list('silverstone', 20).map((person) => person.person_id)).toEqual(Array.from({ length: 12 }, (_, index) => index + 21));
+    expect(server.people.list('silverstone', 20).map((person) => person.person_id)).toEqual(Array.from({ length: 12 }, (_, index) => index + 1));
     expect(server.live?.snapshot(Date.now() / 1000).reporting_devices).toBe(12);
   });
 });

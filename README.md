@@ -86,10 +86,25 @@ With `make console` running in another terminal, populate the circuit from sever
 make simulator SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
 ```
 
+Start from an empty people database and live dashboard state by adding `--reset` to the direct
+simulator command:
+
+```sh
+bun run crowdflow -- live simulate silverstone --reset --people 500 --rate 50 --duration 30
+```
+
+The equivalent Make command is:
+
+```sh
+make simulator SIM_RESET=1 SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
+```
+
 `SIM_RATE` is the number of new people per second, `SIM_TICK_MS` controls movement update frequency,
 `SIM_START_ID` sets the first sequential ID, and `SIM_GATES` accepts a comma-separated list of gate
-IDs. If no gates are supplied, the simulator chooses up to six connected gates. People and their
-current locations are stored locally in `.data/crowdflow.sqlite`.
+IDs. If no gates are supplied, the simulator chooses up to six connected gates. `--reset` deletes
+the selected circuit's people and current locations, clears its live WebSocket state, then starts
+again from person ID 1 unless `--start-id` is supplied. People and their current locations are stored
+locally in `.data/crowdflow.sqlite`.
 
 The dashboard starts with the grid hidden. `GRID OFF` enables it at 100 m, then it switches through
 50 m and 25 m cells down to a minimum 10 m grid as the map is enlarged. `FULL MAP` expands the

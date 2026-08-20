@@ -180,6 +180,15 @@ export class PeopleStore {
     };
   }
 
+  reset(circuitId: string): number {
+    if (!circuitId.trim()) throw new Error('circuit_id is required');
+    const count = this.database.query<{ count: number }, [string]>(
+      'SELECT COUNT(*) AS count FROM people WHERE circuit_id = ?',
+    ).get(circuitId)?.count ?? 0;
+    this.database.run('DELETE FROM people WHERE circuit_id = ?', circuitId);
+    return count;
+  }
+
   close(): void {
     this.database.close();
   }
