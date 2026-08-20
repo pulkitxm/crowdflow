@@ -1,20 +1,27 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { parse } from '@babel/parser';
 
-const selftest = process.argv.includes('--selftest');
+const args = process.argv.slice(2);
+const selftest = args.includes('--selftest');
+const strip = args.includes('--strip');
+const all = strip || args.includes('--all');
+const prefixes = args.filter((arg) => !arg.startsWith('--'));
 
 function allowed(raw) {
   const body = raw
-    .replace(/^(\/\/|\/\*+|<!--|#)/, '')
+    .replace(/^(\/\/+|\/\*+|<!--|#)/, '')
     .replace(/(\*\/|-->)$/, '')
     .trim()
     .replace(/^\*+\s*/, '');
   return [
+    /^<(reference|amd-)/,
     /^@(ts-ignore|ts-expect-error|ts-nocheck|ts-check)\b/,
     /^eslint-(disable|enable)(-next-line|-line)?\b/,
+    /^(eslint-env|eslint\s|globals?\s|exported\b)/,
     /^biome-ignore\b/,
     /^prettier-ignore\b/,
+    /^@(jsx|jsxImportSource|jsxRuntime|jsxFrag)\b/,
     /^swift-tools-version\b/,
     /^swiftlint:/,
     /^swift-format\b/,
@@ -25,6 +32,7 @@ function allowed(raw) {
     /^@(license|preserve)\b/,
     /^yaml-language-server\b/,
     /^yamllint\b/,
+    /webpack(ChunkName|Mode|Prefetch|Preload|Include|Exclude|Ignore)/,
   ].some((pattern) => pattern.test(body)) || raw.startsWith('/*!');
 }
 
@@ -123,11 +131,31 @@ function htmlComments(source) {
 function yamlComments(source) {
   const ranges = [];
   let offset = 0;
+  let blockIndent = null;
+  let quote = null;
   for (const line of source.split('\n')) {
-    let quote = null;
+    const firstNonWhitespace = line.search(/\S/);
+    const blank = firstNonWhitespace === -1;
+    const indent = blank ? 0 : firstNonWhitespace;
+    if (quote === null && blockIndent !== null) {
+      if (blank || indent > blockIndent) {
+        offset += line.length + 1;
+        continue;
+      }
+      blockIndent = null;
+    }
+    if (quote === null && blank) {
+      offset += line.length + 1;
+      continue;
+    }
+    let commentAt = -1;
     for (let index = 0; index < line.length; index += 1) {
       const char = line[index];
       if (quote === '"' && char === '\\') {
+        index += 1;
+        continue;
+      }
+      if (quote === "'" && char === "'" && line[index + 1] === "'") {
         index += 1;
         continue;
       }
@@ -140,10 +168,17 @@ function yamlComments(source) {
         continue;
       }
       if (!quote && char === '#' && (index === 0 || /\s/.test(line[index - 1]))) {
-        const raw = line.slice(index);
-        if (!allowed(raw)) ranges.push({ start: offset + index, end: offset + line.length });
+        commentAt = index;
         break;
       }
+    }
+    if (quote === null) {
+      const code = (commentAt === -1 ? line : line.slice(0, commentAt)).trimEnd();
+      if (/(?:^|\s)[|>](?:[1-9][+-]?|[+-][1-9]?)?$/.test(code)) blockIndent = indent;
+    }
+    if (commentAt !== -1) {
+      const raw = line.slice(commentAt);
+      if (!allowed(raw)) ranges.push({ start: offset + commentAt, end: offset + line.length });
     }
     offset += line.length + 1;
   }
@@ -167,7 +202,7 @@ function propertiesComments(source) {
 function scan(file, source) {
   if (/\.(c|m)?[jt]sx?$/.test(file)) return scriptComments(file, source);
   if (/\.(html?|xml|svg)$/.test(file)) return htmlComments(source);
-  if (/\.ya?ml$/.test(file)) return yamlComments(source);
+  if (/\.ya?ml$/.test(file) || /(^|\/)Makefile$/.test(file)) return yamlComments(source);
   if (/\.properties$/.test(file) || /(^|\/)\.gitignore$/.test(file)) return propertiesComments(source);
   if (/\.css$/.test(file)) return delimitedComments(source, false, false, false);
   if (/\.kts?$/.test(file)) return delimitedComments(source, true, true, true);
@@ -192,13 +227,13 @@ function baseRef() {
 }
 
 function candidateFiles(base) {
-  const changed = execFileSync('git', ['diff', '--name-only', '--diff-filter=ACMR', '-z', base, '--'], { encoding: 'utf8' });
-  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' });
-  return [...new Set(`${changed}${untracked}`.split('\0').filter(Boolean))]
-    .filter((file) => /\.(ts|tsx|js|jsx|mjs|cjs|css|html|htm|kt|kts|swift|gradle|json|jsonc|yaml|yml|xml|svg|properties)$/.test(file) || /(^|\/)\.gitignore$/.test(file))
+  const selected = all
+    ? execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
+    : `${execFileSync('git', ['diff', '--name-only', '--diff-filter=ACMR', '-z', base, '--'], { encoding: 'utf8' })}${execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' })}`;
+  return [...new Set(selected.split('\0').filter(Boolean))]
+    .filter((file) => /\.(ts|tsx|js|jsx|mjs|cjs|css|html|htm|kt|kts|swift|gradle|json|jsonc|yaml|yml|xml|svg|properties|java|rs|py|sh|bash|c|cc|cpp|h|hpp)$/.test(file) || /(^|\/)(\.gitignore|\.gitattributes|Makefile)$/.test(file))
     .filter(existsSync)
-    .filter((file) => !file.startsWith('presentation/vendor/'))
-    .filter((file) => !file.startsWith('packages/contracts/schema/'));
+    .filter((file) => !prefixes.length || prefixes.some((prefix) => file === prefix || file.startsWith(`${prefix.replace(/\/$/, '')}/`)));
 }
 
 function sourceAt(base, file) {
@@ -224,6 +259,34 @@ function newCommentRanges(file, source, previous) {
   });
 }
 
+function stripComments(source, ranges) {
+  const expanded = ranges.map((range) => {
+    let lineStart = range.start;
+    while (lineStart > 0 && source[lineStart - 1] !== '\n') lineStart -= 1;
+    let lineEnd = range.end;
+    while (lineEnd < source.length && source[lineEnd] !== '\n') lineEnd += 1;
+    if (/^[ \t]*$/.test(source.slice(lineStart, range.start)) && /^[ \t]*$/.test(source.slice(range.end, lineEnd))) {
+      return { start: lineStart, end: lineEnd < source.length ? lineEnd + 1 : lineEnd };
+    }
+    let start = range.start;
+    while (start > lineStart && /[ \t]/.test(source[start - 1])) start -= 1;
+    return { start, end: range.end };
+  }).sort((left, right) => left.start - right.start || left.end - right.end);
+  const merged = [];
+  for (const range of expanded) {
+    const previous = merged.at(-1);
+    if (previous && range.start <= previous.end) previous.end = Math.max(previous.end, range.end);
+    else merged.push({ ...range });
+  }
+  let result = '';
+  let cursor = 0;
+  for (const range of merged) {
+    result += source.slice(cursor, range.start);
+    cursor = range.end;
+  }
+  return `${result}${source.slice(cursor)}`.replace(/[ \t]+$/gm, '');
+}
+
 function runSelftest() {
   const cases = [
     ['sample.ts', 'const url = "https://example.com";\n', 0],
@@ -238,11 +301,15 @@ function runSelftest() {
     ['Package.swift', '// swift-tools-version: 6.0\n', 0],
     ['sample.xml', '<node><!-- remove --></node>\n', 1],
     ['sample.properties', 'value=#literal\n! remove\n', 1],
+    ['sample.yaml', 'text: |\n  # visible\n# remove\n', 1],
+    ['sample.ts', '/// <reference types="node" />\n', 0],
   ];
   for (const [file, source, expected] of cases) {
     const actual = scan(file, source).length;
     if (actual !== expected) throw new Error(`${file}: expected ${expected}, received ${actual}`);
   }
+  const stripped = stripComments('const value = 1; // remove\n// remove\n', scan('sample.ts', 'const value = 1; // remove\n// remove\n'));
+  if (stripped !== 'const value = 1;\n') throw new Error(`strip failed: ${JSON.stringify(stripped)}`);
   console.log(`comment checker self-test passed (${cases.length} cases)`);
 }
 
@@ -253,11 +320,16 @@ function main() {
     const source = readFileSync(file, 'utf8');
     let ranges;
     try {
-      ranges = newCommentRanges(file, source, sourceAt(base, file));
+      ranges = all ? scan(file, source) : newCommentRanges(file, source, sourceAt(base, file));
     } catch (error) {
       throw new Error(`${file}: ${error instanceof Error ? error.message : String(error)}`);
     }
     if (!ranges.length) continue;
+    if (strip) {
+      writeFileSync(file, stripComments(source, ranges));
+      findings += ranges.length;
+      continue;
+    }
     findings += ranges.length;
     for (const range of ranges) {
       const line = lineNumber(source, range.start);
@@ -268,8 +340,12 @@ function main() {
       }
     }
   }
-  if (findings) throw new Error(`${findings} new disallowed comments found`);
-  console.log(`no new disallowed comments found against ${base}`);
+  if (strip) {
+    console.log(`removed ${findings} disallowed comments`);
+    return;
+  }
+  if (findings) throw new Error(`${findings} disallowed comments found`);
+  console.log(all ? 'all tracked source and configuration files are comment-free' : `no new disallowed comments found against ${base}`);
 }
 
 if (selftest) runSelftest();
