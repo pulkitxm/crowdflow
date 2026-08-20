@@ -15,6 +15,7 @@
  */
 
 :root {
+  color-scheme: dark;
   --ground: #07090c;
   --panel: #0d1117;
   --panel-head: #121820;
@@ -38,6 +39,28 @@
 
   --font: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
   --row: 20px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ground: #e8eef3;
+  --panel: #ffffff;
+  --panel-head: #f4f7fa;
+  --line: #c8d3dd;
+  --line-soft: #dfe6ec;
+  --ink: #172737;
+  --ink-dim: #506579;
+  --ink-faint: #718396;
+  --nominal: #087846;
+  --building: #9b6200;
+  --critical: #bb2940;
+  --silent: #617487;
+  --unknown: #71808d;
+  --info: #0869aa;
+  --gate: #1768b3;
+  --parking: #087b59;
+  --stand: #946100;
+  --concourse: #71808d;
 }
 
 * {
@@ -271,6 +294,21 @@ button {
   cursor: crosshair;
 }
 
+.map__attribution {
+  position: absolute;
+  left: 7px;
+  bottom: 6px;
+  display: none;
+  max-width: calc(100% - 14px);
+  padding: 2px 5px;
+  color: rgba(255, 255, 255, 0.84);
+  background: rgba(6, 11, 16, 0.72);
+  font-size: 8px;
+  pointer-events: none;
+}
+
+.map__attribution--visible { display: block; }
+
 .zoom-tools {
   display: inline-flex;
   align-items: center;
@@ -319,6 +357,8 @@ button {
   letter-spacing: 0.08em;
   cursor: pointer;
 }
+
+.crowd-view__select--map { min-width: 98px; }
 
 .crowd-view__select:hover,
 .crowd-view__select:focus-visible { border-color: #35597f; outline: none; }
@@ -384,6 +424,20 @@ button {
 .legend__item--heat-active .legend__glyph, .legend__item--heat-active .legend__word { color: #18c886; }
 .legend__item--heat-busy .legend__glyph, .legend__item--heat-busy .legend__word { color: #ffb11b; }
 .legend__item--heat-peak .legend__glyph, .legend__item--heat-peak .legend__word { color: #ff4057; }
+
+:root[data-theme="light"] .tool { background: #ffffff; }
+:root[data-theme="light"] .tool:hover { border-color: #8ea4b7; }
+:root[data-theme="light"] .tool--on { background: #dbeafa; color: #164f7c; border-color: #8bb2d2; }
+:root[data-theme="light"] .crowd-view__select { background-color: #ffffff; color: var(--ink); }
+:root[data-theme="light"] .map__readout { background: rgba(255, 255, 255, 0.94); box-shadow: 0 8px 24px rgba(46, 65, 82, 0.14); }
+:root[data-theme="light"] table.zones tbody tr:hover { background: #edf3f8; }
+:root[data-theme="light"] table.zones tbody tr.is-selected { background: #dcebf7; }
+:root[data-theme="light"] .row--critical { background: #fff0f2; }
+:root[data-theme="light"] .zones__count td { background: #f2f6f9; }
+:root[data-theme="light"] .verdictline { background: #f2f6f9; }
+:root[data-theme="light"] .pill--sel { background: #e4f0fa; border-color: #90b2cc; }
+:root[data-theme="light"] .row--selected td { background: #e5f0f8; }
+:root[data-theme="light"] .feedline--critical { background: #fff0f2; }
 
 /* ------------------------------------------------------------ state atoms -- */
 

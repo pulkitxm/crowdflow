@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@crowdflow/api": "0.2.0",
-    "@crowdflow/contracts": "0.2.0"
+    "@crowdflow/contracts": "0.2.0",
+    "@crowdflow/core": "0.2.0"
   },
   "devDependencies": {
     "vite": "8.2.2"

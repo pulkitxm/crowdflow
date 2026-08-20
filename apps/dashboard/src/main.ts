@@ -13,7 +13,7 @@ import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFram
 import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
-import { readMapQuery, writeMapQuery, type CrowdLayer } from "./mapState";
+import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
 import { FeedPanel } from "./panels/feed";
@@ -40,6 +40,7 @@ let sectorGrid: PeopleQueryResult | null = null;
 let cohortRefreshTimer: number | null = null;
 let cohortViewport: { coordinates: Position[]; zoom: number } | null = null;
 let mapState = readMapQuery(window.location.search);
+document.documentElement.dataset.theme = mapState.theme;
 
 const link = new ConsoleLink({
   onFrame: (frame) => handleFrame(frame),
@@ -69,6 +70,8 @@ map.setKindView(mapState.layer === "kinds");
 map.setGridVisible(mapState.grid);
 map.setCrowdMode(mapState.crowd);
 map.setSectorVisible(mapState.sectors);
+map.setBasemap(mapState.basemap);
+map.setTheme(mapState.theme);
 
 const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => focusSector(zoneId));
 table.onResort(() => {
@@ -83,7 +86,9 @@ const live = new LivePanel(must("live-body"), must("live-status"));
 
 const mapControls = must("map-controls");
 const consoleElement = must("console");
+const attribution = must("map-attribution");
 consoleElement.classList.toggle("console--map-focus", mapState.full);
+attribution.classList.toggle("map__attribution--visible", mapState.basemap === "satellite");
 
 const zoomControls = document.createElement("div");
 zoomControls.className = "zoom-tools";
@@ -136,6 +141,46 @@ rotateButton.addEventListener("click", () => {
   portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
 });
 mapControls.append(rotateButton);
+
+const basemapView = document.createElement("label");
+basemapView.className = "crowd-view";
+basemapView.append("MAP");
+const basemapSelect = document.createElement("select");
+basemapSelect.className = "crowd-view__select crowd-view__select--map";
+basemapSelect.setAttribute("aria-label", "Map background");
+for (const [value, label] of [["schematic", "SCHEMATIC"], ["satellite", "SATELLITE"]] as const) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  basemapSelect.append(option);
+}
+basemapSelect.value = map.basemapMode;
+basemapSelect.addEventListener("change", () => {
+  const basemap = map.setBasemap(basemapSelect.value as Basemap);
+  attribution.classList.toggle("map__attribution--visible", basemap === "satellite");
+  persistMapControls();
+});
+basemapView.append(basemapSelect);
+mapControls.append(basemapView);
+
+const themeButton = document.createElement("button");
+themeButton.type = "button";
+themeButton.className = "tool";
+themeButton.title = "Switch between dark and light mode";
+const updateThemeButton = () => {
+  const isLight = map.themeMode === "light";
+  themeButton.classList.toggle("tool--on", isLight);
+  themeButton.setAttribute("aria-pressed", String(isLight));
+  themeButton.textContent = isLight ? "LIGHT" : "DARK";
+};
+themeButton.addEventListener("click", () => {
+  const theme = map.setTheme(map.themeMode === "light" ? "dark" : "light");
+  document.documentElement.dataset.theme = theme;
+  updateThemeButton();
+  persistMapControls();
+});
+updateThemeButton();
+mapControls.append(themeButton);
 
 const kindButton = document.createElement("button");
 kindButton.type = "button";
@@ -287,6 +332,8 @@ function persistMapControls(): void {
     grid: map.gridVisible,
     crowd: map.crowdMode,
     sectors: map.sectorsVisible,
+    basemap: map.basemapMode,
+    theme: map.themeMode,
   };
   const search = writeMapQuery(window.location.search, mapState);
   window.history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
