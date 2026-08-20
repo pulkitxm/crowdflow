@@ -31,6 +31,11 @@
   --unknown: #4d5a66;
   --info: #58b6ff;
 
+  --gate: #3987e5;
+  --parking: #199e70;
+  --stand: #c98500;
+  --concourse: #4d5a66;
+
   --font: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
   --row: 20px;
 }
@@ -296,6 +301,13 @@ button {
 .legend__item--critical .legend__glyph, .legend__item--critical .legend__word { color: var(--critical); }
 .legend__item--silent .legend__glyph, .legend__item--silent .legend__word { color: var(--silent); }
 .legend__item--unknown .legend__glyph, .legend__item--unknown .legend__word { color: var(--unknown); }
+.legend__item--gate .legend__glyph, .legend__item--gate .legend__word { color: var(--gate); }
+.legend__item--parking .legend__glyph, .legend__item--parking .legend__word { color: var(--parking); }
+.legend__item--stand .legend__glyph, .legend__item--stand .legend__word { color: var(--stand); }
+.legend__item--concourse .legend__glyph, .legend__item--concourse .legend__word { color: var(--concourse); }
+.legend__item--crossing .legend__glyph, .legend__item--crossing .legend__word,
+.legend__item--amenity .legend__glyph, .legend__item--amenity .legend__word,
+.legend__item--exit .legend__glyph, .legend__item--exit .legend__word { color: var(--unknown); }
 
 /* ------------------------------------------------------------ state atoms -- */
 
