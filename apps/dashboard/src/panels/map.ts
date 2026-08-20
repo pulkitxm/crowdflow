@@ -877,7 +877,7 @@ export class MapPanel {
     for (const spot of labelled) {
       const [x, y] = this.toScreen(spot.x, spot.y);
       if (x < 28 || y < 12 || x > width - 28 || y > height - 12) continue;
-      const text = `${spot.count} · ${spot.density.toFixed(2)}`;
+      const text = `${spot.count} · ${spot.density.toFixed(3)}`;
       const boxWidth = ctx.measureText(text).width + 12;
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 9, boxWidth, 18];
       if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py)) continue;
