@@ -38,6 +38,7 @@ import { ASSUMED_ID_ROTATION_S, SERVED_DISCLOSURE_VERSIONS, validateCrowdNode } 
 import { StateEngine } from '@crowdflow/core';
 import { insidePack } from '@crowdflow/core/positioning';
 import type { LoadedCircuit } from './packs.js';
+import type { PeopleStore } from './people.js';
 import type { LiveSnapshot, NodeMark } from './wire.js';
 
 /**
@@ -67,15 +68,21 @@ export interface LiveIngestOptions {
 
 export class LiveIngest {
   private engine: StateEngine;
-  private marks = new Map<string, { node: CrowdNode; received: number }>();
+  private marks = new Map<number, { node: CrowdNode; received: number; source: PositionSource }>();
   private sourceCounts = new Map<PositionSource, number>();
+  private listeners = new Set<(snapshot: LiveSnapshot) => void>();
   private accepted = 0;
   private rejected = 0;
   private problemCounts = new Map<string, number>();
   private lastReportAt: number | null = null;
 
-  constructor(readonly circuit: LoadedCircuit, readonly options: LiveIngestOptions) {
+  constructor(readonly circuit: LoadedCircuit, readonly options: LiveIngestOptions, private readonly people: PeopleStore) {
     this.engine = new StateEngine(circuit.pack, options.participation, options.window_s);
+  }
+
+  subscribe(listener: (snapshot: LiveSnapshot) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   /**
@@ -101,6 +108,9 @@ export class LiveIngest {
     if (report.circuit_id !== this.circuit.pack.id) {
       return fail(`circuit ${report.circuit_id} is not the live circuit`, Math.max(1, report.nodes?.length ?? 1));
     }
+    if (!this.people.exists(report.person_id, report.circuit_id)) {
+      return fail(`person ${report.person_id} is not logged in to ${report.circuit_id}`, Math.max(1, report.nodes?.length ?? 1));
+    }
 
     const batch = report.nodes ?? [];
     if (!batch.length) return { accepted: 0, rejected: 0, problems: [], server_time: now, stop: false };
@@ -124,15 +134,21 @@ export class LiveIngest {
     }
 
     const kept = usable.length ? this.engine.ingest(usable, now) : 0;
-    for (const node of usable) this.marks.set(node.node_id, { node, received: now });
-    for (const source of report.sources ?? []) this.sourceCounts.set(source, (this.sourceCounts.get(source) ?? 0) + 1);
+    const source = report.sources?.[0] ?? 'fused';
+    for (const node of usable) {
+      this.marks.set(report.person_id, { node, received: now, source });
+      this.people.updateLocation(report.person_id, report.circuit_id, node.position, node.speed_ms, node.accuracy_m, source, now, report.gate_id ?? null);
+    }
+    for (const reportedSource of report.sources ?? []) this.sourceCounts.set(reportedSource, (this.sourceCounts.get(reportedSource) ?? 0) + 1);
 
     this.accepted += kept;
     this.rejected += dropped + (usable.length - kept);
     if (usable.length > kept) problems.push('outside the reporting window');
     this.lastReportAt = now;
-
-    return { accepted: kept, rejected: dropped + (usable.length - kept), problems, server_time: now, stop: false };
+    const ack: IngestAck = { accepted: kept, rejected: dropped + (usable.length - kept), problems, server_time: now, stop: false };
+    const snapshot = this.snapshot(now);
+    for (const listener of this.listeners) listener(snapshot);
+    return ack;
   }
 
   /**
@@ -177,8 +193,9 @@ export class LiveIngest {
       participation: this.options.participation,
       participation_provenance: 'assumed',
       state,
-      nodes: [...this.marks.values()].map(({ node }): NodeMark => ({
-        x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
+      nodes: [...this.marks.entries()].map(([personId, { node, source }]): NodeMark => ({
+        person_id: personId, x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
+        timestamp: node.timestamp, source,
       })),
       reporting_devices: this.marks.size,
       by_source: Object.fromEntries(this.sourceCounts) as Partial<Record<PositionSource, number>>,

@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 .cache/
+.data/
 .expo/
 .gradle/
 .DS_Store

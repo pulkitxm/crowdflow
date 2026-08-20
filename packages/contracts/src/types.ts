@@ -935,6 +935,8 @@ export interface PositionFix {
  * connection keeps sensing and sends the backlog when it next has one.
  */
 export interface NodeReport {
+  person_id: number;
+  gate_id?: string;
   /**
    * rotating pseudonym, valid within its epoch only
    */

@@ -31,13 +31,14 @@ function node(now: number, over: Partial<CrowdNode> = {}): CrowdNode {
 
 function report(now: number, nodes: CrowdNode[], over: Partial<NodeReport> = {}): NodeReport {
   return {
-    node_id: 'nd-abcdef', epoch: Math.floor(now / ASSUMED_ID_ROTATION_S), circuit_id: 'silverstone',
+    person_id: 1, node_id: 'nd-abcdef', epoch: Math.floor(now / ASSUMED_ID_ROTATION_S), circuit_id: 'silverstone',
     consent_version: LOCATION_DISCLOSURE_VERSION, nodes, sources: ['wifi'], ...over,
   };
 }
 
 async function armed(): Promise<{ port: number }> {
   server = new CrowdFlowServer(root);
+  server.people.login(1, 'silverstone', Date.now() / 1000);
   server.startLive({ circuit_id: 'silverstone', participation: 0.18 });
   await server.listen(0);
   const address = server.server.address();
@@ -120,7 +121,7 @@ describe('live handset ingest', () => {
     // unlikely, and which must not be joined to the current one even so.
     await send(port, '/api/nodes', report(now, [node(now, { epoch: epoch - 1 })], { epoch: epoch - 1 }));
     const live = await get(port, '/api/live') as any;
-    expect(live.reporting_devices).toBe(2);
+    expect(live.reporting_devices).toBe(1);
   });
 
   it('rejects an enormous batch rather than ingesting it', async () => {

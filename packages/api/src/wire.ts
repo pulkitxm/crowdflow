@@ -3,7 +3,9 @@
 // Contract types are imported, never restated: one authored TypeScript
 // definition of ZoneState serves every runtime and UI.
 import type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "@crowdflow/contracts";
+import type { GridCell, PeopleQueryResult, PersonLocation, PersonRecord } from "./people.js";
 export type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState };
+export type { GridCell, PeopleQueryResult, PersonLocation, PersonRecord };
 
 /**
  * Everything needed to draw the venue, sent once per console.
@@ -152,6 +154,7 @@ export interface StandardsReport {
  * room with a window.
  */
 export interface NodeMark {
+  person_id?: number;
   x: number;
   y: number;
   speed_ms: number;
@@ -159,6 +162,8 @@ export interface NodeMark {
    * positional 1-sigma; the dot is not a point
    */
   accuracy_m: number;
+  timestamp?: number;
+  source?: PositionSource;
 }
 
 /**
@@ -404,7 +409,7 @@ export interface ControlRequest {
   speed?: number | null;
 }
 
-export type FrameType = "hello" | "tick" | "status" | "live";
+export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined";
 
 /**
  * Every WebSocket message, one shape.
@@ -438,6 +443,7 @@ export interface SocketFrame {
    * the live phone picture, on hello and on every `live` frame. Absent when no handset has ever reported — which is different from present-and-empty, and the console draws them differently.
    */
   live?: LiveSnapshot | null;
+  person?: PersonRecord | null;
   note?: string | null;
 }
 
@@ -499,4 +505,9 @@ export interface LiveRequest {
   circuit_id: string;
   participation: number;
   window_s?: number | null;
+}
+
+export interface PersonLoginRequest {
+  person_id: number;
+  circuit_id: string;
 }

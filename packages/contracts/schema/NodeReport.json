@@ -66,6 +66,9 @@
         "epoch": {
           "type": "number"
         },
+        "gate_id": {
+          "type": "string"
+        },
         "node_id": {
           "description": "rotating pseudonym, valid within its epoch only",
           "type": "string"
@@ -77,6 +80,9 @@
           },
           "type": "array"
         },
+        "person_id": {
+          "type": "number"
+        },
         "sources": {
           "description": "which radios were usable while this batch was formed. Explains a coverage gap: 'the zone is empty' and 'every phone in the zone lost its anchor map' look identical without it.",
           "items": {
@@ -86,6 +92,7 @@
         }
       },
       "required": [
+        "person_id",
         "node_id",
         "epoch",
         "circuit_id",
