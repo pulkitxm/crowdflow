@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md,
   },
   prefix: { fontSize: 34, lineHeight: 42, fontWeight: '600', marginRight: space.sm },
-  input: { flex: 1, fontSize: 38, lineHeight: 46, fontWeight: '700', paddingVertical: space.sm },
+  input: { flex: 1, minWidth: 0, fontSize: 38, lineHeight: 46, fontWeight: '700', paddingVertical: space.sm },
   problem: { fontSize: 15, lineHeight: 21 },
   explainer: { gap: space.xs },
   explainerTitle: { fontWeight: '700' },
