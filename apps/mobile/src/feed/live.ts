@@ -1,7 +1,7 @@
 import type { SpectatorView } from '@crowdflow/contracts';
 
 export interface LiveFeedOptions { baseUrl: string; origin: string; destination: string; intervalMs?: number; online?: () => boolean; meshPeers?: () => number }
-export const LIVE_FEED_INTERVAL_MS = 2000;
+const LIVE_FEED_INTERVAL_MS = 2000;
 
 /** Polls the deliberately small spectator endpoint. Mesh-received views use the
  * same `accept` method, so radio and HTTP can never grow separate render paths. */

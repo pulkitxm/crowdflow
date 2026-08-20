@@ -1,6 +1,7 @@
 import type { MeshClass, MeshMessage } from '@crowdflow/contracts';
 import { ASSUMED_SKEW_WINDOW_S } from '@crowdflow/contracts';
 import type { MessageKey } from './policy.js';
+import { mean } from '../statistics.js';
 
 export interface Delivery { key: MessageKey; traffic_class: MeshClass; message: MeshMessage; uplink_id: string; hops: number; origin_timestamp: number; delivered_at: number }
 export interface UplinkReport { uplink_id: string; sent_at: number; deliveries: Delivery[] }
@@ -28,4 +29,3 @@ export class FanIn {
   get p95_age_at_receipt_s(): number { if (!this.receiptAges.length) return 0; const sorted = this.receiptAges.slice().sort((a, b) => a - b); return sorted[Math.min(sorted.length - 1, Math.trunc(0.95 * sorted.length))]!; }
   get redundancy(): number { return this.observations.size ? [...this.observations.values()].reduce((sum, value) => sum + value.reported_by.size, 0) / this.observations.size : 0; }
 }
-function mean(values: number[]): number { return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0; }

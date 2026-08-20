@@ -23,7 +23,7 @@
 
 import type { AnchorPack, CircuitPack, Position, PositionFix, RadioAnchor, RadioObservation } from '@crowdflow/contracts';
 import { FREE_FLOW_SPEED_MS } from '@crowdflow/contracts';
-import { AnchorMap, simulateScan } from '@crowdflow/core/positioning';
+import { simulateScan } from '@crowdflow/core/positioning';
 // The seeded MT19937 stream, from its own subpath. Not re-exported through
 // `positioning` because the package root already exports it and two `export *`
 // paths offering the same name silently cancel each other out in ES modules.
@@ -85,7 +85,6 @@ export interface RehearsalOptions {
 export class RehearsalRadio implements AnchorScanner {
   readonly intervalS: number;
   private readonly rng: Random;
-  private readonly map: AnchorMap;
   private readonly anchors: RadioAnchor[];
 
   constructor(
@@ -97,7 +96,6 @@ export class RehearsalRadio implements AnchorScanner {
   ) {
     this.intervalS = intervalS;
     this.rng = new Random(options.seed ?? 1);
-    this.map = new AnchorMap(anchorPack);
     this.anchors = Object.values(anchorPack.anchors ?? {}).filter(
       (anchor) => anchor.kind === (source === 'wifi' ? 'wifi_ap' : 'ble_beacon'),
     );
@@ -112,7 +110,7 @@ export class RehearsalRadio implements AnchorScanner {
 
   async scan(now: number): Promise<RadioObservation[]> {
     const options = this.options.sigma_db == null ? {} : { sigma_db: this.options.sigma_db };
-    return simulateScan(this.map, this.anchors, this.walk.at(now), now, this.rng, options);
+    return simulateScan(this.anchors, this.walk.at(now), now, this.rng, options);
   }
 }
 

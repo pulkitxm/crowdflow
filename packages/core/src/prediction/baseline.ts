@@ -4,6 +4,7 @@ import {
   DENSITY_NOMINAL_MAX,
   isActionable,
 } from '@crowdflow/contracts';
+import { clamp, round } from '../statistics.js';
 
 export const MODEL_ID = 'baseline-v1';
 export const MIN_HISTORY = 3;
@@ -70,5 +71,3 @@ function leastSquaresSlope(series: Array<[number, number]>): number {
   const denominator = series.reduce((sum, [time]) => sum + (time - meanT) ** 2, 0);
   return denominator === 0 ? 0 : numerator / denominator;
 }
-function clamp(value: number, min: number, max: number): number { return Math.max(min, Math.min(max, value)); }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

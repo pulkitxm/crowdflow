@@ -22,7 +22,7 @@ import type { LOSBand, ZoneKind, ZoneState } from "@crowdflow/contracts";
 import type { TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { NO_VALUE, age, fixed, integer } from "./format";
 
-export type Visibility = "observed" | "silent" | "unknown";
+type Visibility = "observed" | "silent" | "unknown";
 
 export interface ZoneRow {
   id: string;

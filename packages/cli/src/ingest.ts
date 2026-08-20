@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { validateCircuitPack, validateTraceFragment, type CircuitPack, type Position, type TraceFragment } from '@crowdflow/contracts';
+import { round } from '@crowdflow/core/statistics';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export const OSM_QUERY = `[out:json][timeout:180];(way["highway"~"^(footway|path|pedestrian|steps|service|track|cycleway|living_street|residential|unclassified)$"]({bbox});way["barrier"]({bbox});way["building"="grandstand"]({bbox});way["amenity"="parking"]({bbox});node["barrier"~"^(gate|entrance|stile|cycle_barrier|kissing_gate)$"]({bbox});node["highway"="crossing"]({bbox}););out geom;`;
@@ -42,4 +43,3 @@ export function writePack(root: string, pack: CircuitPack, track: Position[] = [
   writeFileSync(join(directory, 'track.json'), JSON.stringify(track.map(({ x, y }) => [Number(x.toFixed(2)), Number(y.toFixed(2))])) + '\n'); return directory;
 }
 function exists(path: string): boolean { try { readFileSync(path); return true; } catch { return false; } }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

@@ -1,5 +1,3 @@
-# CrowdFlow — one Bun/TypeScript toolchain. Kotlin exists only under the Expo
-# Android mesh module, where the screen-off foreground service requires it.
 DASHBOARD := apps/dashboard
 API_PORT ?= 8099
 UI_PORT ?= 5199
@@ -9,13 +7,16 @@ POPULATION ?= 2500
 SEED ?= 42
 SPEED ?= 4
 
-.PHONY: help install console api dashboard test typecheck codegen build gate clean
+.PHONY: help install console api dashboard comments lint test typecheck codegen build check gate clean
 help:
 	@echo "make console     Bun API + dashboard -> http://127.0.0.1:$(UI_PORT)"
 	@echo "make api         Bun API only        -> http://127.0.0.1:$(API_PORT)"
 	@echo "make dashboard   operator console only"
+	@echo "make comments    reject new source comments"
+	@echo "make lint        project lint rules"
 	@echo "make test        every Vitest suite + TypeScript check"
 	@echo "make codegen     deterministic JSON Schema from authored TypeScript"
+	@echo "make check       complete local quality gate"
 	@echo "make gate        seeded Silverstone intervention A/B"
 
 install:
@@ -35,6 +36,12 @@ api:
 dashboard:
 	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --port $(UI_PORT)
 
+comments:
+	bun run comments:check
+
+lint:
+	bun run lint
+
 test: typecheck
 	bun run test
 
@@ -47,6 +54,9 @@ codegen:
 
 build:
 	bun run build
+
+check:
+	bun run check
 
 gate:
 	bun run crowdflow -- sim ab $(CIRCUIT) --count 6000 --ticks 700 --seed $(SEED)

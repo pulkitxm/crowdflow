@@ -15,7 +15,7 @@
  * downloaded over a saturated cell network.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AnchorPack, CircuitPack, SensingStatus } from '@crowdflow/contracts';
 
 import type { CircuitSource } from '../circuits/registry';
@@ -51,7 +51,6 @@ export function useSensing(options: UseSensingOptions): Sensing {
   const [problem, setProblem] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState(0);
   const [survey, setSurvey] = useState(NO_SURVEY);
-  const engineRef = useRef<SensingEngine | null>(null);
 
   // The pack and the anchor map, fetched once per circuit. Deliberately not
   // refetched when `enabled` flips: a person toggling sharing off and on again
@@ -82,7 +81,6 @@ export function useSensing(options: UseSensingOptions): Sensing {
   }, [baseUrl, loaded, mode]);
 
   useEffect(() => {
-    engineRef.current = engine;
     if (!engine) { setStatus(null); setSurvey(NO_SURVEY); return; }
     setSurvey(engine.survey);
     const unsubscribe = engine.subscribe((next) => {
@@ -95,11 +93,10 @@ export function useSensing(options: UseSensingOptions): Sensing {
   }, [engine]);
 
   useEffect(() => {
-    const current = engineRef.current;
-    if (!current) return;
-    if (enabled) void current.start();
-    else void current.stop();
-  }, [engine, enabled]);
+    if (!engine) return;
+    if (enabled) void engine.start();
+    else void engine.stop();
+  }, [enabled, engine]);
 
   return { status, pseudonymExpiresIn: expiresIn, survey, problem };
 }

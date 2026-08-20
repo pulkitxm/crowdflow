@@ -8,34 +8,32 @@
     "web": "bunx expo start --web",
     "ios": "bunx expo start --ios",
     "android": "bunx expo start --android",
-    "typecheck": "bunx --bun tsc --noEmit",
-    "test": "bunx vitest run"
+    "build": "expo export --platform android --output-dir dist",
+    "lint": "biome lint App.tsx src modules/mesh/index.ts modules/mesh/bridge.test.ts metro.config.js vitest.config.mts index.js --diagnostic-level=error",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@crowdflow/contracts": "0.2.0",
     "@crowdflow/core": "0.2.0",
-    "@expo/metro-runtime": "~57.0.9",
+    "@expo/metro-runtime": "~57.0.12",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~57.0.12",
+    "expo": "~57.0.15",
     "expo-crypto": "~57.0.1",
-    "expo-location": "~57.0.11",
-    "expo-modules-core": "~57.0.6",
+    "expo-location": "~57.0.12",
+    "expo-modules-core": "~57.0.12",
     "expo-status-bar": "~57.0.1",
-    "expo-task-manager": "~57.0.11",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
     "react-native-ble-plx": "^3.5.1",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "^15.15.5",
+    "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2",
     "react-native-wifi-reborn": "^4.13.6"
   },
   "devDependencies": {
     "@crowdflow/api": "workspace:*",
-    "@types/node": "^24.10.0",
-    "@types/react": "~19.2.4",
-    "typescript": "~6.0.3",
-    "vitest": "^4.1.10"
+    "@types/react": "~19.2.4"
   }
 }

@@ -2,6 +2,7 @@ import type { MeshClass, Position } from '@crowdflow/contracts';
 import { ASSUMED_RADIO_RANGE_CROWD_M, FREE_FLOW_SPEED_MS, MESH_TTL_MAX, sprayCopiesFor } from '@crowdflow/contracts';
 import { Random } from '../random.js';
 import { electUplinks, meshCoverage, radioNeighbours } from './uplink.js';
+import { round } from '../statistics.js';
 
 export interface MeshSimConfig { seed: number; node_count: number; span_m: number; radio_range_m: number; tick_s: number; walk_speed_ms: number; data_plan_fraction: number; state_every_ticks: number; uplink_every_ticks: number; urgent_every_ticks: number; ttl: number }
 export const DEFAULT_MESH_SIM_CONFIG: MeshSimConfig = { seed: 7, node_count: 150, span_m: 400, radio_range_m: ASSUMED_RADIO_RANGE_CROWD_M, tick_s: 5, walk_speed_ms: FREE_FLOW_SPEED_MS, data_plan_fraction: 0.05, state_every_ticks: 1, uplink_every_ticks: 1, urgent_every_ticks: 20, ttl: MESH_TTL_MAX };
@@ -24,4 +25,3 @@ export class MeshSimulator {
   private point(): Position { return { x: this.rng.uniform(0, this.config.span_m), y: this.rng.uniform(0, this.config.span_m) }; }
 }
 export function comparePolicies(config: Partial<MeshSimConfig> = {}, ticks = 200): MeshRunMetrics { return new MeshSimulator(config).run(ticks); }
-function round(value: number, digits = 2): number { return Number(value.toFixed(digits)); }

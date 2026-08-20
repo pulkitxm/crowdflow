@@ -30,6 +30,7 @@ import type { AnchorPack, CircuitPack, Position, RadioAnchor, RadioObservation, 
 import { ASSUMED_FIX_ACCURACY_CEILING_M, ASSUMED_MIN_ANCHORS_FOR_FIX } from '@crowdflow/contracts';
 import { Random } from '../random.js';
 import { AnchorMap } from './anchors.js';
+import { quantileNearest, round } from '../statistics.js';
 import { anchorIdFor } from './anchors.js';
 import { PATH_LOSS, curveFor, rssiFromDistance } from './pathloss.js';
 import { trilaterate } from './solve.js';
@@ -143,7 +144,6 @@ export interface ScanOptions {
  * `rangeSigmaM` is proportional.
  */
 export function simulateScan(
-  map: AnchorMap,
   anchors: RadioAnchor[],
   truth: Position,
   now: number,
@@ -236,7 +236,7 @@ export function positioningAccuracy(
   for (let index = 0; index < sampleCount; index++) {
     const truth = samplePosition(pack, rng);
     if (!truth) break;
-    const observations = simulateScan(map, anchors, truth, 1000, rng, options);
+    const observations = simulateScan(anchors, truth, 1000, rng, options);
     const resolved = map.resolve(observations, 1000, options.kinds);
     heardTotal += resolved.matched;
     if (resolved.matched < ASSUMED_MIN_ANCHORS_FOR_FIX) continue;
@@ -260,9 +260,9 @@ export function positioningAccuracy(
     samples: sampleCount,
     solved,
     usable,
-    p50_error_m: quantile(errors, 0.5),
-    p95_error_m: quantile(errors, 0.95),
-    p50_claimed_m: quantile(claims, 0.5),
+    p50_error_m: round(quantileNearest(errors, 0.5), 2),
+    p95_error_m: round(quantileNearest(errors, 0.95), 2),
+    p50_claimed_m: round(quantileNearest(claims, 0.5), 2),
     within_3_sigma: usable ? within / usable : 0,
     mean_anchors_heard: sampleCount ? heardTotal / sampleCount : 0,
     seed,
@@ -286,10 +286,4 @@ function samplePosition(pack: CircuitPack, rng: Random): Position | null {
   if (!from || !to) return null;
   const t = rng.random();
   return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
-}
-
-function quantile(sorted: number[], fraction: number): number {
-  if (!sorted.length) return Number.NaN;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.round(fraction * (sorted.length - 1))));
-  return Number(sorted[index]!.toFixed(2));
 }

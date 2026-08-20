@@ -12,17 +12,15 @@
     "crowdflow": "./src/main.ts"
   },
   "scripts": {
-    "test": "bunx vitest run",
-    "typecheck": "bunx --bun tsc --noEmit"
+    "build": "bun build src/main.ts --outdir dist --target bun --packages external",
+    "lint": "biome lint src tests --diagnostic-level=error",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@crowdflow/contracts": "0.2.0",
     "@crowdflow/core": "0.2.0",
     "@crowdflow/hf": "0.2.0",
     "yaml": "^2.9.0"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.0",
-    "vitest": "^4.1.10"
   }
 }

@@ -23,7 +23,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { EventProfile, Session } from '@crowdflow/contracts';
+import type { EventProfile } from '@crowdflow/contracts';
 import type { RaceSummary } from './wire.js';
 
 interface CalendarFile {
@@ -35,7 +35,7 @@ interface CalendarFile {
 }
 
 /** Every committed season calendar, newest first. */
-export function calendars(root: string): CalendarFile[] {
+function calendars(root: string): CalendarFile[] {
   const directory = join(root, 'circuits');
   if (!existsSync(directory)) return [];
   return readdirSync(directory)
@@ -50,7 +50,7 @@ function packExists(root: string, circuitId: string): boolean {
 
 /** A stable id for one race. Season and round, because both are needed to be
  *  unique and neither changes once a season is published. */
-export function raceId(event: EventProfile): string {
+function raceId(event: EventProfile): string {
   return `${event.season ?? 0}-${String(event.round ?? 0).padStart(2, '0')}-${event.circuit_id}`;
 }
 
@@ -112,5 +112,3 @@ export function currentRace(root: string, now: Date): RaceSummary | null {
   if (running) return running;
   return all.find((entry) => (entry.starts_at ?? entry.date) > iso) ?? all.at(-1) ?? null;
 }
-
-export type { Session };

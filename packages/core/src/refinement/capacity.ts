@@ -2,6 +2,7 @@ import type { CircuitPack, Edge, Sourced } from '@crowdflow/contracts';
 import { GEOIND_PRIVACY_LEVEL, MEASURED_SAMPLE_FLOOR, isTrustworthy } from '@crowdflow/contracts';
 import { capacityFlow } from '../state/flow.js';
 import { traversalSpeed, type MatchedFragment, type Traversal } from './trace.js';
+import { median, round, sampleStandardDeviation } from '../statistics.js';
 
 export const BIN_S = 60; export const SUSTAINED_BINS = 3;
 export interface EdgeMeasurement { edge_id: string; fragments: number; width: Sourced; capacity_flow_ped_m_min: Sourced | null; free_speed: Sourced | null; peak_bin_flow_ped_m_min: number; notes: string[] }
@@ -10,7 +11,7 @@ export function measureWidth(traversals: Traversal[], imported: Sourced | null, 
   const offsets = traversals.flatMap((item) => item.signed_offsets_m);
   const count = samples ?? new Set(traversals.map((item) => item.fragment_id)).size;
   if (offsets.length < 2) return [imported, 'too few matched points to estimate lateral spread'];
-  const observed = stdev(offsets);
+  const observed = sampleStandardDeviation(offsets);
   const radius = median(traversals.map((item) => item.noise_radius_m));
   const epsilons = traversals.map((item) => item.epsilon).filter((value): value is number => value != null);
   const sigma = epsilons.length ? Math.sqrt(3) / median(epsilons) : Math.sqrt(3) * radius / GEOIND_PRIVACY_LEVEL;
@@ -39,7 +40,11 @@ export function measureCapacity(traversals: Traversal[], widthM: number, partici
 
 export function measureEdges(pack: CircuitPack, matched: MatchedFragment[], participation: number): Record<string, EdgeMeasurement> {
   const grouped: Record<string, Traversal[]> = {};
-  for (const item of matched) for (const traversal of item.traversals) (grouped[traversal.edge_id] ??= []).push(traversal);
+  for (const item of matched) for (const traversal of item.traversals) {
+    const group = grouped[traversal.edge_id] ?? [];
+    group.push(traversal);
+    grouped[traversal.edge_id] = group;
+  }
   const out: Record<string, EdgeMeasurement> = {};
   for (const [edgeId, traversals] of Object.entries(grouped)) {
     const edge = pack.edges?.[edgeId]; if (!edge) continue;
@@ -66,6 +71,3 @@ export function applyMeasurements(pack: CircuitPack, measurements: Record<string
   }
   return refined;
 }
-function median(values: number[]): number { const sorted = [...values].sort((a, b) => a - b); const middle = Math.trunc(sorted.length / 2); return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2; }
-function stdev(values: number[]): number { const mean = values.reduce((a, b) => a + b, 0) / values.length; return values.length < 2 ? 0 : Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1)); }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

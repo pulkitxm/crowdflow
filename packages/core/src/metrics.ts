@@ -2,6 +2,7 @@ import type { VenueState } from '@crowdflow/contracts';
 import { ControlLoop, type TickResult } from './loop.js';
 import { VenueGraph } from './routing/graph.js';
 import { Scenario } from './simulation/scenario.js';
+import { round } from './statistics.js';
 
 export class RunMetrics {
   peak_density = 0; critical_zone_seconds = 0; building_zone_seconds = 0;
@@ -80,4 +81,3 @@ export function abTest(scenario: Scenario, graph: VenueGraph, participation: num
   const [withIntervention] = runScenario(scenario, graph, true, participation, ticks);
   return new ABResult(without, withIntervention);
 }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

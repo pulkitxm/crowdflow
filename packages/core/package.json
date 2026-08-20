@@ -6,17 +6,16 @@
   "exports": {
     ".": "./src/index.ts",
     "./positioning": "./src/positioning/index.ts",
-    "./random": "./src/random.ts"
+    "./random": "./src/random.ts",
+    "./statistics": "./src/statistics.ts"
   },
   "scripts": {
-    "test": "bunx vitest run",
-    "typecheck": "bunx --bun tsc --noEmit"
+    "build": "bun build src/index.ts --outdir dist --target bun --packages external",
+    "lint": "biome lint src tests --diagnostic-level=error",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@crowdflow/contracts": "0.2.0"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.0",
-    "vitest": "^4.1.10"
   }
 }

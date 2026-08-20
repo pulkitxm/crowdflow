@@ -18,13 +18,13 @@ import type { AnchorPack, CircuitSummary, VenueGeometry } from '@crowdflow/api/w
 import { planAnchors } from '@crowdflow/core/positioning';
 import { DEMO_GEOMETRY } from './demo';
 
-export interface CircuitChoice {
+interface CircuitChoice {
   id: string;
   name: string;
   track_length_m: number;
 }
 
-export function toChoice(summary: CircuitSummary): CircuitChoice {
+function toChoice(summary: CircuitSummary): CircuitChoice {
   return {
     id: summary.id,
     name: summary.name,

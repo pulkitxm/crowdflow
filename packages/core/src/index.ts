@@ -4,6 +4,7 @@ export * from './routing/graph.js';
 export * from './prediction/baseline.js';
 export * from './safety/engine.js';
 export * from './random.js';
+export * from './statistics.js';
 export * from './simulation/model.js';
 export * from './simulation/scenario.js';
 export * from './mesh/privacy.js';

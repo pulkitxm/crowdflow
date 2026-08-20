@@ -1,5 +1,7 @@
 import type { CircuitPack, Edge, Position, Provenance, Sourced, Zone, ZoneKind } from '@crowdflow/contracts';
 import { Frame, pointToSegmentDistance, segmentsIntersect, widthFor, type OsmNode, type OsmWay } from './venue.js';
+import { distanceM as distance } from './positioning/geo.js';
+import { round } from './statistics.js';
 
 export const ASSUMED_OSM_SNAP_M = 8;
 export const ASSUMED_GATE_TOLERANCE_M = 12;
@@ -29,6 +31,4 @@ export function buildPack(input: { circuit_id: string; name: string; geometry_so
 export function simplifyGraph(sourceZones: Record<string, Zone>, sourceEdges: Record<string, Edge>, protectedIds = new Set<string>()): { zones: Record<string, Zone>; edges: Record<string, Edge>; collapsed: number } { const zones = { ...sourceZones }; const edges = { ...sourceEdges }; let collapsed = 0; for (const id of Object.keys(zones)) { if (protectedIds.has(id)) continue; const incident = Object.values(edges).filter((edge) => edge.source === id || edge.destination === id); if (incident.length !== 2) continue; const [first, second] = incident as [Edge, Edge]; const a = first.source === id ? first.destination : first.source; const b = second.source === id ? second.destination : second.source; if (a === b || a === id || b === id) continue; const length = first.length_m + second.length_m; const provenance: Provenance = first.width_m.provenance === 'assumed' || second.width_m.provenance === 'assumed' ? 'assumed' : first.width_m.provenance; const width: Sourced = { value: round((first.width_m.value * first.length_m + second.width_m.value * second.length_m) / length), provenance, note: 'length-weighted mean of merged segments' }; delete edges[first.id]; delete edges[second.id]; const edgeId = `m${first.id}_${second.id}`; edges[edgeId] = { id: edgeId, source: a, destination: b, length_m: round(length), width_m: width, gradient: ((first.gradient ?? 0) + (second.gradient ?? 0)) / 2, bidirectional: (first.bidirectional ?? true) && (second.bidirectional ?? true) }; delete zones[id]; collapsed += 1; } const live = new Set(Object.values(edges).flatMap((edge) => [edge.source, edge.destination])); return { zones: Object.fromEntries(Object.entries(zones).filter(([id]) => live.has(id))), edges, collapsed }; }
 function nearTrack(points: Position[], track: Position[], buffer: number): boolean { return points.some((point) => track.slice(1).some((end, index) => pointToSegmentDistance(point, track[index]!, end) <= buffer)); }
 function centroid(points: Position[]): Position { return { x: points.reduce((sum, point) => sum + point.x, 0) / points.length, y: points.reduce((sum, point) => sum + point.y, 0) / points.length }; }
-function distance(a: Position, b: Position): number { return Math.hypot(a.x - b.x, a.y - b.y); }
-function round(value: number, digits = 2): number { return Number(value.toFixed(digits)); }
 function roundPosition(point: Position): Position { return { x: round(point.x), y: round(point.y) }; }

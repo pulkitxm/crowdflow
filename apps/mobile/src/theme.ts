@@ -73,7 +73,7 @@ export const type = {
   micro: { size: 13, lineHeight: 18, weight: '600' as const, letterSpacing: 0.6 },
 } as const;
 
-export interface StatusColors {
+interface StatusColors {
   fill: string;
   text: string;
   edge: string;
@@ -104,7 +104,7 @@ export interface Palette {
  * Colour is never the only carrier: every status renders its word beside it, for
  * colour-blind users and for anyone glancing at a screen washed out by the sun.
  */
-export const light: Palette = {
+const light: Palette = {
   paper: '#FFFFFF',
   surface: '#F1F4F4',
   ink: '#0E1213',
@@ -118,7 +118,7 @@ export const light: Palette = {
   unknown: { fill: '#EAEDEE', text: '#3E484A', edge: '#687477' },
 };
 
-export const dark: Palette = {
+const dark: Palette = {
   paper: '#0B0E0F',
   surface: '#171C1D',
   ink: '#F3F6F6',

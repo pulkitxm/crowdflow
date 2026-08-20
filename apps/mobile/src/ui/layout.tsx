@@ -216,12 +216,6 @@ export function ListRow({
   );
 }
 
-/** A hairline. Explicit rather than a card border, so a list can be flat. */
-export function Divider() {
-  const palette = usePalette();
-  return <View style={{ height: StyleSheet.hairlineWidth * 2, backgroundColor: palette.line }} />;
-}
-
 /** A round number, in a fixed-width box. The one piece of F1 vocabulary the app
  *  borrows outright, because everybody at a circuit already reads it. */
 export function RoundBadge({ round }: { round: number }) {

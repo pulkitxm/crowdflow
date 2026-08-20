@@ -63,7 +63,7 @@ export function venueDay(iso: string, offset: string | undefined): string {
   return `${DAYS[at.getUTCDay()]} ${at.getUTCDate()}`;
 }
 
-export function monthName(iso: string): string {
+function monthName(iso: string): string {
   return MONTHS[new Date(iso).getUTCMonth()] ?? '';
 }
 

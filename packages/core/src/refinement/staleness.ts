@@ -6,7 +6,14 @@ export function auditUsage(pack: CircuitPack, matched: MatchedFragment[]): EdgeU
   const counts: Record<string, number> = {};
   for (const item of matched) for (const traversal of item.traversals) counts[traversal.edge_id] = (counts[traversal.edge_id] ?? 0) + 1;
   const byZone: Record<string, string[]> = {};
-  for (const [id, edge] of Object.entries(pack.edges ?? {})) { (byZone[edge.source] ??= []).push(id); (byZone[edge.destination] ??= []).push(id); }
+  for (const [id, edge] of Object.entries(pack.edges ?? {})) {
+    const sources = byZone[edge.source] ?? [];
+    sources.push(id);
+    byZone[edge.source] = sources;
+    const destinations = byZone[edge.destination] ?? [];
+    destinations.push(id);
+    byZone[edge.destination] = destinations;
+  }
   return Object.entries(pack.edges ?? {}).map(([id, edge]) => {
     const neighbours = new Set([...(byZone[edge.source] ?? []), ...(byZone[edge.destination] ?? [])]); neighbours.delete(id);
     const nearby = [...neighbours].reduce((sum, neighbour) => sum + (counts[neighbour] ?? 0), 0); const mine = counts[id] ?? 0;

@@ -1,5 +1,6 @@
 import type { CircuitPack, VenueState } from '@crowdflow/contracts';
 import { MAD_TO_SIGMA, MODIFIED_Z_OUTLIER } from '@crowdflow/contracts';
+import { median, round } from '@crowdflow/core/statistics';
 
 export const MIN_BASELINE_POINTS = 8;
 export const MIN_PEERS = 3;
@@ -18,5 +19,3 @@ export class InsightEngine {
   private name(id: string): string { return this.pack.zones?.[id]?.name ?? id; }
 }
 function relative(observed: number, baseline: number): number { return baseline ? (observed - baseline) / Math.abs(baseline) : 0; }
-function median(values: number[]): number { const sorted = values.slice().sort((a, b) => a - b); const middle = Math.trunc(sorted.length / 2); return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2; }
-function round(value: number, digits = 2): number { return Number(value.toFixed(digits)); }

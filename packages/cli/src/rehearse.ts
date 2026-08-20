@@ -25,6 +25,7 @@ import { ASSUMED_MIN_ANCHORS_FOR_FIX, FREE_FLOW_SPEED_MS, LOCATION_DISCLOSURE_VE
 import {
   AnchorMap, NodeIdentity, PositionFuser, crowdNodeFrom, distanceM, fixFrom, simulateScan, trilaterate,
 } from '@crowdflow/core/positioning';
+import { quantileNearest, round } from '@crowdflow/core/statistics';
 import { Random } from '@crowdflow/core/random';
 
 export interface RehearsalRun {
@@ -153,8 +154,8 @@ export async function rehearseLivePhones(options: RehearseOptions): Promise<Rehe
   }
 
   errors.sort((a, b) => a - b);
-  run.p50_error_m = quantile(errors, 0.5);
-  run.p95_error_m = quantile(errors, 0.95);
+  run.p50_error_m = round(quantileNearest(errors, 0.5), 2);
+  run.p95_error_m = round(quantileNearest(errors, 0.95), 2);
   return run;
 }
 
@@ -162,7 +163,7 @@ function offerRadio(
   map: AnchorMap, anchors: RadioAnchor[], walker: Walker, truth: Position, now: number,
   rng: Random, sigmaDb: number, source: 'wifi' | 'ble', kinds: ('wifi_ap' | 'ble_beacon')[],
 ): boolean {
-  const scan = simulateScan(map, anchors, truth, now, rng, { sigma_db: sigmaDb, kinds });
+  const scan = simulateScan(anchors, truth, now, rng, { sigma_db: sigmaDb, kinds });
   const resolved = map.resolve(scan, now, kinds);
   if (resolved.matched < ASSUMED_MIN_ANCHORS_FOR_FIX) return false;
   walker.fuser.offer(fixFrom(trilaterate(resolved.ranges), source, now));
@@ -199,12 +200,6 @@ function hex(rng: Random, bytes: number): string {
   let out = '';
   for (let index = 0; index < bytes; index++) out += Math.floor(rng.random() * 256).toString(16).padStart(2, '0');
   return out;
-}
-
-function quantile(sorted: number[], fraction: number): number {
-  if (!sorted.length) return Number.NaN;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.round(fraction * (sorted.length - 1))));
-  return Number(sorted[index]!.toFixed(2));
 }
 
 function sleep(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }

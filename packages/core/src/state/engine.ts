@@ -10,6 +10,7 @@ import {
   isReportable,
 } from '@crowdflow/contracts';
 import { flowFromOccupancy, queueExcess } from './flow.js';
+import { clamp01, round } from '../statistics.js';
 
 export const DEFAULT_WINDOW_S = 30;
 export const STALE_S = 90;
@@ -136,14 +137,14 @@ export class StateEngine {
     const freshness = now - Math.max(...nodes.map((node) => node.timestamp));
     const accuracy = nodes.reduce((sum, node) => sum + node.accuracy_m, 0) / count;
     const countTerm = Math.min(1, Math.log1p(count) / Math.log1p(ASSUMED_CONFIDENCE_COUNT_SATURATION));
-    const freshTerm = clamp(1 - freshness / this.windowS);
+    const freshTerm = clamp01(1 - freshness / this.windowS);
     const span = ASSUMED_POSITION_ACCURACY_WORST_M - ASSUMED_POSITION_ACCURACY_BEST_M;
-    const accuracyTerm = clamp(1 - (accuracy - ASSUMED_POSITION_ACCURACY_BEST_M) / span);
+    const accuracyTerm = clamp01(1 - (accuracy - ASSUMED_POSITION_ACCURACY_BEST_M) / span);
     const qualityWeight = (1 - ASSUMED_CONFIDENCE_COUNT_WEIGHT) / 3;
     const value = ASSUMED_CONFIDENCE_COUNT_WEIGHT * countTerm
       + qualityWeight * (freshTerm + accuracyTerm + stabilityValue);
     const confidence = {
-      value: round(clamp(value), 3), observed_nodes: count,
+      value: round(clamp01(value), 3), observed_nodes: count,
       freshness_s: round(freshness, 2), mean_accuracy_m: round(accuracy, 2),
       stability: round(stabilityValue, 3), reportable: false,
     };
@@ -151,12 +152,10 @@ export class StateEngine {
   }
 }
 
-function clamp(value: number): number { return Math.max(0, Math.min(1, value)); }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }
 function stability(history: number[]): number {
   if (history.length < 3) return 0.4;
   const mean = history.reduce((a, b) => a + b, 0) / history.length;
   if (mean <= 0) return 1;
   const variance = history.reduce((sum, value) => sum + (value - mean) ** 2, 0) / history.length;
-  return clamp(1 - Math.sqrt(variance) / mean);
+  return clamp01(1 - Math.sqrt(variance) / mean);
 }
