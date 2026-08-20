@@ -25,11 +25,12 @@ import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
 import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
 import { fixed, integer } from "../format";
-import { easeOutCubic, revealProgress } from "../mapMotion";
+import { easeOutCubic, layerTransform, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 import { HEAT_BANDS, heatSpots } from "../heatmap";
-import type { CrowdLayer } from "../mapState";
+import type { Basemap, CrowdLayer, Theme } from "../mapState";
+import { satelliteTileUrl, satelliteZoom, tileVenueCorners, visibleTiles, type TileCoordinate } from "../satellite";
 import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
@@ -118,6 +119,9 @@ export class MapPanel {
   private rotation: 0 | 90 | 180 | 270 = 270;
   private statics: HTMLCanvasElement | null = null;
   private staticKey = "";
+  private staticView: View | null = null;
+  private staticDpr = 1;
+  private staticRotation: 0 | 90 | 180 | 270 = 270;
   private selected: string | null = null;
   private hovered: string | null = null;
   private dragging: { x: number; y: number } | null = null;
@@ -137,6 +141,16 @@ export class MapPanel {
   private zoomTargetScale: number | null = null;
   private gridFrame: number | null = null;
   private gridFadeStarted = 0;
+  private basemap: Basemap = "schematic";
+  private theme: Theme = "dark";
+  private tileImages = new Map<string, HTMLImageElement>();
+  private satelliteLayer: HTMLCanvasElement | null = null;
+  private satelliteKey = "";
+  private satelliteView: View | null = null;
+  private satelliteDpr = 1;
+  private satelliteRotation: 0 | 90 | 180 | 270 = 270;
+  private satelliteRevision = 0;
+  private satelliteRedrawFrame: number | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -235,6 +249,35 @@ export class MapPanel {
 
   get sectorsVisible(): boolean { return this.showSectors; }
 
+  setBasemap(basemap: Basemap): Basemap {
+    this.basemap = basemap;
+    this.invalidateBaseLayers();
+    this.draw();
+    return this.basemap;
+  }
+
+  get basemapMode(): Basemap { return this.basemap; }
+
+  setTheme(theme: Theme): Theme {
+    this.theme = theme;
+    this.invalidateBaseLayers();
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.theme;
+  }
+
+  get themeMode(): Theme { return this.theme; }
+
+  private invalidateBaseLayers(): void {
+    this.statics = null;
+    this.satelliteLayer = null;
+  }
+
+  private get viewIsMoving(): boolean {
+    return this.dragging !== null || this.zoomFrame !== null;
+  }
+
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
    * silent, unknown) and a zone-kind view (concourse/gate/parking/stand) that
@@ -263,14 +306,14 @@ export class MapPanel {
   setOrientation(deg: 0 | 90 | 180 | 270): void {
     if (this.rotation === deg) return;
     this.rotation = deg;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
   }
 
   /** Rotate orientation 90 degrees clockwise */
   rotate90(): number {
     this.rotation = ((this.rotation + 90) % 360) as 0 | 90 | 180 | 270;
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
     return this.rotation;
   }
@@ -278,7 +321,7 @@ export class MapPanel {
   /** Toggle between Landscape (0°) and Portrait (90°) views */
   togglePortrait(): boolean {
     this.rotation = (this.rotation === 90 ? 0 : 90);
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.fit();
     return this.rotation === 90;
   }
@@ -359,7 +402,7 @@ export class MapPanel {
       offsetX: pad - minX * scale + (width - pad * 2 - (maxX - minX) * scale) / 2,
       offsetY: height - pad + minY * scale - (height - pad * 2 - (maxY - minY) * scale) / 2,
     };
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     this.emitZoom();
     this.notifyViewport();
@@ -396,13 +439,15 @@ export class MapPanel {
         offsetX: startView.offsetX + (targetView.offsetX - startView.offsetX) * progress,
         offsetY: startView.offsetY + (targetView.offsetY - startView.offsetY) * progress,
       };
-      this.statics = null;
-      this.draw();
-      this.emitZoom();
       if (progress < 1) {
+        this.draw();
+        this.emitZoom();
         this.zoomFrame = window.requestAnimationFrame(frame);
       } else {
         this.zoomFrame = null;
+        this.invalidateBaseLayers();
+        this.draw();
+        this.emitZoom();
         this.notifyViewport();
       }
     };
@@ -424,7 +469,7 @@ export class MapPanel {
       offsetX: width / 2 - rx * scale,
       offsetY: height / 2 + ry * scale,
     };
-    this.statics = null;
+    this.invalidateBaseLayers();
     this.draw();
     this.emitZoom();
     this.notifyViewport();
@@ -483,7 +528,7 @@ export class MapPanel {
     this.canvas.width = Math.round(width * dpr);
     this.canvas.height = Math.round(height * dpr);
     this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.statics = null;
+    this.invalidateBaseLayers();
     const firstSize = this.viewportWidth === 0 || this.viewportHeight === 0;
     this.viewportWidth = width;
     this.viewportHeight = height;
@@ -528,14 +573,16 @@ export class MapPanel {
         offsetX: px - rx * scale,
         offsetY: py + ry * scale,
       };
-      this.statics = null;
-      this.draw();
-      this.emitZoom();
       if (progress < 1) {
+        this.draw();
+        this.emitZoom();
         this.zoomFrame = window.requestAnimationFrame(frame);
       } else {
         this.zoomFrame = null;
         this.zoomTargetScale = null;
+        this.invalidateBaseLayers();
+        this.draw();
+        this.emitZoom();
         this.notifyViewport();
       }
     };
@@ -588,7 +635,6 @@ export class MapPanel {
         offsetX: this.view.offsetX + dx,
         offsetY: this.view.offsetY + dy,
       };
-      this.statics = null;
       this.draw();
       return;
     }
@@ -601,8 +647,13 @@ export class MapPanel {
   };
 
   private onPointerUp = (): void => {
-    if (this.dragging) this.notifyViewport();
+    const moved = this.dragging !== null;
     this.dragging = null;
+    if (moved) {
+      this.invalidateBaseLayers();
+      this.draw();
+      this.notifyViewport();
+    }
   };
 
   private pick(event: { clientX: number; clientY: number }): string | null {
@@ -628,8 +679,9 @@ export class MapPanel {
   // -- drawing -------------------------------------------------------------
 
   private drawStatics(): HTMLCanvasElement {
-    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.showSectors}`;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.showSectors}:${this.basemap}:${this.theme}`;
     if (this.statics && this.staticKey === key) return this.statics;
+    if (this.statics && this.staticView && this.viewIsMoving) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
     const layer = document.createElement("canvas");
@@ -640,12 +692,15 @@ export class MapPanel {
     if (!ctx || !geometry) {
       this.statics = layer;
       this.staticKey = key;
+      this.staticView = { ...this.view };
+      this.staticDpr = dpr;
+      this.staticRotation = this.rotation;
       return layer;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = EDGE_COLOUR;
+    ctx.strokeStyle = this.basemap === "satellite" ? "rgba(231, 242, 251, 0.34)" : this.theme === "light" ? "#b1bec9" : EDGE_COLOUR;
     ctx.beginPath();
     const zones = geometry.pack.zones ?? {};
     for (const edge of Object.values(geometry.pack.edges ?? {})) {
@@ -661,7 +716,7 @@ export class MapPanel {
 
     if (geometry.track && geometry.track.length > 1) {
       ctx.lineWidth = 2;
-      ctx.strokeStyle = TRACK_COLOUR;
+      ctx.strokeStyle = this.basemap === "satellite" ? "rgba(255, 255, 255, 0.72)" : this.theme === "light" ? "#536b7d" : TRACK_COLOUR;
       ctx.beginPath();
       geometry.track.forEach((point, index) => {
         const [x, y] = this.toScreen(point.x, point.y);
@@ -700,7 +755,7 @@ export class MapPanel {
           ctx.arc(x, y, 2, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = "rgba(8,11,14,0.75)";
+        ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255,255,255,0.82)" : "rgba(8,11,14,0.75)";
         ctx.fillRect(...box);
         ctx.fillStyle = colour;
         ctx.fillText(zone.name, x + 7, y);
@@ -713,6 +768,9 @@ export class MapPanel {
 
     this.statics = layer;
     this.staticKey = key;
+    this.staticView = { ...this.view };
+    this.staticDpr = dpr;
+    this.staticRotation = this.rotation;
     return layer;
   }
 
@@ -774,7 +832,7 @@ export class MapPanel {
       if (row && !row.reportable) {
         // A reading exists but the contract says do not lean on it. Hollow ring,
         // so the mark reads as provisional rather than measured.
-        ctx.strokeStyle = "#0b0e12";
+        ctx.strokeStyle = this.theme === "light" ? "#f7fafc" : "#0b0e12";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(x, y, GLYPH_R * 0.6, 0, Math.PI * 2);
@@ -791,7 +849,7 @@ export class MapPanel {
     ctx.textBaseline = "middle";
     for (const { x, y, row } of labelled.slice(0, 40)) {
       const text = `${row.name} ${row.word} ${row.value}`;
-      ctx.fillStyle = "rgba(8,11,14,0.82)";
+      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255,255,255,0.88)" : "rgba(8,11,14,0.82)";
       const w = ctx.measureText(text).width;
       ctx.fillRect(x + 7, y - 7, w + 6, 14);
       ctx.fillStyle = row.band ? BAND_COLOUR[row.band] : UNKNOWN_COLOUR;
@@ -856,7 +914,7 @@ export class MapPanel {
       ctx.fill();
       if (size * this.view.scale >= 34) {
         const [x, y] = this.toScreen((cell.min_x + cell.max_x) / 2, (cell.min_y + cell.max_y) / 2);
-        ctx.fillStyle = "#d8e2ec";
+        ctx.fillStyle = this.theme === "light" ? "#132638" : "#d8e2ec";
         ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -911,7 +969,7 @@ export class MapPanel {
     const colours = Object.fromEntries(HEAT_BANDS.map((band) => [band.band, band.colour]));
     ctx.save();
     ctx.globalAlpha = opacity;
-    ctx.globalCompositeOperation = "screen";
+    ctx.globalCompositeOperation = this.theme === "dark" && this.basemap === "schematic" ? "screen" : "source-over";
     for (const spot of spots) {
       const [x, y] = this.toScreen(spot.x, spot.y);
       const radius = Math.min(90, Math.max(20, grid.grid_size_m * this.view.scale * 0.9));
@@ -940,9 +998,9 @@ export class MapPanel {
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 9, boxWidth, 18];
       if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py)) continue;
       placed.push(box);
-      ctx.fillStyle = "rgba(7, 12, 18, 0.88)";
+      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255, 255, 255, 0.92)" : "rgba(7, 12, 18, 0.88)";
       ctx.fillRect(...box);
-      ctx.fillStyle = "#f4fbff";
+      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "#132638" : "#f4fbff";
       ctx.fillText(text, x, y);
     }
     ctx.restore();
@@ -985,14 +1043,16 @@ export class MapPanel {
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
       if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
       placed.push(box);
-      ctx.fillStyle = sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
+      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic"
+        ? sector.id === this.selected ? "rgba(218, 237, 252, 0.96)" : "rgba(255, 255, 255, 0.90)"
+        : sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
       ctx.strokeStyle = sector.id === this.selected ? "#79c7ff" : "rgba(121, 199, 255, 0.48)";
       ctx.lineWidth = 1;
       ctx.fillRect(...box);
       ctx.strokeRect(...box);
-      ctx.fillStyle = "#d8e2ec";
+      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "#132638" : "#d8e2ec";
       ctx.fillText(name, x, y - 6);
-      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : "#8a99a9";
+      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === "light" ? "#52667a" : "#8a99a9";
       ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.fillText(detail, x, y + 7);
       ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -1013,10 +1073,21 @@ export class MapPanel {
     if (!this.geometry) return;
 
     const dpr = window.devicePixelRatio || 1;
+    if (this.basemap === "satellite") {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const satellite = this.drawSatelliteLayer(width, height);
+      if (this.satelliteView && this.satelliteRotation === this.rotation) {
+        this.drawCachedLayer(ctx, satellite, this.satelliteView, this.satelliteDpr);
+      }
+      ctx.restore();
+    }
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.drawStatics(), 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const statics = this.drawStatics();
+    if (this.staticView && this.staticRotation === this.rotation) {
+      this.drawCachedLayer(ctx, statics, this.staticView, this.staticDpr);
+    }
 
     const zones = this.geometry.pack.zones ?? {};
     const gridProgress = this.previousGrid
@@ -1040,7 +1111,7 @@ export class MapPanel {
       const zone = zones[id];
       if (!zone) continue;
       const [x, y] = this.toScreen(zone.position.x, zone.position.y);
-      ctx.strokeStyle = id === this.selected ? "#e8eef4" : "#8fa3b5";
+      ctx.strokeStyle = id === this.selected ? (this.theme === "light" ? "#102437" : "#e8eef4") : "#8fa3b5";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(x, y, 9, 0, Math.PI * 2);
@@ -1048,6 +1119,100 @@ export class MapPanel {
     }
 
     ctx.restore();
+  }
+
+  private drawCachedLayer(
+    ctx: CanvasRenderingContext2D,
+    layer: HTMLCanvasElement,
+    sourceView: View,
+    sourceDpr: number,
+  ): void {
+    const transform = layerTransform(sourceView, this.view);
+    ctx.save();
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+    ctx.drawImage(layer, 0, 0, layer.width / sourceDpr, layer.height / sourceDpr);
+    ctx.restore();
+  }
+
+  private drawSatelliteLayer(width: number, height: number): HTMLCanvasElement {
+    const dpr = window.devicePixelRatio || 1;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.theme}:${this.satelliteRevision}`;
+    if (this.satelliteLayer && this.satelliteKey === key) return this.satelliteLayer;
+    if (this.satelliteLayer && this.satelliteView && this.viewIsMoving) return this.satelliteLayer;
+
+    const layer = document.createElement("canvas");
+    layer.width = this.canvas.width;
+    layer.height = this.canvas.height;
+    const ctx = layer.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.paintSatellite(ctx, width, height);
+    }
+    this.satelliteLayer = layer;
+    this.satelliteKey = key;
+    this.satelliteView = { ...this.view };
+    this.satelliteDpr = dpr;
+    this.satelliteRotation = this.rotation;
+    return layer;
+  }
+
+  private paintSatellite(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const geometry = this.geometry;
+    if (!geometry) return;
+    const frame = geometry.pack.frame;
+    const zoom = satelliteZoom(this.view.scale, frame.origin_lat);
+    const corners = [this.fromScreen(0, 0), this.fromScreen(width, 0), this.fromScreen(width, height), this.fromScreen(0, height)];
+    for (const tile of visibleTiles(frame, corners, zoom)) {
+      const image = this.tileImage(tile);
+      if (!image?.complete || image.naturalWidth === 0) continue;
+      const [topLeft, topRight, bottomLeft] = tileVenueCorners(frame, tile).map((position) => {
+        const [x, y] = this.toScreen(position.x, position.y);
+        return { x, y };
+      }) as [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }];
+      ctx.save();
+      ctx.transform(
+        (topRight.x - topLeft.x) / 256,
+        (topRight.y - topLeft.y) / 256,
+        (bottomLeft.x - topLeft.x) / 256,
+        (bottomLeft.y - topLeft.y) / 256,
+        topLeft.x,
+        topLeft.y,
+      );
+      ctx.drawImage(image, -0.25, -0.25, 256.5, 256.5);
+      ctx.restore();
+    }
+    ctx.fillStyle = this.theme === "light" ? "rgba(255, 255, 255, 0.06)" : "rgba(2, 8, 14, 0.24)";
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  private tileImage(tile: TileCoordinate): HTMLImageElement {
+    const key = `${tile.z}/${tile.y}/${tile.x}`;
+    const cached = this.tileImages.get(key);
+    if (cached) {
+      this.tileImages.delete(key);
+      this.tileImages.set(key, cached);
+      return cached;
+    }
+    if (this.tileImages.size >= 256) {
+      const oldest = this.tileImages.keys().next().value;
+      if (oldest) this.tileImages.delete(oldest);
+    }
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.decoding = "async";
+    image.addEventListener("load", () => {
+      if (this.satelliteRedrawFrame != null) return;
+      this.satelliteRedrawFrame = window.requestAnimationFrame(() => {
+        this.satelliteRedrawFrame = null;
+        this.satelliteRevision += 1;
+        if (!this.viewIsMoving) this.satelliteLayer = null;
+        if (this.basemap === "satellite") this.draw();
+      });
+    });
+    image.src = satelliteTileUrl(tile);
+    this.tileImages.set(key, image);
+    return image;
   }
 
 
