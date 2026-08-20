@@ -1,7 +1,8 @@
 import type { Forecast, LOSBand, VenueState, ZoneState } from '@crowdflow/contracts';
 import { DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, isActionable } from '@crowdflow/contracts';
 import { InferenceClient } from '@huggingface/inference';
-import { clamp01, toTabularData, zoneFeatureRow } from './features.js';
+import { clamp01, round } from '@crowdflow/core/statistics';
+import { toTabularData, zoneFeatureRow } from './features.js';
 
 export interface HfProbabilityModel {
   readonly model_id: string;
@@ -70,5 +71,3 @@ export function composeForecast(zone: ZoneState, timeToThreshold: number, modelI
   };
   return { ...forecast, actionable: isActionable(forecast) };
 }
-
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

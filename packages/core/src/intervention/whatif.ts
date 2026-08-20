@@ -2,6 +2,7 @@ import type { InterventionCandidate, ScoreBreakdown } from '@crowdflow/contracts
 import { DENSITY_BUILDING_MAX } from '@crowdflow/contracts';
 import { density } from '../state/flow.js';
 import { Simulation } from '../simulation/model.js';
+import { round } from '../statistics.js';
 
 export const DEFAULT_FRACTIONS = [0, 0.1, 0.2, 0.3, 0.4] as const;
 export const WALK_COST_PER_MIN = 8;
@@ -68,4 +69,3 @@ export class InterventionEngine {
 function total(score: Omit<ScoreBreakdown, 'total'>): number {
   return score.congestion_reduction + score.capacity_headroom + score.safety_margin + score.fairness - score.walk_time_cost;
 }
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }

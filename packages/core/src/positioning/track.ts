@@ -112,10 +112,10 @@ export function crowdNodeFrom(fix: PositionFix, identity: NodeIdentity, pack: Ci
     node_id: identity.nodeId,
     epoch: identity.epoch,
     timestamp: Math.round(fix.timestamp),
-    position: { x: round(fix.position.x), y: round(fix.position.y) },
-    speed_ms: Math.max(0, round(fix.speed_ms ?? 0)),
+    position: { x: roundToTenth(fix.position.x), y: roundToTenth(fix.position.y) },
+    speed_ms: Math.max(0, roundToTenth(fix.speed_ms ?? 0)),
     heading_deg: fix.heading_deg == null ? 0 : normaliseDegrees(fix.heading_deg),
-    accuracy_m: Math.max(ASSUMED_FIX_ACCURACY_FLOOR_M, round(fix.accuracy_m)),
+    accuracy_m: Math.max(ASSUMED_FIX_ACCURACY_FLOOR_M, roundToTenth(fix.accuracy_m)),
   };
 }
 
@@ -129,9 +129,9 @@ export function crowdNodeFrom(fix: PositionFix, identity: NodeIdentity, pack: Ci
  * is: the trailing digits of a coordinate are more identifying than the leading
  * ones, and they carry no information about where anybody is.
  */
-function round(value: number): number { return Math.round(value * 10) / 10; }
-
 function normaliseDegrees(value: number): number {
   const wrapped = ((value % 360) + 360) % 360;
-  return Math.round(wrapped * 10) / 10;
+  return roundToTenth(wrapped);
 }
+
+function roundToTenth(value: number): number { return Math.round(value * 10) / 10; }

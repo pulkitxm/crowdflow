@@ -1,23 +1,3 @@
-/**
- * The venue map, drawn in the app.
- *
- * Schematic, not cartographic — the same choice the operator console makes.
- * It draws the imported pack geometry (the circuit outline and the walkway
- * graph) with no basemap, because the spectator's question is "where am I
- * going" and every pixel spent on a picture of the place is a pixel not spent
- * on the way through it.
- *
- * This is the one shared drawing in the system: the console and this app both
- * render the same `VenueGeometry` fetched from the same API, so a pack edit
- * shows up in both without either keeping a copy. The console draws live
- * glyphs over this static layer; the app will draw its own live layer the same
- * way once the day is running.
- *
- * The static layer only is drawn here: the track outline, the walkway edges,
- * and the gates — the places a spectator can act on. The anonymous interior
- * nodes of the walking graph are not drawn; they are the scaffolding the
- * routing engine walks, not landmarks a person walks to.
- */
 
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
@@ -114,7 +94,6 @@ function frameOf(geometry: VenueGeometry) {
     if (point.x > maxX) maxX = point.x;
     if (point.y > maxY) maxY = point.y;
   }
-  // A degenerate frame is not a map.
   if (!Number.isFinite(minX) || maxX <= minX || maxY <= minY) return null;
   return { bounds: { minX, minY, maxX, maxY } };
 }

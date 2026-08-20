@@ -1,14 +1,3 @@
-/**
- * The demo harness: a live clock, the six states of a race day, and a phone.
- *
- * Everything in this file is scaffolding. None of it ships to a spectator — the
- * product is `SpectatorApp`, which takes a view and renders a screen. The shell
- * exists so the whole day can be walked through in a browser without a backend,
- * and so that a reviewer can see both themes without changing their OS setting.
- *
- * The clock is real: countdowns on the crossing rows tick down while you watch,
- * because the feed carries absolute times rather than "closes in 8 minutes".
- */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -20,7 +9,6 @@ import { palettes, radius, space, type ThemeName } from '../theme';
 import { ThemeProvider } from '../ui/theme';
 import { PHONE, PhoneFrame } from './PhoneFrame';
 
-/** Wide enough to show a phone with a rail beside it rather than a stretched app. */
 const DESKTOP_MIN_WIDTH = 940;
 
 export function DemoShell() {
@@ -60,9 +48,6 @@ export function DemoShell() {
         <PhoneFrame
           clock={DAY_LABELS[kind].when}
           online={view.link.online}
-          // A 14" laptop is shorter than an iPhone is tall once the browser
-          // chrome is counted, so the frame gives up height rather than letting
-          // the screen run off the bottom of the page.
           height={Math.min(PHONE.height, height - 2 * space.xl - 24)}
           bezel={{
             body: theme === 'light' ? '#C7CFD1' : '#1A1E20',
@@ -77,10 +62,6 @@ export function DemoShell() {
   );
 }
 
-/**
- * Ticks once a second. Fast enough that a countdown feels live, slow enough that
- * nothing on screen flickers — the app only ever renders whole minutes.
- */
 function useLiveClock(): number {
   const [now, setNow] = useState(nowSeconds);
   useEffect(() => {
@@ -163,7 +144,6 @@ function Rail({
   );
 }
 
-/** The same switcher on a phone, kept deliberately ugly so it reads as a tool. */
 function StateBar({
   kind,
   onPick,

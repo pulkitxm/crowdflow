@@ -1,0 +1,141 @@
+name: Quality
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Affected projects
+    runs-on: ubuntu-latest
+    outputs:
+      workspaces: ${{ steps.affected.outputs.workspaces }}
+      lint: ${{ steps.affected.outputs.lint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate project selection
+        run: node scripts/affected-projects.mjs --selftest
+      - id: affected
+        name: Select affected projects
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/affected-projects.mjs
+
+  standards:
+    name: Repository standards
+    needs: changes
+    if: needs.changes.outputs.lint != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - name: Validate workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
+      - name: No new disallowed comments
+        env:
+          COMMENTS_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bun run comments:check
+
+  lint:
+    name: Lint ${{ matrix.project }}
+    needs: changes
+    if: needs.changes.outputs.lint != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.lint) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - if: matrix.workspace != ''
+        run: bun run --filter '${{ matrix.workspace }}' lint
+      - if: matrix.project == 'presentation'
+        run: bunx biome lint presentation --diagnostic-level=error
+
+  typecheck:
+    name: Type-check ${{ matrix.project }}
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter '${{ matrix.workspace }}' typecheck
+
+  test:
+    name: Test ${{ matrix.project }}
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter '${{ matrix.workspace }}' test
+
+  build:
+    name: Build ${{ matrix.project }}
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter '${{ matrix.workspace }}' build
+
+  quality:
+    name: Quality
+    if: always()
+    needs: [changes, standards, lint, typecheck, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful checks
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          case ",${RESULTS}," in
+            *,failure,*|*,cancelled,*) exit 1 ;;
+          esac
+          echo "quality checks passed"

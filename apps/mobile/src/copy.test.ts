@@ -1,21 +1,3 @@
-/**
- * The vocabulary guard.
- *
- * The brief for this app bans a specific set of words from the screen: the
- * operator console's language, and anything about accounts. Bans written only in
- * a brief last until the next feature, so this test enforces it two ways:
- *
- *   1. it reads the rendering layer's source and checks every string literal and
- *      every piece of JSX text — catching a component that starts explaining
- *      itself;
- *   2. it walks the feed data structure and checks the fields that actually
- *      reach a screen — catching a message that arrives already wrong.
- *
- * The second list is deliberately narrow and explicit. `SafetyVerdict.reason`,
- * for instance, is not checked, because it is written for the operator console
- * and this app never renders it. If a screen ever starts to, that line has to be
- * added here first, which is the argument the reviewer wants to have.
- */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -34,7 +16,6 @@ import {
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
-/** Everything that draws pixels, plus the file all crowd-state wording lives in. */
 const RENDERING_LAYER = ['screens', 'ui', 'demo', 'feed/words.ts'];
 
 const BANNED: { pattern: RegExp; why: string }[] = [
@@ -65,13 +46,7 @@ function sourceFiles(): string[] {
   return out;
 }
 
-/**
- * Comments are stripped first, on purpose: the modules in this app explain at
- * length why the banned words are banned, and a naive grep would flag the
- * reasoning along with the offence.
- */
 function stripComments(source: string): string {
-  /** Small lexer, not regex: `//` inside a visible string is not a comment. */
   let out = '';
   let quote: "'" | '"' | '`' | null = null;
   let escaped = false;
@@ -113,9 +88,6 @@ function visibleText(source: string): string[] {
   for (const match of code.matchAll(/'([^'\\]*)'|"([^"\\]*)"|`([^`\\]*)`/g)) {
     found.push(match[1] ?? match[2] ?? match[3] ?? '');
   }
-  // Scan every raw JSX segment, including nodes interrupted by an interpolation
-  // (`The way adds {minutes} minutes`). The old regex skipped the entire node as
-  // soon as it saw a brace, leaving roughly half the live prose unguarded.
   for (const match of code.matchAll(/>([\s\S]*?)</g)) {
     const raw = match[1] ?? '';
     for (const segment of raw.split(/[{}]/)) found.push(segment);
@@ -131,7 +103,6 @@ describe('the rendering layer speaks the user’s language', () => {
   const files = sourceFiles();
 
   it('finds the files it is supposed to be guarding', () => {
-    // A guard that silently stops matching any files passes forever.
     expect(files.length).toBeGreaterThanOrEqual(10);
   });
 
@@ -145,7 +116,6 @@ describe('the rendering layer speaks the user’s language', () => {
 describe('the words the feed can put on screen', () => {
   const day = buildDay(1_700_000_000);
 
-  /** Exactly the fields a screen renders. Adding one here is a design decision. */
   function rendered(): string[] {
     const out: string[] = [];
     for (const view of Object.values(day)) {
@@ -204,14 +174,10 @@ describe('the words the feed can put on screen', () => {
       'nominal',
       'unknown',
     ]);
-    // The three bands must read as three different things at a glance.
     expect(new Set(Object.values(WAY_AHEAD_WORD)).size).toBe(4);
   });
 
   it('does not claim a whole route is unreported when only part of it is', () => {
-    // The bug this caught: the route headline borrowed the per-leg sentence and
-    // told someone that nobody was reporting from a route, three legs of which
-    // were reporting.
     expect(WAY_AHEAD_ROUTE_SENTENCE.unknown).not.toBe(WAY_AHEAD_SENTENCE.unknown);
     expect(WAY_AHEAD_ROUTE_SENTENCE.unknown).toMatch(/part/i);
   });

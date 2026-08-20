@@ -1,42 +1,3 @@
-/**
- * TEMPORARY VERIFICATION SCREEN — delete when it has served its purpose.
- *
- * Its one job: open the app, allow location, and see your own position on
- * screen, with the three radios reporting whether they actually work on THIS
- * handset. Nothing else — no server, no circuit choice, no crowd picture.
- *
- * ---------------------------------------------------------------------------
- * TO REMOVE IT (three deletions, no other code touches it):
- *   1. delete this file
- *   2. in App.tsx: remove the `LocationCheck` import, the `'check'` entry in
- *      `Stage`, the block that renders it, and change the two places that set
- *      stage to 'check' back to 'landing'
- *   3. that is all — nothing else imports this
- * ---------------------------------------------------------------------------
- *
- * Two design choices worth stating, because both are about not lying during a
- * verification.
- *
- * IT DOES NOT RUN `SensingEngine`. The engine geofences every fix to the chosen
- * circuit's bounds, which is correct behaviour and exactly wrong here: whoever
- * is holding this phone is almost certainly not at Silverstone, so the engine
- * would correctly report nothing and the screen would read as broken. This
- * screen shows the raw truth instead, and says plainly whether that position
- * falls inside the demo circuit.
- *
- * IT SHOWS THE RAW COORDINATE. The rest of the app never does — positions are
- * venue metres, and a latitude is the one thing this system is built to avoid
- * handling. It is here because "is this actually my location" cannot be answered
- * by an x/y in a frame whose origin is a field in Northamptonshire. The
- * coordinate is displayed and never stored, never queued and never uploaded;
- * there is no uplink on this screen at all.
- *
- * The radio rows reuse the real `WifiSensor` and `BleSensor`, so what they show
- * is what the shipping stack sees. They report a COUNT and the strongest signal,
- * never a network name: an SSID list is a description of where somebody is
- * precise enough to name the room, and `WifiSensor` hashes identifiers on the
- * way out for that reason. Nothing here can un-hash them.
- */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -55,13 +16,9 @@ import { Body, Card } from '../ui/atoms';
 import { Chip, MetaRow, Page, Section } from '../ui/layout';
 import { usePalette } from '../ui/theme';
 
-// The bundled pack is a frozen literal, so its tuples are `readonly` and the
-// contract's are not. Widened once, here, rather than cast at each call.
 const FRAME = DEMO_GEOMETRY.pack.frame as unknown as CoordinateFrame;
 
 interface RadioReading {
-  /** null while it has not been tried, so "not scanned" and "heard nothing" stay
-   *  distinguishable — they mean completely different things about a handset. */
   heard: number | null;
   strongestDbm: number | null;
   reason: string | null;
@@ -85,9 +42,6 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
 
   useEffect(() => { void currentPermissions().then(setPermissions); }, []);
 
-  // A one-second tick so the fix's age counts up on screen. A coordinate with no
-  // age beside it is a photograph presented as a window — and during a
-  // verification, a frozen reading is the exact thing you need to notice.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now() / 1000), 1000);
     return () => clearInterval(timer);
@@ -118,9 +72,6 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
         continue;
       }
       await sensor.start?.();
-      // BLE is a subscription: advertisements arrive continuously, so give it a
-      // window to hear anything at all before draining it. A Wi-Fi scan is a
-      // one-shot call and ignores the wait.
       await new Promise((resolve) => setTimeout(resolve, 3000));
       const observations: RadioObservation[] = await sensor.scan(Date.now() / 1000).catch(() => []);
       set({
@@ -136,19 +87,10 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
     let state = await requestForeground();
     if (state.foreground) state = await requestBluetooth();
     setPermissions(state);
-    // Start the watch WHATEVER the permission query reported. On the web,
-    // `requestForegroundPermissionsAsync` goes through the Permissions API,
-    // which answers "prompt" rather than "granted" until a position is actually
-    // requested — so gating the watch on `state.foreground` leaves a browser
-    // stuck on this screen forever with the button doing nothing. The watch is
-    // what raises the real prompt; if it is genuinely denied, it throws and the
-    // catch in `startWatch` puts the reason on screen.
     await startWatch();
     void scanRadios();
   }, [startWatch, scanRadios]);
 
-  // If permission was already granted on the disclosure screen, start without
-  // making somebody press a second button for something they already allowed.
   useEffect(() => {
     if (permissions?.foreground && !watch.current) { void startWatch(); void scanRadios(); }
   }, [permissions?.foreground, startWatch, scanRadios]);
@@ -232,9 +174,7 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
         onPress={() => { if (!scanning) void scanRadios(); }}
       />
 
-      {/* Last, and small. It is a fact about a circuit nobody is standing in,
-          kept because it is the one thing that proves the venue projection is
-          wired correctly — but it is not what this screen is for. */}
+      {}
       {venue ? (
         <Section label="Footnote — the circuit frame">
           <Card tone="outline">
@@ -252,13 +192,6 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
   );
 }
 
-/**
- * One radio's state in one line.
- *
- * Three outcomes, kept apart: not tried yet, tried and heard nothing, and
- * unavailable for a stated reason. Collapsing the last two is what makes a phone
- * with Bluetooth switched off look identical to a phone in an empty field.
- */
 function RadioRow({ label, reading, unit }: { label: string; reading: RadioReading; unit: string }) {
   const palette = usePalette();
   const value = reading.reason

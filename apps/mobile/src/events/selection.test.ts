@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RaceSummary } from '@crowdflow/api/wire';
 
-/**
- * What the app remembers between launches, and what it serves with no server.
- *
- * AsyncStorage is mocked rather than stubbed, because its real entry point
- * imports React Native and the suite is Node. The mock is a Map, which is
- * exactly the contract the store depends on.
- */
 
 const store = new Map<string, string>();
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -45,8 +38,6 @@ describe('the remembered race', () => {
     const held = await storedRace();
     expect(held?.id).toBe('2026-09-silverstone');
     expect(held?.circuit_id).toBe('silverstone');
-    // The whole point of storing a summary rather than a reference: a phone on a
-    // saturated network must still answer "when does the race end".
     expect(held?.sessions).toHaveLength(2);
     expect(held?.utc_offset).toBe('+01:00');
     expect(held?.has_map).toBe(true);
@@ -62,7 +53,6 @@ describe('the remembered race', () => {
 
   it('treats a corrupted record as absent', async () => {
     store.set('crowdflow.race.v1', '{not json');
-    // The cost is asking again, which is the safe direction to fail in.
     expect(await storedRace()).toBeNull();
   });
 
@@ -84,14 +74,12 @@ describe('the race source', () => {
     expect(source.demo).toBe(true);
     const all = await source.list();
     expect(all).toHaveLength(23);
-    // Listed, not filtered. Serving only the guidable rounds would hide the gap.
     expect(all.filter((race) => race.has_map)).toHaveLength(1);
     expect(all.every((race) => race.name.length > 0 && race.round > 0)).toBe(true);
   });
 
   it('offers a sensible default rather than an empty picker', async () => {
     const chosen = await demoRaces().current(new Date('2026-08-20T12:00:00Z'));
-    // Today sits between rounds, so the next one is the answer.
     expect(chosen?.round).toBe(12);
     expect(chosen?.name).toContain('Grand Prix');
   });
@@ -101,7 +89,6 @@ describe('the race source', () => {
     vi.stubGlobal('fetch', fetcher);
     const chosen = await liveRaces('http://localhost:8099').current(new Date());
     expect(chosen?.id).toBe(RACE.id);
-    // The server owns the calendar and has a clock nobody set by hand.
     expect(String(fetcher.mock.calls[0]![0])).toContain('/api/events/current');
   });
 
@@ -112,7 +99,6 @@ describe('the race source', () => {
 
   it('propagates a failure from the list, which the picker must show', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500 })));
-    // A silently empty season list is indistinguishable from a cancelled season.
     await expect(liveRaces('http://localhost:8099').list()).rejects.toThrow('500');
   });
 

@@ -1,13 +1,3 @@
-/**
- * The parts that describe a walk: the headline number, the list of legs, and a
- * crossing's timetable.
- *
- * The list of legs is the closest thing this app has to a map, and that is on
- * purpose. A map of a venue you have never been to, held at arm's length in a
- * crowd, is a puzzle to solve; a list of the three places you will pass, in
- * order, is an instruction you can follow without stopping. It also cannot leak
- * where anybody else is standing, which a map inevitably starts to.
- */
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -20,11 +10,6 @@ import { worstOf } from '../feed/severity';
 import { Body, Display, Eyebrow, Headline, Label, StatusPill, statusColors } from './atoms';
 import { usePalette } from './theme';
 
-/**
- * The single most important thing on the screen: where you are going and how
- * many minutes away it is. Everything else on any screen is subordinate to this,
- * including whatever the system wants to tell you.
- */
 export function Hero({ route, state }: { route: Route; state: WayAhead }) {
   return (
     <View style={{ gap: space.xs }}>
@@ -41,7 +26,6 @@ export function Hero({ route, state }: { route: Route; state: WayAhead }) {
   );
 }
 
-/** Re-exported so screens import their route vocabulary from one place. */
 export { worstOf };
 
 export function StepList({
@@ -52,7 +36,6 @@ export function StepList({
 }: {
   steps: Step[];
   now: number;
-  /** Renders the legs as abandoned — used for the route a redirect replaced. */
   struck?: boolean;
   highlightId?: string;
 }) {
@@ -127,13 +110,6 @@ export function StepList({
   );
 }
 
-/**
- * A crossing's timetable, in words.
- *
- * Absolute times arrive on the wire, so this keeps counting down correctly when
- * the phone has not heard from anyone in ten minutes — which is exactly when a
- * spectator standing at a closed bridge most wants to know.
- */
 export function CrossingLine({ crossing, now }: { crossing: CrossingNotice; now: number }) {
   const palette = usePalette();
   const text = crossing.state.open
@@ -164,8 +140,6 @@ const styles = StyleSheet.create({
   stepMeta: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
   crossing: {
     borderWidth: 1,
-    // A rectangle, not a pill: a long crossing name wraps to two lines and a
-    // stadium shape around two lines of text reads as a mistake.
     borderRadius: radius.sm,
     paddingHorizontal: space.sm + space.xs,
     paddingVertical: space.xs,

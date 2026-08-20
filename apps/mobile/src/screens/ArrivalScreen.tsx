@@ -1,17 +1,3 @@
-/**
- * Arrival: which gate to walk to.
- *
- * This is the cheapest intervention of the day and the only free one. Asked
- * before anyone has started walking, a gate choice costs the spectator nothing —
- * they have not committed to a direction yet — and spreading a few thousand
- * people across three gates flattens the arrival peak that causes most of the
- * day's queueing. Ten minutes later the same relief costs four minutes of
- * backtracking, and by then most people will refuse it.
- *
- * So the screen leads with the choice rather than with a route, and it is honest
- * that the nearest gate is the busiest: hiding that would make the nearest gate
- * look broken rather than popular, and people would still walk to it.
- */
 
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -83,8 +69,6 @@ function GateRow({ gate, onPress }: { gate: GateChoice; onPress?: () => void }) 
         <StatusPill state={gate.way_ahead} />
       </View>
       {gate.note ? (
-        // On its own line, always: a note that sometimes sits beside the pill and
-        // sometimes below it makes three cards scan as three different designs.
         <Label tone="soft" style={{ fontWeight: '500' }}>
           {gate.note}
         </Label>
@@ -98,8 +82,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: space.md + space.xs,
     gap: space.sm,
-    // Comfortably above the 48dp floor: this is the day's most consequential tap
-    // and it is made in a car park with a coat over one arm.
     minHeight: 96,
     justifyContent: 'center',
   },

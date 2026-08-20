@@ -1,11 +1,3 @@
-/**
- * The frame every screen sits in.
- *
- * It carries the two things that must never scroll away: where you are, at the
- * top, and how old the advice is, at the bottom. Orientation first, instruction
- * second, honesty last — in that order down the screen, because that is the
- * order a lost person needs them in.
- */
 
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -24,7 +16,6 @@ export function Screen({
 }: {
   view: SpectatorView;
   children: React.ReactNode;
-  /** Actions. Pinned below the scroll so the ask is always reachable one-handed. */
   footer?: React.ReactNode;
 }) {
   const palette = usePalette();

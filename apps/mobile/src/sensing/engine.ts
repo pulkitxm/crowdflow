@@ -1,27 +1,3 @@
-/**
- * The loop. Radios in, one position, one queued sample.
- *
- * Nothing in this file decides anything. The path-loss curve is in
- * `pathloss.ts`, the geometry in `solve.ts`, the arbitration between radios in
- * `fuse.ts`, the pseudonym in `track.ts`, the retry policy in `uplink.ts` — all
- * pure, all tested against a simulated walk. What is left here is scheduling and
- * plumbing, which is the part that cannot be unit-tested meaningfully because it
- * is made of timers and platform calls. Keeping that part thin is the whole
- * design: a bug in the ladder is found in milliseconds on a laptop, and a bug in
- * this file is found by looking at fifty lines.
- *
- * Cadence is per sensor and imposed by the platform, not chosen. Wi-Fi is
- * throttled to four scans per two minutes on Android; BLE is a continuous
- * subscription drained on a short window; GNSS is a watch the OS paces itself.
- * A single interval for all three would mean either hammering the Wi-Fi throttle
- * into returning stale results, or sampling GNSS once every thirty seconds for
- * no reason.
- *
- * The engine reports its own state through `SensingStatus`, which is a CONTRACT
- * type rather than app state. The app must be able to answer "what are you doing
- * with my phone right now" in the same words the console uses; a status screen
- * that paraphrases is a status screen that drifts from the truth.
- */
 
 import type {
   AnchorPack, CircuitPack, PositionFix, PositionSource, SensingStatus,
@@ -38,21 +14,13 @@ import { Uplink } from './uplink';
 import { WifiSensor } from './wifi';
 import { isAnchorScanner, isFixProvider, type AnchorScanner, type FixProvider, type Sensor } from './types';
 
-/** How often the loop wakes. Sensors are sampled on their own intervals; this is
- *  only the granularity at which those intervals are checked. */
 const TICK_MS = 2000;
 
 export interface SensingConfig {
   baseUrl: string;
   pack: CircuitPack;
   anchors: AnchorPack;
-  /**
-   * `device` uses the real radios. `rehearsal` swaps them for the simulator in
-   * `rehearsal.ts` and changes nothing else — same solve, same ladder, same
-   * uplink, same server. It is how this is tested without a circuit.
-   */
   mode?: 'device' | 'rehearsal';
-  /** shadowing spread for rehearsal mode */
   sigma_db?: number;
   seed?: number;
 }
@@ -76,9 +44,6 @@ export class SensingEngine {
   constructor(private readonly config: SensingConfig) {
     this.map = new AnchorMap(config.anchors);
     this.fuser = new PositionFuser(config.pack.frame);
-    // The platform CSPRNG for the pseudonym. `Math.random` would do for
-    // collision resistance, which is all a pseudonym needs, but this costs
-    // nothing and removes the question.
     this.identity = new NodeIdentity(Date.now() / 1000, undefined, (bytes) =>
       [...Crypto.getRandomBytes(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join(''));
     this.uplink = new Uplink({
@@ -96,19 +61,10 @@ export class SensingEngine {
     return () => this.listeners.delete(listener);
   }
 
-  /**
-   * Seconds until the pseudonym changes.
-   *
-   * Surfaced for the app's own status screen. "Anonymous" is a claim, and a
-   * countdown a person can watch is the only evidence for it an app can offer
-   * without asking to be believed.
-   */
   pseudonymExpiresIn(now = Date.now() / 1000): number {
     return Math.max(0, this.identity.expiresIn(now));
   }
 
-  /** How much of the anchor map this venue actually has, for the status screen.
-   *  A surveyed_at of null means the positions are planned, not walked. */
   get survey(): { anchors: number; wifi: number; ble: number; surveyedAt: string | null } {
     return {
       anchors: this.map.size,
@@ -129,15 +85,6 @@ export class SensingEngine {
     };
   }
 
-  /**
-   * Start sensing.
-   *
-   * Availability is asked once here rather than on every tick: a person who
-   * switches Bluetooth off mid-event is handled by that sensor returning nothing,
-   * which the ladder already treats as a source that has gone quiet. Re-polling
-   * three platform permission APIs every two seconds would cost more than it
-   * tells us.
-   */
   async start(): Promise<void> {
     if (this.timer) return;
     this.stopped = null;
@@ -159,14 +106,6 @@ export class SensingEngine {
     this.emit();
   }
 
-  /**
-   * Stop, and leave nothing running.
-   *
-   * The fuser is reset rather than merely paused. Resuming with a stale velocity
-   * would dead-reckon a phone forward from wherever it was when sensing stopped,
-   * which after a lunch break is a position in the wrong zone reported with
-   * confidence.
-   */
   async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
@@ -179,7 +118,6 @@ export class SensingEngine {
   }
 
   private async tick(now: number): Promise<void> {
-    // The pseudonym first: everything after this must belong to one epoch.
     if (this.identity.refresh(now)) {
       this.fuser.reset();
       this.uplink.clear();
@@ -199,8 +137,6 @@ export class SensingEngine {
     if (resolved.fix) {
       this.lastFix = resolved.fix;
       const node = crowdNodeFrom(resolved.fix, this.identity, this.config.pack);
-      // Null means the fix cannot honestly become a report — outside the venue,
-      // most often, which is the disclosure's promise being kept.
       if (node) this.uplink.enqueue(node, resolved.fix.source);
     }
 
@@ -208,14 +144,6 @@ export class SensingEngine {
     this.emit();
   }
 
-  /**
-   * One radio scan, solved on the handset.
-   *
-   * The observations do not leave this method. That is the privacy architecture,
-   * not a courtesy: a list of the access points and beacons around somebody is a
-   * location, and a far more identifying one than a coordinate — it names the
-   * hardware in the room. `NodeReport` has nowhere to put it.
-   */
   private async sampleRadio(sensor: AnchorScanner, now: number): Promise<void> {
     const observations = await sensor.scan(now).catch(() => []);
     if (!observations.length) return;
@@ -244,9 +172,6 @@ export class SensingEngine {
         new RehearsalGnss(walk, 10),
       ];
     }
-    // Order is presentation only — the ladder arbitrates on measured accuracy,
-    // not on this list. It decides which reason appears first on the status
-    // screen when a rung is unavailable.
     return [new WifiSensor(), new BleSensor(), new GnssSensor(this.config.pack.frame)];
   }
 

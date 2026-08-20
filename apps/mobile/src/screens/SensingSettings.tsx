@@ -1,19 +1,3 @@
-/**
- * The answer to "what is this app doing with my phone right now".
- *
- * Not a settings page with a switch on it. The switch is here, but the screen
- * exists so that every claim the disclosure made is checkable from it: which
- * radio is placing you, how well, how old that reading is, how many samples are
- * waiting, and how long until the label your phone reports under is thrown away.
- * An app that says "we anonymise your data" and shows nothing is asking to be
- * trusted. An app that shows a countdown to the next identifier rotation is
- * showing its work.
- *
- * It is also the support screen. Every reason a rung of the ladder is unavailable
- * arrives here as a sentence somebody can act on — "Bluetooth is switched off",
- * not an adapter state enum — because the person holding the phone is the only
- * one who can fix most of them.
- */
 
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -29,15 +13,12 @@ const RADIO_WORD: Record<PositionSource, string> = {
   ble: 'Bluetooth',
   gnss: 'GPS',
   fused: 'combined',
-  // Named honestly on the one screen where the distinction matters: this is the
-  // last known position carried forward, not a fresh reading.
   dead_reckoning: 'last known position',
 };
 
 export interface SensingSettingsProps {
   status: SensingStatus;
   sharing: boolean;
-  /** Seconds until the reporting label is replaced. */
   pseudonymExpiresIn: number;
   survey: { anchors: number; wifi: number; ble: number; surveyedAt: string | null };
   onSharingChange: (sharing: boolean) => void;
@@ -66,8 +47,6 @@ export function SensingSettings({
         <MetaRow label="Placed by" value={status.using ? RADIO_WORD[status.using] : 'nothing right now'} emphasis />
         <MetaRow
           label="How precisely"
-          // Metres, rounded, with the age beside it. A precision figure with no
-          // age is a photograph presented as a window.
           value={fix ? `about ${Math.round(fix.accuracy_m)} m${ageS == null ? '' : `, ${ageS}s ago`}` : '—'}
         />
         <MetaRow
@@ -96,9 +75,6 @@ export function SensingSettings({
               : `${survey.wifi} Wi-Fi points and ${survey.ble} beacons are mapped.`}
           </Body>
           {survey.anchors > 0 && !survey.surveyedAt ? (
-            // The distinction the whole provenance system exists for, said out
-            // loud: these positions are planned, not measured, and the fixes
-            // built on them inherit that.
             <Body tone="soft" style={styles.small}>
               These positions are planned rather than surveyed, so positions from them are approximate.
             </Body>
@@ -123,8 +99,6 @@ export function SensingSettings({
   );
 }
 
-/** A destructive-ish choice with its consequence inside the target, so the price
- *  is readable before the finger lands rather than in a dialog afterwards. */
 function Choice({ label, note, onPress }: { label: string; note: string; onPress: () => void }) {
   const palette = usePalette();
   return (

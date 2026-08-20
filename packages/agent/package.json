@@ -7,17 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "bunx vitest run",
-    "typecheck": "bunx --bun tsc --noEmit"
+    "build": "bun build src/index.ts --outdir dist --target bun --packages external",
+    "lint": "biome lint src tests --diagnostic-level=error",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@crowdflow/contracts": "0.2.0",
     "@crowdflow/core": "0.2.0",
-    "@huggingface/inference": "^4.13.26"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.0",
-    "vitest": "^4.1.10"
+    "@huggingface/inference": "^4.13.28"
   }
 }

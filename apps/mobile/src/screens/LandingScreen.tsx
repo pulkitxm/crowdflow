@@ -1,27 +1,3 @@
-/**
- * The front page: which race, and what is happening at it.
- *
- * It used to ask for a circuit, and that was the wrong question. Nobody holds a
- * ticket to a circuit id — they hold one to the British Grand Prix on the fifth
- * of July — so the page now leads with the race and treats the venue as a
- * property of it.
- *
- * The order down the screen is a priority ordering, not a layout:
- *
- *   THE RACE, as its own block, with the round number the sport actually uses.
- *   THE NEXT SESSION, in venue time, because at a circuit that is the only
- *   question — and it disappears once the weekend is over rather than sitting
- *   there as a stale fact.
- *   WHAT THE APP CAN DO HERE, before the button rather than after it. Most
- *   rounds have no venue map, and "Continue" leading to a screen that cannot
- *   guide you is the kind of dead end that loses a user for good.
- *   WHETHER THE PHONE IS SHARING, last and always visible.
- *
- * Times are rendered in the VENUE's offset and labelled as such. Every timestamp
- * in this system is UTC; a phone being used to plan a trip from another country
- * is not on venue time, and that is exactly when a start time gets misread by an
- * hour.
- */
 
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -78,8 +54,6 @@ export function LandingScreen({
         race.has_map
           ? <PrimaryAction label="Continue" onPress={onContinue} />
           : (
-            // No map, no guidance — and the button says so instead of leading
-            // somewhere that cannot answer.
             <View style={{ gap: space.sm }}>
               <Body tone="soft" style={styles.note}>
                 We have the timetable for {race.locality}, but not a venue map yet — so there is
@@ -136,12 +110,6 @@ export function LandingScreen({
   );
 }
 
-/**
- * Whether the phone is helping, in one line, always visible.
- *
- * Never behind a settings icon. Somebody who agreed to share their position is
- * entitled to see at a glance whether it is happening, and to stop it in one tap.
- */
 function SharingLine({ sensing, onPress }: { sensing: SensingStatus | null; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.link, { opacity: pressed ? 0.7 : 1 }]}>

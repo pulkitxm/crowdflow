@@ -1,13 +1,17 @@
 node_modules/
 dist/
+coverage/
+.cache/
+.expo/
+.gradle/
 .DS_Store
+.idea/
+.vscode/
+*.log
+*.tmp
+*.tsbuildinfo
+web-build/
 circuits/*/raw/
 circuits/_geometry/
 mockups/
-
-# Generated anchor plans. `crowdflow anchors plan <id> --write` produces these,
-# and a plan is not data: every anchor in it is provenance=assumed, and a 1.8 MB
-# file of guessed hardware positions committed beside a surveyed circuit pack
-# reads as a survey to anybody who does not open it. Regenerate on demand; commit
-# only a real, walked survey.
 circuits/*/pack/anchors.json

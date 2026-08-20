@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { LiveRequest, LiveSnapshot, ScenarioOption, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
+import type { LiveSnapshot, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 
@@ -31,23 +31,11 @@ export function fetchGeometry(circuitId: string): Promise<VenueGeometry> {
   return json<VenueGeometry>(`/api/circuits/${circuitId}/geometry`);
 }
 
-export function fetchScenarios(circuitId: string): Promise<ScenarioOption[]> {
-  return json<ScenarioOption[]>(`/api/circuits/${circuitId}/scenarios`);
-}
-
 export function control(action: string, speed?: number): Promise<SessionInfo> {
   return json<SessionInfo>("/api/session/control", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ action, speed: speed ?? null }),
-  });
-}
-
-export function startSession(request: Record<string, unknown>): Promise<SessionInfo> {
-  return json<SessionInfo>("/api/session", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
   });
 }
 
@@ -69,14 +57,6 @@ export async function fetchLive(): Promise<LiveSnapshot | null> {
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`GET /api/live → ${response.status}`);
   return (await response.json()) as LiveSnapshot;
-}
-
-export function startLive(request: LiveRequest): Promise<LiveSnapshot> {
-  return json<LiveSnapshot>("/api/live", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
-  });
 }
 
 export interface LinkHandlers {

@@ -1,5 +1,7 @@
 import { MEASURED_SAMPLE_FLOOR, type CircuitPack, type Edge, type Position, type TraceFragment } from '@crowdflow/contracts';
 import { VenueGraph } from '../routing/graph.js';
+import { median } from '../statistics.js';
+import { distanceM as distance } from '../positioning/geo.js';
 
 export interface DesireLine { id: string; from_zone: string; to_zone: string; start: Position; end: Position; observed_length_m: number; graph_walk_m: number; detour_ratio: number; fragments: string[]; evidence: number; width_m: number | null }
 export interface DesireLineReview { desire: DesireLine; status: 'proposed' | 'accepted' | 'rejected'; note: string }
@@ -24,6 +26,4 @@ export function proposeDesireLines(fragments: TraceFragment[], pack: CircuitPack
 export function desireLineEdges(lines: DesireLine[]): Record<string, Edge> { return Object.fromEntries(lines.filter((line) => line.evidence >= MEASURED_SAMPLE_FLOOR && line.width_m != null).map((line) => [line.id, { id: line.id, source: line.from_zone, destination: line.to_zone, length_m: line.observed_length_m, width_m: { value: line.width_m!, provenance: 'measured' as const, samples: line.evidence, note: 'operator-reviewed desire line from independent private fragments' }, bidirectional: true }])); }
 function lateralWidth(fragments: TraceFragment[], source: Position, destination: Position): number | null { const dx = destination.x - source.x; const dy = destination.y - source.y; const span = Math.hypot(dx, dy); if (!span) return null; const offsets = fragments.flatMap((fragment) => fragment.points.map((point) => Math.abs(dx * (point.y - source.y) - dy * (point.x - source.x)) / span)); if (offsets.length < 2) return null; const sorted = offsets.sort((a, b) => a - b); return Number((2 * sorted[Math.trunc(0.9 * (sorted.length - 1))]!).toFixed(2)); }
 function nearest(zones: { id: string; position: Position }[], point: Position): { id: string; position: Position } | undefined { return zones.slice().sort((a, b) => distance(a.position, point) - distance(b.position, point) || a.id.localeCompare(b.id))[0]; }
-function distance(a: Position, b: Position): number { return Math.hypot(a.x - b.x, a.y - b.y); }
 function polyline(points: Position[]): number { let total = 0; for (let i = 1; i < points.length; i += 1) total += distance(points[i - 1]!, points[i]!); return total; }
-function median(values: number[]): number { const sorted = values.slice().sort((a, b) => a - b); const middle = Math.trunc(sorted.length / 2); return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2; }

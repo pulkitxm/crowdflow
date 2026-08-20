@@ -1,25 +1,9 @@
-/**
- * A phone-shaped window, for looking at a phone app on a laptop.
- *
- * Demo scaffolding, not product. It exists because the people who decide whether
- * this ships will mostly meet it in a browser on a desk, and a full-bleed desktop
- * rendering of a one-handed outdoor app misrepresents it in both directions: the
- * type looks enormous and the constraint that produced it is invisible.
- *
- * On a real device the frame is not drawn at all — the phone is the frame.
- */
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-/** iPhone 15 logical points. A real size, so the layout is judged at real size. */
 export const PHONE = { width: 390, height: 844 } as const;
 
-/**
- * Simulated safe-area insets. On web the real insets are zero, so without these
- * the status-bar strip and the home indicator would not be reserved and the
- * desktop rendering would be subtly roomier than the device.
- */
 const INSET_TOP = 20;
 const INSET_BOTTOM = 12;
 
@@ -33,9 +17,7 @@ export function PhoneFrame({
   children: React.ReactNode;
   clock: string;
   online: boolean;
-  /** Matches the app's theme so the hardware does not glow white in dark mode. */
   bezel: { body: string; screen: string; ink: string };
-  /** Shortened on a laptop screen too small for a real phone. */
   height?: number;
 }) {
   return (

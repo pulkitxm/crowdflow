@@ -47,7 +47,6 @@ describe('circuit registry', () => {
   it('demo source plans an anchor map so rehearsal works with no server', async () => {
     const anchors = await demoSource().anchors('silverstone');
     expect(Object.keys(anchors.anchors ?? {}).length).toBeGreaterThan(50);
-    // A plan, never a survey. Every consumer reads this field to know which.
     expect(anchors.surveyed_at).toBeNull();
   });
 
@@ -66,7 +65,6 @@ describe('circuit registry', () => {
   it('demo fixture stays recognisably Silverstone', () => {
     expect(DEMO_GEOMETRY.pack.id).toBe('silverstone');
     expect(DEMO_GEOMETRY.pack.name).toBe('Silverstone Circuit');
-    // The circuit outline must survive, or the preview is a dot field.
     expect(DEMO_GEOMETRY.track?.length).toBe(135);
   });
 });

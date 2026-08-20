@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGenerator, type Config } from 'ts-json-schema-generator';

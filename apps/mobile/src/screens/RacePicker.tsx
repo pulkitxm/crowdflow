@@ -1,27 +1,3 @@
-/**
- * The race picker: the season, by month, one race per row.
- *
- * This replaced a circuit picker, and the change is the point. A list of
- * twenty-three lowercase circuit ids asks somebody to recognise the venue behind
- * the name on their ticket — which is the data model's problem, not theirs.
- * People hold tickets to the British Grand Prix on the fifth of July.
- *
- * Three things are on every row and each earns its place:
- *
- *   THE ROUND NUMBER, because "round nine" is how the sport is discussed and
- *   everybody at a circuit already reads it. It is also the fixed-width slot
- *   that keeps the titles aligned down the list — a ragged left edge is most of
- *   what makes a list look like dumped data rather than a table of it.
- *
- *   THE WEEKEND, first session to last, not just race day. A single date invites
- *   somebody to arrive on Sunday holding a Friday ticket.
- *
- *   WHETHER IT CAN BE GUIDED. Most rounds have no committed circuit pack, so the
- *   app can name the race and give the timetable but cannot route anybody through
- *   the venue. Those rows are still listed, still selectable, and say what they
- *   will and will not do — a row greyed out with no reason is a dead end, and a
- *   list quietly filtered down to the one usable entry hides the gap.
- */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
@@ -45,14 +21,6 @@ export function RacePicker({
   onBack,
 }: {
   source: RaceSource;
-  /**
-   * Where the venue drawing comes from, for the confirmation preview.
-   *
-   * The map is the answer to a question a name cannot settle: is this the place
-   * on my ticket. Twenty-three rounds share a naming convention and a person
-   * scanning quickly can pick the wrong one; the outline of the circuit is
-   * instantly recognisable in a way "Round 9" is not.
-   */
   circuits: CircuitSource;
   selectedId?: string | null;
   onPick: (race: SelectedRace) => void;
@@ -81,8 +49,6 @@ export function RacePicker({
 
   const active = chosen ?? races?.find((race) => race.id === selectedId) ?? null;
 
-  // Only fetch a drawing for a round that has one. An unmapped round has no pack
-  // to fetch, and asking would produce a 404 the picker would have to explain.
   useEffect(() => {
     if (!active?.has_map) { setGeometry(null); setLoadingMap(false); return; }
     let alive = true;
@@ -91,9 +57,6 @@ export function RacePicker({
     circuits.geometry(active.circuit_id)
       .then((next) => { if (alive) { setGeometry(next); setLoadingMap(false); } })
       .catch(() => {
-        // A missing drawing is not a reason to block the choice — the timetable
-        // and the guidance do not depend on it. The preview simply does not
-        // appear, and the row already said the round is mapped.
         if (alive) { setGeometry(null); setLoadingMap(false); }
       });
     return () => { alive = false; };
@@ -113,8 +76,7 @@ export function RacePicker({
               {loadingMap ? <ActivityIndicator color={palette.ink} /> : geometry ? <MapView geometry={geometry} /> : null}
             </View>
           ) : null}
-          {/* The consequence of the choice, stated before the button rather than
-              discovered after it. */}
+          {}
           <Body tone="soft" style={styles.footnote}>
             {active.has_map
               ? `${active.locality} is mapped — you will get walking guidance and the live crowd picture.`

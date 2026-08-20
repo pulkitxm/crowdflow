@@ -1,27 +1,3 @@
-/**
- * THE MOCK FEED. This is the only file in the app that invents data.
- *
- * WHERE THE REAL FEED ATTACHES: replace `buildDay` with a subscription that
- * decodes `MeshMessage` payloads of type `route_update`, `alert` and `reroute`
- * into `SpectatorView`. Nothing else in `src/` changes — every screen is a pure
- * function of a `SpectatorView`, and no component reaches past the view it was
- * handed. If a real feed ever needs a field that is not in `./types.ts`, that is
- * a conversation about the contract, not a client-side addition.
- *
- * Place names are real Silverstone zones from circuits/silverstone/pack: the
- * stands (Copse B, Farm Curve), the gates (3, 4, 6) and North Car Park 22. Made
- * up landmarks would hide the fact that this venue's names are what the user
- * actually has to navigate by.
- *
- * The day it tells is one story in six states, and the story has a point: the
- * gate choice at 11:00 costs the spectator nothing and is the cheapest thing the
- * system will do all day; by 13:40 the same amount of relief costs them four
- * minutes of walking; by 16:30 the only honest advice is to sit still.
- *
- * Times are absolute unix seconds anchored to app start, so countdowns really
- * count down while the demo is open — including on the offline screen, which is
- * the point of putting absolute times on the wire rather than "closes in 8 min".
- */
 
 import type { RerouteCommand, SafetyVerdict } from '@crowdflow/contracts';
 
@@ -33,13 +9,11 @@ export function nowSeconds(): number {
 
 const MIN = 60;
 
-/** A device with an uplink and fresh data — the ordinary case. */
 function connected(now: number): LinkStatus {
   return { online: true, mesh_peers: 12, updated_at: now - 8 };
 }
 
 export function buildDay(now: number): Record<ViewKind, SpectatorView> {
-  // --- the walk in, once a gate has been chosen ---------------------------
   const viaBridge: Route = {
     id: 'route-bridge',
     from: 'Gate 3',
@@ -58,7 +32,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
     ],
   };
 
-  // --- halfway there, the bridge starts to fill --------------------------
   const remainingViaBridge: Route = {
     id: 'route-bridge-remaining',
     from: 'Village concourse',
@@ -69,8 +42,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
         id: 's2',
         to: 'Bridge at Village',
         walk_s: 120,
-        // STILL WALKABLE. The app is speaking because the model says it will not
-        // be shortly, not because the user cannot get across right now.
         way_ahead: 'building',
         crossing: { name: 'Bridge at Village', state: { open: true, closes_at: now + 22 * MIN } },
       },
@@ -95,11 +66,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
     ],
   };
 
-  /**
-   * The command as it would arrive over the mesh. `expected_cost_s` is exactly
-   * the difference between the two routes above — if those ever disagree the app
-   * is lying to the user about the price, which `mock.test.ts` checks.
-   */
   const rerouteCommand: RerouteCommand = {
     command_id: 'cmd-village-bridge-1',
     issued_at: now - 20,
@@ -122,7 +88,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
     dispatchable: true,
   };
 
-  // --- the walk out ------------------------------------------------------
   const wayOut: Route = {
     id: 'route-egress',
     from: 'Copse B',
@@ -135,8 +100,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
         to: 'Gate 4',
         walk_s: 300,
         way_ahead: 'critical',
-        // Post-race the track itself becomes a crossing. A spectator cannot see
-        // when the marshals open it, which is precisely why it is worth screen space.
         crossing: {
           name: 'Track crossing at Vale',
           state: { open: false, opens_at: now + 10 * MIN },
@@ -162,7 +125,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
         ],
       },
       note: 'Your ticket works at any gate. Gate 3 is a few minutes further and you walk straight in.',
-      // The nearest gate is the busiest one: that is why this screen exists.
       gates: [
         {
           zone_id: 'gate_3649603665',
@@ -212,9 +174,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
     offline: {
       kind: 'offline',
       now,
-      // No uplink, but 34 phones in earshot are still passing state around. This
-      // is the one screen where the mesh is worth explaining: here it is the
-      // reason the screen still works, not a technical detail.
       link: { online: false, mesh_peers: 34, updated_at: now - 3 * MIN - 20 },
       route: {
         id: 'route-offline',
@@ -226,7 +185,6 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
             id: 'o1',
             to: 'Club corner path',
             walk_s: 180,
-            // Invariant 5: nobody is reporting from here. Not "clear". Not empty.
             way_ahead: 'unknown',
             crossing: {
               name: 'Club crossing',
@@ -275,16 +233,10 @@ export function buildDay(now: number): Record<ViewKind, SpectatorView> {
   };
 }
 
-/**
- * Built once, at app start, so that every countdown on every screen shares one
- * clock. The real feed replaces this constant with a subscription.
- */
 export const DAY = buildDay(nowSeconds());
 
-/** Ordered as the day happens, for the demo switcher. */
 export const DAY_ORDER: ViewKind[] = ['arrival', 'walk', 'ahead', 'rerouted', 'offline', 'hold'];
 
-/** What the switcher calls each state. Demo scaffolding — never shown in-app. */
 export const DAY_LABELS: Record<ViewKind, { title: string; when: string }> = {
   arrival: { title: 'Arriving', when: '11:02' },
   walk: { title: 'On the way in', when: '11:20' },

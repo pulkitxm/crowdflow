@@ -1,8 +1,3 @@
-/**
- * The whole visual vocabulary of the app: six text sizes, a card, a status pill
- * and two kinds of button. Deliberately small. A spectator screen that needs a
- * seventh component is usually a screen that has started explaining itself.
- */
 
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -56,11 +51,6 @@ export const Headline = make('headline');
 export const Body = make('body');
 export const Label = make('label');
 
-/**
- * The small all-caps line above a fact ("YOU'RE AT"). It is a label, not a
- * heading: it tells you what kind of thing the next line is, then gets out of
- * the way, which is why it is the one place uppercase is allowed.
- */
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   const palette = usePalette();
   return (
@@ -104,14 +94,6 @@ export function Card({
   );
 }
 
-/**
- * The state of the way ahead, as a word.
- *
- * The word is the component; the colour is an accelerant. Under direct sun a
- * phone screen loses most of its saturation, and a fifth of the male audience
- * cannot separate the amber from the green anyway — so this never ships as a
- * bare dot, and the word is never abbreviated.
- */
 export function StatusPill({ state, big = false }: { state: WayAhead; big?: boolean }) {
   const palette = usePalette();
   const colors = statusColors(state, palette);
@@ -155,13 +137,6 @@ export function statusColors(state: WayAhead, palette: ReturnType<typeof usePale
   }
 }
 
-/**
- * The one action a screen asks for.
- *
- * `cost` is not decoration: the honest price of a redirect has to be readable
- * before the finger lands, so it is rendered inside the target as a second line
- * rather than in a confirmation dialog after the fact.
- */
 export function PrimaryAction({
   label,
   cost,

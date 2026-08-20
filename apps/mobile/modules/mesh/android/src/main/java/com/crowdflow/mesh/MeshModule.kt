@@ -13,7 +13,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-/** The narrow Expo bridge over [MeshNetwork]. Radio details never cross it. */
 class MeshModule : Module() {
 
     private val network: MeshNetwork = StubMeshNetwork()

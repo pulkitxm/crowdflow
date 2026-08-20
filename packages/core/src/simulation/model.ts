@@ -2,12 +2,12 @@ import type { CrowdNode, Position, TraceFragment } from '@crowdflow/contracts';
 import {
   ASSUMED_FRAGMENT_MAX_DURATION_S,
   FREE_FLOW_SPEED_MS,
-  GEOIND_EPSILON_VENUE,
 } from '@crowdflow/contracts';
 import { Random } from '../random.js';
 import { VenueGraph } from '../routing/graph.js';
 import { speedAtDensity } from '../state/flow.js';
 import { noiseFragment } from '../mesh/privacy.js';
+import { round } from '../statistics.js';
 
 export const REROUTE_COOLDOWN_S = 45;
 
@@ -190,5 +190,3 @@ export class Simulation {
   get active(): number { return this.agents.filter((agent) => agent.started && !agent.arrived).length; }
   get arrived(): number { return this.agents.filter((agent) => agent.arrived).length; }
 }
-
-function round(value: number, digits: number): number { return Number(value.toFixed(digits)); }
