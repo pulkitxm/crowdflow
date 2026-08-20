@@ -257,6 +257,15 @@ button {
   white-space: nowrap;
 }
 
+.panel--map > .panel__head { flex-wrap: wrap; }
+.panel--map > .panel__head h2 { flex: 1 1 220px; }
+.panel--map > .panel__head .panel__tools {
+  flex: 1 1 540px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  white-space: normal;
+}
+
 .panel__body {
   flex: 1;
   min-height: 0;
