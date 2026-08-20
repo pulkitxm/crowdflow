@@ -30,6 +30,7 @@ import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 import { HEAT_BANDS, heatSpots } from "../heatmap";
 import type { CrowdLayer } from "../mapState";
+import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
   nominal: "#37d67a",
@@ -126,6 +127,9 @@ export class MapPanel {
   private previousGrid: PeopleQueryResult | null = null;
   private showGrid = false;
   private crowd: CrowdLayer = "cohorts";
+  private sectors: SectorArea[] = [];
+  private sectorRows = new Map<string, SectorRow>();
+  private showSectors = true;
   private viewportTimer: number | null = null;
   private viewportWidth = 0;
   private viewportHeight = 0;
@@ -162,6 +166,7 @@ export class MapPanel {
   setGeometry(geometry: VenueGeometry, standards: StandardsReport | null): void {
     this.geometry = geometry;
     this.standards = standards;
+    this.sectors = buildSectorAreas(geometry);
     this.fit();
     this.paintLegend();
   }
@@ -212,6 +217,23 @@ export class MapPanel {
   }
 
   get crowdMode(): CrowdLayer { return this.crowd; }
+
+  setSectors(rows: SectorRow[]): void {
+    this.sectorRows = new Map(rows.map((row) => [row.id, row]));
+    this.draw();
+    this.paintReadout();
+  }
+
+  setSectorVisible(visible: boolean): boolean {
+    this.showSectors = visible;
+    this.statics = null;
+    this.draw();
+    this.paintLegend();
+    this.paintReadout();
+    return this.showSectors;
+  }
+
+  get sectorsVisible(): boolean { return this.showSectors; }
 
   /**
    * Toggle between the operator's live-state view (nominal/building/critical,
@@ -349,6 +371,42 @@ export class MapPanel {
 
   zoomBy(factor: number): number {
     return this.animateZoom(factor, this.canvas.clientWidth / 2, this.canvas.clientHeight / 2);
+  }
+
+  focusSector(sectorId: string, zoom = 12): void {
+    const sector = this.sectors.find((item) => item.id === sectorId);
+    if (!sector || this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
+    this.cancelZoom();
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    const targetScale = this.fitScale * Math.min(Math.max(zoom, 0.5), 50);
+    const [rx, ry] = this.rotateCoord(sector.x, sector.y);
+    const startView = { ...this.view };
+    const targetView = {
+      scale: targetScale,
+      offsetX: width / 2 - rx * targetScale,
+      offsetY: height / 2 + ry * targetScale,
+    };
+    const started = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = (now: number): void => {
+      const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
+      this.view = {
+        scale: startView.scale + (targetView.scale - startView.scale) * progress,
+        offsetX: startView.offsetX + (targetView.offsetX - startView.offsetX) * progress,
+        offsetY: startView.offsetY + (targetView.offsetY - startView.offsetY) * progress,
+      };
+      this.statics = null;
+      this.draw();
+      this.emitZoom();
+      if (progress < 1) {
+        this.zoomFrame = window.requestAnimationFrame(frame);
+      } else {
+        this.zoomFrame = null;
+        this.notifyViewport();
+      }
+    };
+    this.zoomFrame = window.requestAnimationFrame(frame);
   }
 
   restoreView(zoom: number, center: Position | null): void {
@@ -570,7 +628,7 @@ export class MapPanel {
   // -- drawing -------------------------------------------------------------
 
   private drawStatics(): HTMLCanvasElement {
-    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}`;
+    const key = `${this.canvas.width}x${this.canvas.height}:${this.view.scale.toFixed(4)}:${this.view.offsetX.toFixed(1)}:${this.view.offsetY.toFixed(1)}:${this.rotation}:${this.showSectors}`;
     if (this.statics && this.staticKey === key) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
@@ -649,7 +707,7 @@ export class MapPanel {
       }
       ctx.restore();
     };
-    if (zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
+    if (!this.showSectors && zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
     const parkingOpacity = revealProgress(zoomRatio, PARK_LABEL_FADE_START, PARK_LABEL_FADE_END);
     if (parkingOpacity > 0) placeLabels("parking", PARK_COLOUR, parkingOpacity);
 
@@ -890,6 +948,58 @@ export class MapPanel {
     ctx.restore();
   }
 
+  private drawSectors(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.save();
+    ctx.lineJoin = "round";
+    for (const sector of this.sectors) {
+      if (sector.polygon.length < 3) continue;
+      ctx.beginPath();
+      sector.polygon.forEach((point, index) => {
+        const [x, y] = this.toScreen(point.x, point.y);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      const isSelected = sector.id === this.selected;
+      if (isSelected) {
+        ctx.fillStyle = "rgba(88, 182, 255, 0.10)";
+        ctx.fill();
+      }
+      ctx.strokeStyle = isSelected ? "rgba(121, 199, 255, 0.90)" : "rgba(121, 199, 255, 0.26)";
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.setLineDash(isSelected ? [] : [5, 5]);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const sector of this.sectors) {
+      const [x, y] = this.toScreen(sector.x, sector.y);
+      if (x < 40 || y < 22 || x > width - 40 || y > height - 22) continue;
+      const row = this.sectorRows.get(sector.id);
+      const name = sector.name.toUpperCase();
+      const detail = row ? `${integer(row.people)} PEOPLE · ${row.word}` : "SECTOR";
+      const boxWidth = Math.max(ctx.measureText(name).width, ctx.measureText(detail).width) + 14;
+      const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
+      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
+      placed.push(box);
+      ctx.fillStyle = sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
+      ctx.strokeStyle = sector.id === this.selected ? "#79c7ff" : "rgba(121, 199, 255, 0.48)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(...box);
+      ctx.strokeRect(...box);
+      ctx.fillStyle = "#d8e2ec";
+      ctx.fillText(name, x, y - 6);
+      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : "#8a99a9";
+      ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.fillText(detail, x, y + 7);
+      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    }
+    ctx.restore();
+  }
+
   private draw(): void {
     const ctx = this.context;
     const width = this.canvas.clientWidth;
@@ -923,6 +1033,7 @@ export class MapPanel {
       if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
       if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
     }
+    if (this.showSectors) this.drawSectors(ctx, width, height);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -962,10 +1073,19 @@ export class MapPanel {
       return;
     }
     const zone = this.geometry?.pack.zones?.[id];
+    const sector = this.sectorRows.get(id);
     this.readout.append(
       el("div", { class: "readout__name", text: zone?.name ?? id }),
-      el("div", { class: "readout__id", text: `${id} · ${zone?.kind ?? "unknown"}` }),
+      el("div", { class: "readout__id", text: `${id} · ${sector ? "sector" : zone?.kind ?? "unknown"}` }),
     );
+    if (sector) {
+      this.readout.append(
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "LIVE CROWD" }), el("span", { class: "readout__value", text: integer(sector.people) })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "STATE" }), el("span", { class: "readout__value", text: sector.word })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "ZONES LIVE" }), el("span", { class: "readout__value", text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}` })),
+      );
+      return;
+    }
     if (!row) return;
     const facts: Array<[string, string]> =
       row.visibility === "observed"
@@ -1000,6 +1120,16 @@ export class MapPanel {
       this.paintLiveLegend();
       return;
     }
+    if (this.showSectors) this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--sectors" },
+        el("span", { class: "legend__glyph", text: "◇" }),
+        el("span", { class: "legend__word", text: "SECTORS" }),
+        el("span", { class: "legend__count", text: integer(this.sectors.length) }),
+        el("span", { class: "legend__note", text: "live crowd areas" }),
+      ),
+    );
     const counts = { nominal: 0, building: 0, critical: 0, silent: 0, unknown: 0 };
     for (const row of this.rows) {
       if (row.visibility === "observed" && row.band) counts[row.band] += 1;

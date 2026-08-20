@@ -12,6 +12,7 @@ describe("map query state", () => {
       layer: "live",
       grid: false,
       crowd: "cohorts",
+      sectors: true,
     });
   });
 
@@ -24,6 +25,7 @@ describe("map query state", () => {
       layer: "kinds",
       grid: true,
       crowd: "heatmap",
+      sectors: true,
     });
   });
 
@@ -36,6 +38,7 @@ describe("map query state", () => {
       layer: "live",
       grid: false,
       crowd: "cohorts",
+      sectors: true,
     });
   });
 
@@ -48,6 +51,7 @@ describe("map query state", () => {
       layer: "live",
       grid: true,
       crowd: "heatmap",
+      sectors: false,
     });
     const values = new URLSearchParams(query);
     expect(values.get("circuit")).toBe("silverstone");
@@ -57,5 +61,6 @@ describe("map query state", () => {
     expect(values.get("cy")).toBe("98.8");
     expect(values.get("grid")).toBe("on");
     expect(values.get("crowd")).toBe("heatmap");
+    expect(values.get("sectors")).toBe("off");
   });
 });

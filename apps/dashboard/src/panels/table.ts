@@ -130,7 +130,7 @@ export class SectorTable {
     }
   }
 
-  update(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): void {
+  update(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
     const rows = sortSectorRows(buildSectorRows(live, geometry, grid), this.sort);
     clear(this.body);
     for (const row of rows) this.body.append(this.renderRow(row));
@@ -148,6 +148,7 @@ export class SectorTable {
         ),
       ),
     );
+    return rows;
   }
 
   private renderHead(): void {
@@ -181,7 +182,9 @@ export class SectorTable {
     const tr = el("tr", {
       class: `row row--${tone(row)}${row.overCapacity ? " row--over" : ""}`,
       "data-zone": row.id,
-      title: `${row.name}: ${row.zoneCount} source zones`,
+      title: `${row.name}: ${row.zoneCount} source zones. Open sector in full map.`,
+      role: "button",
+      tabindex: "0",
     });
     if (row.id === this.selected) tr.classList.add("is-selected");
     for (const column of COLUMNS) {
@@ -191,6 +194,12 @@ export class SectorTable {
       tr.append(td);
     }
     tr.addEventListener("click", () => this.onSelect(row.id));
+    tr.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        this.onSelect(row.id);
+      }
+    });
     return tr;
   }
 }

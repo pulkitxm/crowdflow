@@ -12,6 +12,7 @@ export interface MapQueryState {
   layer: MapLayer;
   grid: boolean;
   crowd: CrowdLayer;
+  sectors: boolean;
 }
 
 export function readMapQuery(search: string): MapQueryState {
@@ -36,6 +37,7 @@ export function readMapQuery(search: string): MapQueryState {
     layer: query.get("layer") === "kinds" ? "kinds" : "live",
     grid: query.get("grid") === "on",
     crowd: query.get("crowd") === "heatmap" ? "heatmap" : "cohorts",
+    sectors: query.get("sectors") !== "off",
   };
 }
 
@@ -50,6 +52,8 @@ export function writeMapQuery(search: string, state: MapQueryState): string {
   else query.delete("grid");
   if (state.crowd === "heatmap") query.set("crowd", "heatmap");
   else query.delete("crowd");
+  if (state.sectors) query.delete("sectors");
+  else query.set("sectors", "off");
   if (state.center) {
     query.set("cx", compact(state.center.x, 1));
     query.set("cy", compact(state.center.y, 1));

@@ -68,10 +68,11 @@ map.setOrientation(mapState.rotation);
 map.setKindView(mapState.layer === "kinds");
 map.setGridVisible(mapState.grid);
 map.setCrowdMode(mapState.crowd);
+map.setSectorVisible(mapState.sectors);
 
-const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => select(zoneId));
+const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => focusSector(zoneId));
 table.onResort(() => {
-  if (latestLive && geometry) table.update(latestLive, geometry, sectorGrid);
+  if (latestLive && geometry) map.setSectors(table.update(latestLive, geometry, sectorGrid));
 });
 
 const prediction = new PredictionPanel(must("prediction-body"), must("prediction-model"));
@@ -184,6 +185,22 @@ heatButton.addEventListener("click", () => {
 updateHeatButton();
 mapControls.append(heatButton);
 
+const sectorButton = document.createElement("button");
+sectorButton.type = "button";
+sectorButton.className = "tool";
+sectorButton.title = "Show or hide named circuit sectors and their live crowd";
+const updateSectorButton = () => {
+  sectorButton.classList.toggle("tool--on", map.sectorsVisible);
+  sectorButton.textContent = map.sectorsVisible ? "SECTORS ON" : "SECTORS OFF";
+};
+sectorButton.addEventListener("click", () => {
+  map.setSectorVisible(!map.sectorsVisible);
+  updateSectorButton();
+  persistMapControls();
+});
+updateSectorButton();
+mapControls.append(sectorButton);
+
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
@@ -213,6 +230,17 @@ function select(zoneId: string | null): void {
   selected = zoneId;
   map.setSelected(zoneId);
   table.setSelected(zoneId);
+}
+
+function focusSector(sectorId: string): void {
+  select(sectorId);
+  consoleElement.classList.add("console--map-focus");
+  focusButton.classList.add("tool--on");
+  focusButton.textContent = "EXIT FULL";
+  persistMapControls();
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => map.focusSector(sectorId));
+  });
 }
 
 function persistMapViewport(coordinates: Position[], zoom: number): void {
@@ -245,6 +273,7 @@ function persistMapControls(): void {
     layer: map.kindView ? "kinds" : "live",
     grid: map.gridVisible,
     crowd: map.crowdMode,
+    sectors: map.sectorsVisible,
   };
   const search = writeMapQuery(window.location.search, mapState);
   window.history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
@@ -268,7 +297,7 @@ async function loadGeometry(circuitId: string): Promise<void> {
       `${Object.keys(geometry.pack.edges ?? {}).length} EDGES`;
     map.setGeometry(geometry, standards);
     map.restoreView(mapState.zoom, mapState.center);
-    if (latestLive) table.update(latestLive, geometry, sectorGrid);
+    if (latestLive) map.setSectors(table.update(latestLive, geometry, sectorGrid));
     void loadSectorGrid();
     if ((geometry.integrity_problems ?? []).length > 0) {
       // Shown, never swallowed: a console rendering a broken pack while looking
@@ -303,7 +332,7 @@ async function loadSectorGrid(): Promise<void> {
     const result = await fetchPeopleGrid(circuitId, coordinates, 1);
     if (request !== sectorGridRequest) return;
     sectorGrid = result;
-    if (latestLive) table.update(latestLive, venue, result);
+    if (latestLive) map.setSectors(table.update(latestLive, venue, result));
   } catch (error) {
     console.error("sector crowd unavailable", error);
   }
@@ -328,7 +357,7 @@ function handleFrame(frame: SocketFrame): void {
     latestLive = frame.live;
     live.update(frame.live);
     map.updateLive(frame.live);
-    if (geometry) table.update(frame.live, geometry, sectorGrid);
+    if (geometry) map.setSectors(table.update(frame.live, geometry, sectorGrid));
     scheduleCohortRefresh();
   }
 
