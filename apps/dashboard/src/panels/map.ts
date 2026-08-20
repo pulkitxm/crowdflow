@@ -30,7 +30,7 @@ import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 import { HEAT_BANDS, heatSpots } from "../heatmap";
 import type { Basemap, CrowdLayer, Theme } from "../mapState";
-import { satelliteAsset } from "../satellite";
+import { satelliteTileUrl, satelliteZoom, tileVenueCorners, visibleTiles, type TileCoordinate } from "../satellite";
 import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
@@ -143,8 +143,7 @@ export class MapPanel {
   private gridFadeStarted = 0;
   private basemap: Basemap = "schematic";
   private theme: Theme = "dark";
-  private satelliteImage: HTMLImageElement | null = null;
-  private satelliteImageUrl = "";
+  private tileImages = new Map<string, HTMLImageElement>();
   private satelliteLayer: HTMLCanvasElement | null = null;
   private satelliteKey = "";
   private satelliteView: View | null = null;
@@ -1161,34 +1160,46 @@ export class MapPanel {
   private paintSatellite(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     const geometry = this.geometry;
     if (!geometry) return;
-    const asset = satelliteAsset(geometry.pack.id);
-    if (asset) {
-      const image = this.loadSatelliteImage(asset.url);
-      const [topLeft, topRight, bottomLeft] = [asset.topLeft, asset.topRight, asset.bottomLeft].map((position) => {
+    const frame = geometry.pack.frame;
+    const zoom = satelliteZoom(this.view.scale, frame.origin_lat);
+    const corners = [this.fromScreen(0, 0), this.fromScreen(width, 0), this.fromScreen(width, height), this.fromScreen(0, height)];
+    for (const tile of visibleTiles(frame, corners, zoom)) {
+      const image = this.tileImage(tile);
+      if (!image?.complete || image.naturalWidth === 0) continue;
+      const [topLeft, topRight, bottomLeft] = tileVenueCorners(frame, tile).map((position) => {
         const [x, y] = this.toScreen(position.x, position.y);
         return { x, y };
       }) as [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }];
-      if (image.complete && image.naturalWidth > 0) {
-        ctx.save();
-        ctx.transform(
-          (topRight.x - topLeft.x) / image.naturalWidth,
-          (topRight.y - topLeft.y) / image.naturalWidth,
-          (bottomLeft.x - topLeft.x) / image.naturalHeight,
-          (bottomLeft.y - topLeft.y) / image.naturalHeight,
-          topLeft.x,
-          topLeft.y,
-        );
-        ctx.drawImage(image, 0, 0);
-        ctx.restore();
-      }
+      ctx.save();
+      ctx.transform(
+        (topRight.x - topLeft.x) / 256,
+        (topRight.y - topLeft.y) / 256,
+        (bottomLeft.x - topLeft.x) / 256,
+        (bottomLeft.y - topLeft.y) / 256,
+        topLeft.x,
+        topLeft.y,
+      );
+      ctx.drawImage(image, -0.25, -0.25, 256.5, 256.5);
+      ctx.restore();
     }
     ctx.fillStyle = this.theme === "light" ? "rgba(255, 255, 255, 0.06)" : "rgba(2, 8, 14, 0.24)";
     ctx.fillRect(0, 0, width, height);
   }
 
-  private loadSatelliteImage(url: string): HTMLImageElement {
-    if (this.satelliteImage && this.satelliteImageUrl === url) return this.satelliteImage;
+  private tileImage(tile: TileCoordinate): HTMLImageElement {
+    const key = `${tile.z}/${tile.y}/${tile.x}`;
+    const cached = this.tileImages.get(key);
+    if (cached) {
+      this.tileImages.delete(key);
+      this.tileImages.set(key, cached);
+      return cached;
+    }
+    if (this.tileImages.size >= 256) {
+      const oldest = this.tileImages.keys().next().value;
+      if (oldest) this.tileImages.delete(oldest);
+    }
     const image = new Image();
+    image.crossOrigin = "anonymous";
     image.decoding = "async";
     image.addEventListener("load", () => {
       if (this.satelliteRedrawFrame != null) return;
@@ -1199,9 +1210,8 @@ export class MapPanel {
         if (this.basemap === "satellite") this.draw();
       });
     });
-    image.src = url;
-    this.satelliteImage = image;
-    this.satelliteImageUrl = url;
+    image.src = satelliteTileUrl(tile);
+    this.tileImages.set(key, image);
     return image;
   }
 
