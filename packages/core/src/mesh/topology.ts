@@ -31,11 +31,6 @@ interface Candidate extends PeerObservation {
   observations: number;
 }
 
-/**
- * Converts noisy discovery snapshots into a stable, bounded set of direct links.
- * The wider leave threshold is intentional hysteresis: one weak scan must not
- * cause every phone in a moving crowd to renegotiate at once.
- */
 export class PeerLifecycle {
   private readonly candidates = new Map<string, Candidate>();
   private connected = new Set<string>();
@@ -68,9 +63,6 @@ export class PeerLifecycle {
     for (const [nodeId, peer] of this.candidates) {
       if (nowMs - peer.last_seen_ms > this.config.lost_after_ms) {
         this.candidates.delete(nodeId);
-      } else if (!observed.has(nodeId)) {
-        // Keep the last observation until the loss timeout. Discovery APIs often
-        // omit a reachable peer for one scan while radios are negotiating.
       }
     }
 
