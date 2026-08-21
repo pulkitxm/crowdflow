@@ -660,8 +660,6 @@ table.mini tr.row--act td { color: var(--ink); }
 .verdict__reason { color: var(--ink-dim); }
 .verdict__violations { color: var(--critical); }
 
-/* ----------------------------------------------------------- gates/exits -- */
-
 .panel__body--gates {
   display: flex;
   flex-direction: column;
@@ -755,11 +753,11 @@ button:focus-visible {
 @media (max-width: 1200px) {
   .console {
     grid-template-columns: minmax(0, 1fr);
-    /* Explicit heights, not auto: with every gate/exit row and sector list,
-       `auto` rows make a fifty-thousand-pixel page and every panel scrolls the
-       window instead of itself. Every area named here — including metrics; an
-       item whose grid-area matches no name lands in an implicit track and
-       drags the whole layout with it. */
+    /* Explicit heights, not auto: with 400 feed lines and 1,875 zones, `auto`
+       rows make a fifty-thousand-pixel page and every panel scrolls the window
+       instead of itself. Every area named here — including metrics; an item
+       whose grid-area matches no name lands in an implicit track and drags the
+       whole layout with it. */
     grid-template-rows: auto 320px 300px 320px 260px 360px 360px auto;
     grid-template-areas:
       "header"

@@ -1,14 +1,3 @@
-/**
- * Gates and exit points.
- *
- * Entry and egress are where the crowd arrives and leaves; everything else on
- * this screen is downstream of them. This panel is a live status board for those
- * zones only — not a log — so an operator looking away from the map still sees
- * which gates are building and which exits are clear.
- *
- * Sorted by operational weight: critical first, then building, then the rest by
- * density. Unknown and silent sinks sink, never pretending to be empty.
- */
 import type { VenueGeometry } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, fixed, integer, signed } from "../format";

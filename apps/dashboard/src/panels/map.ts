@@ -1064,7 +1064,6 @@ export class MapPanel {
     ctx.restore();
   }
 
-  /** Outer venue box the sectors are clipped to — drawn once so the envelope reads clearly. */
   private drawVenueEnvelope(ctx: CanvasRenderingContext2D): void {
     const bounds = this.geometry?.pack.frame.venue_bounds_m?.map(Number);
     if (!bounds || bounds.length < 4) return;
