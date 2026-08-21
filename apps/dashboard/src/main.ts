@@ -16,7 +16,7 @@ import { must } from "./dom";
 import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
-import { FeedPanel } from "./panels/feed";
+import { GatesPanel } from "./panels/gates";
 import { HeaderPanel } from "./panels/header";
 import { InterventionPanel } from "./panels/intervention";
 import { LivePanel } from "./panels/live";
@@ -33,7 +33,6 @@ let latest: TickEnvelope | null = null;
 let latestLive: LiveSnapshot | null = null;
 let latestSession: SessionInfo | null = null;
 let selected: string | null = null;
-let sessionId: string | null = null;
 let gridRequest = 0;
 let sectorGridRequest = 0;
 let sectorGrid: PeopleQueryResult | null = null;
@@ -80,7 +79,7 @@ table.onResort(() => {
 
 const prediction = new PredictionPanel(must("prediction-body"), must("prediction-model"));
 const intervention = new InterventionPanel(must("intervention-body"), must("intervention-status"));
-const feed = new FeedPanel(must("feed-body"), must("feed-count"));
+const gates = new GatesPanel(must("gates-body"), must("gates-count"), (zoneId) => select(zoneId));
 const metrics = new MetricsStrip(must("metrics"));
 const live = new LivePanel(must("live-body"), must("live-status"));
 
@@ -346,6 +345,7 @@ function redraw(envelope: TickEnvelope): void {
   table.setSelected(selected);
   prediction.update(envelope, byId, zoneName);
   intervention.update(envelope, zoneName);
+  gates.update(rows, geometry);
   if (latestSession) metrics.update(envelope, latestSession);
 }
 
@@ -365,6 +365,7 @@ async function loadGeometry(circuitId: string): Promise<void> {
       console.warn("pack integrity problems", geometry.integrity_problems ?? []);
     }
     if (latest) redraw(latest);
+    else gates.update([], geometry);
   } catch (error) {
     console.error("geometry unavailable", error);
     must("map-circuit").textContent = "GEOMETRY UNAVAILABLE";
@@ -423,13 +424,6 @@ function handleFrame(frame: SocketFrame): void {
 
   if (frame.type === "hello") {
     if (frame.standards) standards = frame.standards;
-    // A new session id means a different run: history from the old one would be
-    // a lie about this one.
-    if (sessionId !== frame.session.session_id) {
-      sessionId = frame.session.session_id;
-      feed.reset();
-    }
-    feed.append(frame.backlog ?? []);
     void loadGeometry(frame.session.circuit_id);
     if (frame.last_tick) {
       memory.observe(frame.last_tick);
@@ -442,7 +436,6 @@ function handleFrame(frame: SocketFrame): void {
   if (frame.type === "tick" && frame.tick) {
     memory.observe(frame.tick);
     latest = frame.tick;
-    feed.append(frame.tick.events ?? []);
     redraw(frame.tick);
   }
 }

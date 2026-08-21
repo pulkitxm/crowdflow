@@ -97,7 +97,7 @@ button {
     "map          prediction"
     "map          intervention"
     "map          live"
-    "zones        feed"
+    "zones        gates"
     "metrics      metrics";
 }
 
@@ -223,7 +223,7 @@ button {
 .panel--prediction { grid-area: prediction; }
 .panel--intervention { grid-area: intervention; }
 .panel--zones { grid-area: zones; }
-.panel--feed { grid-area: feed; }
+.panel--gates { grid-area: gates; }
 .panel--live { grid-area: live; }
 
 .panel__head {
@@ -276,7 +276,7 @@ button {
 }
 
 .panel__body--table,
-.panel__body--feed { padding: 0; }
+.panel__body--gates { padding: 0; }
 
 .empty,
 .note {
@@ -446,7 +446,8 @@ button {
 :root[data-theme="light"] .verdictline { background: #f2f6f9; }
 :root[data-theme="light"] .pill--sel { background: #e4f0fa; border-color: #90b2cc; }
 :root[data-theme="light"] .row--selected td { background: #e5f0f8; }
-:root[data-theme="light"] .feedline--critical { background: #fff0f2; }
+:root[data-theme="light"] .gateline:hover { background: #edf3f8; }
+:root[data-theme="light"] .gateline--critical { background: #fff0f2; }
 
 /* ------------------------------------------------------------ state atoms -- */
 
@@ -659,30 +660,58 @@ table.mini tr.row--act td { color: var(--ink); }
 .verdict__reason { color: var(--ink-dim); }
 .verdict__violations { color: var(--critical); }
 
-/* ------------------------------------------------------------------ feed -- */
+.panel__body--gates {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
 
-.panel__body--feed { display: flex; flex-direction: column; }
-
-.feedline {
+.gateline {
   display: grid;
-  grid-template-columns: 54px 74px 1fr;
+  grid-template-columns: 44px minmax(0, 1.4fr) minmax(0, 1.1fr) 72px 64px 72px;
   gap: 8px;
-  padding: 3px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 10px;
+  border: 0;
   border-bottom: 1px solid var(--line-soft);
   border-left: 2px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
   align-items: baseline;
 }
 
-.feedline__time { color: var(--ink-faint); }
-.feedline__kind { color: var(--ink-faint); font-size: 9px; letter-spacing: 0.1em; }
-.feedline__message { white-space: normal; }
-.feedline__detail { grid-column: 3; color: var(--ink-faint); font-size: 10px; white-space: normal; }
+.gateline:hover { background: #131c26; }
+.gateline:focus-visible { outline: 1px solid var(--info); outline-offset: -1px; }
 
-.feedline--info { border-left-color: var(--line); }
-.feedline--warning { border-left-color: var(--building); }
-.feedline--critical { border-left-color: var(--critical); background: #180f11; }
-.feedline--critical .feedline__message { color: var(--critical); }
-.feedline--warning .feedline__message { color: var(--building); }
+.gateline__kind {
+  color: var(--ink-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.gateline__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gateline__metric { color: var(--ink-dim); font-size: 11px; text-align: right; }
+.gateline__queue { color: var(--building); font-size: 11px; text-align: right; }
+
+.gateline--nominal { border-left-color: var(--nominal); }
+.gateline--building { border-left-color: var(--building); }
+.gateline--critical { border-left-color: var(--critical); background: #180f11; }
+.gateline--silent { border-left-color: var(--silent); color: var(--ink-dim); }
+.gateline--unknown { border-left-color: var(--unknown); color: var(--ink-faint); }
+.gateline--over .gateline__name { font-weight: 600; }
+
+.gateline--critical .state__word { color: var(--critical); }
+.gateline--building .state__word { color: var(--building); }
 
 .tool:focus-visible,
 button:focus-visible {
@@ -737,7 +766,7 @@ button:focus-visible {
       "intervention"
       "live"
       "zones"
-      "feed"
+      "gates"
       "metrics";
     height: auto;
     min-height: 100vh;
@@ -788,10 +817,15 @@ button:focus-visible {
     padding: 8px;
   }
 
-  .feedline {
-    grid-template-columns: 48px 62px minmax(0, 1fr);
+  .gateline {
+    grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);
     gap: 5px;
     padding-inline: 8px;
+  }
+
+  .gateline__metric,
+  .gateline__queue {
+    display: none;
   }
 
   .map__readout {
