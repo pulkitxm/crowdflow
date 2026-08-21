@@ -73,3 +73,16 @@ claims to be Wi-Fi Aware, Direct or BLE: choosing one without the required demo-
 handset capability/walk test would be fabricating hardware support. The measured
 routing policies in `@crowdflow/core` are ready behind the seam; replacing
 the in-memory transport is explicitly the hardware-dependent remainder.
+
+## Dynamic peer lifecycle
+
+`src/mesh/coordinator.ts` consumes the transport's changing discovery snapshots.
+It requires two observations before admitting a peer, keeps an established link
+through short scan gaps and weaker signal, removes peers after a 12 second loss
+timeout, and caps the direct neighbour set at eight. This hysteresis prevents a
+moving crowd from continuously renegotiating links because of one noisy scan.
+
+The lifecycle is continuous: discovery updates can create and remove direct
+links at any time. Connected components therefore split and merge naturally as
+people move. These defaults are operational starting points, not measured radio
+range claims; handset walk tests must calibrate them before deployment.
