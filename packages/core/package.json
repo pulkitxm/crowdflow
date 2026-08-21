@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./mesh/topology": "./src/mesh/topology.ts",
     "./positioning": "./src/positioning/index.ts",
     "./random": "./src/random.ts",
     "./statistics": "./src/statistics.ts"

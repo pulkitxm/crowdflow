@@ -1,7 +1,6 @@
+export type MeshTrafficClass = 'state' | 'uplink' | 'urgent';
 
-export type MeshTrafficClass = "state" | "uplink" | "urgent";
-
-export type MeshTransport = "wifi_aware" | "wifi_direct" | "ble" | "unknown";
+export type MeshTransport = 'wifi_aware' | 'wifi_direct' | 'ble' | 'unknown';
 
 export interface MeshPeer {
   nodeId: string;
@@ -36,19 +35,23 @@ interface MeshEvents extends Record<string, (...args: any[]) => void> {
 }
 
 export interface MeshModule {
-  addListener<EventName extends keyof MeshEvents>(eventName: EventName, listener: MeshEvents[EventName]): EventSubscription;
+  addListener<EventName extends keyof MeshEvents>(
+    eventName: EventName,
+    listener: MeshEvents[EventName],
+  ): EventSubscription;
   start(): Promise<void>;
   stop(): Promise<void>;
   getStatus(): Promise<MeshStatus>;
   getNearbyNodes(): Promise<MeshPeer[]>;
+  connect(nodeId: string): Promise<void>;
+  disconnect(nodeId: string): Promise<void>;
   send(nodeId: string, message: MeshMessage): Promise<void>;
   broadcast(message: MeshMessage): Promise<void>;
   addPeerListener(listener: (peers: MeshPeer[]) => void): () => void;
   addMessageListener(listener: (message: MeshMessage) => void): () => void;
 }
 
-const native: MeshModule | null =
-  typeof document === 'undefined' ? requireNativeModule<MeshModule>('Mesh') : null;
+const native: MeshModule | null = typeof document === 'undefined' ? requireNativeModule<MeshModule>('Mesh') : null;
 
 function nativeMesh(): MeshModule {
   if (native === null) {
@@ -62,6 +65,8 @@ export const Mesh = {
   stop: () => nativeMesh().stop(),
   getStatus: () => nativeMesh().getStatus(),
   getNearbyNodes: () => nativeMesh().getNearbyNodes(),
+  connect: (nodeId: string) => nativeMesh().connect(nodeId),
+  disconnect: (nodeId: string) => nativeMesh().disconnect(nodeId),
   send: (nodeId: string, message: MeshMessage) => nativeMesh().send(nodeId, message),
   broadcast: (message: MeshMessage) => nativeMesh().broadcast(message),
   addPeerListener(listener: (peers: MeshPeer[]) => void): () => void {
@@ -81,6 +86,8 @@ export const Mesh = {
   | 'stop'
   | 'getStatus'
   | 'getNearbyNodes'
+  | 'connect'
+  | 'disconnect'
   | 'send'
   | 'broadcast'
   | 'addPeerListener'

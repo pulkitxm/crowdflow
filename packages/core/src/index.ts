@@ -12,6 +12,7 @@ export * from './mesh/policy.js';
 export * from './mesh/uplink.js';
 export * from './mesh/fanin.js';
 export * from './mesh/simulator.js';
+export * from './mesh/topology.js';
 export * from './venue.js';
 export * from './venue-build.js';
 export * from './intervention/whatif.js';
