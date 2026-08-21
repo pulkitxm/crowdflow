@@ -1,6 +1,7 @@
 import { InferenceClient } from '@huggingface/inference';
 import type { Message, ModelClient, ModelResponse, ToolSchema } from './client.js';
 import { AnthropicClient } from './client.js';
+import { GeminiClient } from './gemini.js';
 
 export const DEFAULT_HF_MODEL = process.env.CROWDFLOW_HF_MODEL ?? 'meta-llama/Llama-3.3-70B-Instruct';
 
@@ -89,10 +90,12 @@ function parseArguments(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
 }
 
-export type ModelProvider = 'anthropic' | 'huggingface';
-export const DEFAULT_MODEL_PROVIDER: ModelProvider = process.env.CROWDFLOW_MODEL_PROVIDER === 'huggingface' ? 'huggingface' : 'anthropic';
+export type ModelProvider = 'anthropic' | 'huggingface' | 'gemini';
+export const DEFAULT_MODEL_PROVIDER: ModelProvider = process.env.CROWDFLOW_MODEL_PROVIDER === 'huggingface' ? 'huggingface' : process.env.CROWDFLOW_MODEL_PROVIDER === 'gemini' ? 'gemini' : 'anthropic';
 
 /** Pick the agent's model client from `CROWDFLOW_MODEL_PROVIDER`; Anthropic remains the default. */
 export function resolveModelClient(provider: ModelProvider = DEFAULT_MODEL_PROVIDER): ModelClient {
-  return provider === 'huggingface' ? new HuggingFaceClient() : new AnthropicClient();
+  if (provider === 'huggingface') return new HuggingFaceClient();
+  if (provider === 'gemini') return new GeminiClient();
+  return new AnthropicClient();
 }

@@ -17,3 +17,5 @@ circuits/_geometry/
 mockups/
 evidence/
 circuits/*/pack/anchors.json
+.env
+.env.local

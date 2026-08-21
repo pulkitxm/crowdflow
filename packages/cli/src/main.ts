@@ -164,7 +164,7 @@ async function liveSimulate(id: string, opts: Options): Promise<void> {
     reset: opts.reset === true,
     ...(selectedGates?.length ? { gates: selectedGates } : {}),
     onTick: (state) => {
-      if (state.tick === 1 || state.joined === people || state.tick % 10 === 0) console.log(`tick ${state.tick}: ${state.joined}/${people} joined, ${state.reports} locations sent`);
+      if (state.tick === 1 || state.joined === people || state.tick % 10 === 0) console.log(`tick ${state.tick}: ${state.joined}/${people} joined, ${state.reports} locations sent${state.guided ? `, ${state.guided} rerouted by guidance` : ''}`);
     },
   });
   if (result.reset) console.log(`${result.removed} stored people cleared before simulation`);

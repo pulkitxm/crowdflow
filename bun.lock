@@ -68,6 +68,7 @@
         "crowdflow-api": "./src/main.ts",
       },
       "dependencies": {
+        "@crowdflow/agent": "0.2.0",
         "@crowdflow/cli": "0.2.0",
         "@crowdflow/contracts": "0.2.0",
         "@crowdflow/core": "0.2.0",

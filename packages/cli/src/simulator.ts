@@ -22,6 +22,15 @@ export interface CrowdSimulatorTick {
   joined: number;
   active: number;
   reports: number;
+  guided: number;
+}
+
+export interface GuidanceOrder {
+  person_id: number;
+  command_id: string;
+  to_zone: string;
+  avoid: string[];
+  prefer: string[];
 }
 
 export interface CrowdSimulatorResult extends CrowdSimulatorTick {
@@ -34,6 +43,8 @@ export interface CrowdSimulatorResult extends CrowdSimulatorTick {
 export interface SimulatedWalker {
   personId: number;
   gateId: string;
+  commandId: string | null;
+  zoneIds: string[];
   path: Position[];
   segment: number;
   progress: number;
@@ -74,6 +85,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
   const ticks = Math.ceil(duration / tickSeconds);
   let joined = 0;
   let reports = 0;
+  let guided = 0;
   let spawnBudget = 0;
 
   for (let tick = 1; tick <= ticks; tick++) {
@@ -103,12 +115,35 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
       reports += ack.accepted;
     }
 
-    const state = { tick, joined, active: walkers.length, reports };
+    const orders = await getJson<{ guidance: GuidanceOrder[] }>(`${api}/api/circuits/${options.circuitId}/guidance`);
+    guided += applyGuidance(orders.guidance, walkers, pack, graph);
+
+    const state = { tick, joined, active: walkers.length, reports, guided };
     options.onTick?.(state);
     if (tick < ticks) await sleep(options.tickMs);
   }
 
-  return { tick: ticks, joined, active: walkers.length, reports, gates, duration_s: duration, reset, removed };
+  return { tick: ticks, joined, active: walkers.length, reports, guided, gates, duration_s: duration, reset, removed };
+}
+
+export function applyGuidance(orders: GuidanceOrder[], walkers: SimulatedWalker[], pack: CircuitPack, graph: VenueGraph): number {
+  const byPerson = new Map(orders.map((order) => [order.person_id, order]));
+  let applied = 0;
+  for (const walker of walkers) {
+    const order = byPerson.get(walker.personId);
+    if (!order || walker.commandId === order.command_id) continue;
+    const current = walker.zoneIds[Math.min(walker.segment, walker.zoneIds.length - 1)];
+    if (!current || current === order.to_zone) continue;
+    const route = graph.route(current, order.to_zone, undefined, new Set(order.avoid.filter((zone) => zone !== current && zone !== order.to_zone)), new Set(order.prefer));
+    if (route.path.length < 2) continue;
+    walker.commandId = order.command_id;
+    walker.zoneIds = route.path;
+    walker.path = route.path.map((id) => pack.zones?.[id]?.position).filter((position): position is Position => position != null);
+    walker.segment = 0;
+    walker.progress = 0;
+    applied += 1;
+  }
+  return applied;
 }
 
 function selectGates(pack: CircuitPack, graph: VenueGraph, destinations: Array<{ id: string }>, requested?: string[]): string[] {
@@ -146,6 +181,8 @@ export function buildWalker(
   return {
     personId,
     gateId,
+    commandId: null,
+    zoneIds: route.path,
     path: route.path.map((id) => pack.zones?.[id]?.position).filter((position): position is Position => position != null),
     segment: 0,
     progress: 0,

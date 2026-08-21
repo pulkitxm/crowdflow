@@ -10,12 +10,13 @@
  */
 import "./style.css";
 import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
-import { ConsoleLink, control, fetchGeometry, fetchPeopleGrid } from "./client";
+import { ConsoleLink, approveProposal, askAgent, control, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
 import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
+import { AgentPanel } from "./panels/agent";
 import { FeedPanel } from "./panels/feed";
 import { HeaderPanel } from "./panels/header";
 import { InterventionPanel } from "./panels/intervention";
@@ -83,6 +84,31 @@ const intervention = new InterventionPanel(must("intervention-body"), must("inte
 const feed = new FeedPanel(must("feed-body"), must("feed-count"));
 const metrics = new MetricsStrip(must("metrics"));
 const live = new LivePanel(must("live-body"), must("live-status"));
+
+const agent = new AgentPanel(
+  must("agent-body"),
+  must("agent-status"),
+  askAgent,
+  {
+    has: (zoneId) => !!geometry?.pack.zones?.[zoneId],
+    name: (zoneId) => zoneName(zoneId),
+    focus: (zoneId) => {
+      select(zoneId);
+      map.focusZone(zoneId);
+    },
+  },
+  approveProposal,
+);
+window.setInterval(() => {
+  fetchAgentCommands().then(
+    (result) => agent.setCommands(result.commands),
+    () => {},
+  );
+}, 2000);
+fetchAgentStatus().then(
+  (status) => agent.setStatus(status),
+  () => agent.setStatus(null),
+);
 
 const mapControls = must("map-controls");
 const consoleElement = must("console");
@@ -436,6 +462,12 @@ function handleFrame(frame: SocketFrame): void {
       latest = frame.last_tick;
       redraw(frame.last_tick);
     }
+    return;
+  }
+
+  if (frame.type === "command") {
+    if (frame.event) feed.append([frame.event]);
+    if (frame.command) agent.setCommands([frame.command]);
     return;
   }
 
