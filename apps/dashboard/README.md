@@ -38,7 +38,7 @@ make console POPULATION=6000 SEED=7 SPEED=1
 | Zones | one dense row per zone | Sortable by any column. Absent measurements never sort as zero. |
 | Prediction | **time to event** | Not the current value. "T-02:47 to CRITICAL" drives a decision; "87% full" does not. Confidence sits beside the claim and the model is named. |
 | Intervention | every option, rejected ones included | A recommendation without its alternatives is an assertion. The do-nothing baseline is always shown, and sometimes it wins. |
-| Race control | timestamped transitions | The only panel with memory. Replayed on reconnect. |
+| Gates & exits | live portal status | Entry and egress only — density band, net flow, queue. Click a row to focus it on the map. |
 | Metrics | the A/B harness's own definitions | So the wall cannot flatter a run the Phase 3 gate would fail. |
 
 ## Rules the code enforces

@@ -1019,6 +1019,9 @@ export class MapPanel {
 
   private drawSectors(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     const placed: Array<[number, number, number, number]> = [];
+    const lightSchematic = this.theme === "light" && this.basemap === "schematic";
+    const sectorStroke = lightSchematic ? "rgba(42, 118, 176, 0.58)" : "rgba(121, 199, 255, 0.58)";
+    const selectedStroke = lightSchematic ? "rgba(26, 98, 158, 0.95)" : "rgba(121, 199, 255, 0.95)";
     ctx.save();
     ctx.lineJoin = "round";
     for (const sector of this.sectors) {
@@ -1035,11 +1038,12 @@ export class MapPanel {
         ctx.fillStyle = "rgba(88, 182, 255, 0.10)";
         ctx.fill();
       }
-      ctx.strokeStyle = isSelected ? "rgba(121, 199, 255, 0.90)" : "rgba(121, 199, 255, 0.26)";
-      ctx.lineWidth = isSelected ? 2 : 1;
-      ctx.setLineDash(isSelected ? [] : [5, 5]);
+      ctx.strokeStyle = isSelected ? selectedStroke : sectorStroke;
+      ctx.lineWidth = isSelected ? 2.5 : 1.5;
+      ctx.setLineDash(isSelected ? [] : [8, 4]);
       ctx.stroke();
     }
+    this.drawVenueEnvelope(ctx);
     ctx.setLineDash([]);
     ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
@@ -1054,14 +1058,14 @@ export class MapPanel {
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
       if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
       placed.push(box);
-      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic"
+      ctx.fillStyle = lightSchematic
         ? sector.id === this.selected ? "rgba(218, 237, 252, 0.96)" : "rgba(255, 255, 255, 0.90)"
         : sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
       ctx.strokeStyle = sector.id === this.selected ? "#79c7ff" : "rgba(121, 199, 255, 0.48)";
       ctx.lineWidth = 1;
       ctx.fillRect(...box);
       ctx.strokeRect(...box);
-      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "#132638" : "#d8e2ec";
+      ctx.fillStyle = lightSchematic ? "#132638" : "#d8e2ec";
       ctx.fillText(name, x, y - 6);
       ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === "light" ? "#52667a" : "#8a99a9";
       ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -1069,6 +1073,34 @@ export class MapPanel {
       ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
     }
     ctx.restore();
+  }
+
+  private drawVenueEnvelope(ctx: CanvasRenderingContext2D): void {
+    const bounds = this.geometry?.pack.frame.venue_bounds_m?.map(Number);
+    if (!bounds || bounds.length < 4) return;
+    const [minX, minY, maxX, maxY] = bounds;
+    if (![minX, minY, maxX, maxY].every(Number.isFinite) || minX! >= maxX! || minY! >= maxY!) return;
+    const corners = [
+      this.toScreen(minX!, minY!),
+      this.toScreen(maxX!, minY!),
+      this.toScreen(maxX!, maxY!),
+      this.toScreen(minX!, maxY!),
+    ];
+    ctx.beginPath();
+    corners.forEach(([x, y], index) => {
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    const lightSchematic = this.theme === "light" && this.basemap === "schematic";
+    ctx.setLineDash([]);
+    ctx.strokeStyle = lightSchematic ? "rgba(42, 118, 176, 0.18)" : "rgba(121, 199, 255, 0.22)";
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    ctx.strokeStyle = lightSchematic ? "rgba(26, 98, 158, 0.88)" : "rgba(168, 220, 255, 0.88)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 5]);
+    ctx.stroke();
   }
 
   private draw(): void {
