@@ -63,8 +63,8 @@ export class InterventionPanel {
             class: "note",
             text:
               `Earlier in this run: ${dispatched} command(s) dispatched, ` +
-              `${rejected} rejected by safety. Those sweeps are in the race-control feed; ` +
-              `their option tables were not replayed.`,
+              `${rejected} rejected by safety. Option tables from those sweeps ` +
+              `were not replayed to this console.`,
           }),
         );
       }
