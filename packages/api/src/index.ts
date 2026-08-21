@@ -3,5 +3,7 @@ export * from './packs.js';
 export * from './session.js';
 export * from './scenarios.js';
 export * from './spectator.js';
+export * from './agent.js';
+export * from './control.js';
 export * from './app.js';
 export * from './people.js';

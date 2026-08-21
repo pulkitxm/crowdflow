@@ -418,12 +418,23 @@ export class MapPanel {
 
   focusSector(sectorId: string, zoom = 12): void {
     const sector = this.sectors.find((item) => item.id === sectorId);
-    if (!sector || this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
+    if (!sector) return;
+    this.animateTo(sector.x, sector.y, zoom);
+  }
+
+  focusZone(zoneId: string, zoom = 14): void {
+    const position = this.geometry?.pack.zones?.[zoneId]?.position;
+    if (!position) return;
+    this.animateTo(position.x, position.y, zoom);
+  }
+
+  private animateTo(x: number, y: number, zoom: number): void {
+    if (this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
     this.cancelZoom();
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
     const targetScale = this.fitScale * Math.min(Math.max(zoom, 0.5), 50);
-    const [rx, ry] = this.rotateCoord(sector.x, sector.y);
+    const [rx, ry] = this.rotateCoord(x, y);
     const startView = { ...this.view };
     const targetView = {
       scale: targetScale,

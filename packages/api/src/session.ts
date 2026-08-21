@@ -22,6 +22,7 @@ export class ScenarioSession {
     return { session_id: this.sessionId, circuit_id: this.circuit.pack.id, scenario: this.option.id, description: this.scenario.description, status: this.status, seed: this.scenario.seed, population: this.population, participation: this.participation, compliance: this.sim.config.compliance, tick_s: this.sim.config.tick_s, speed: this.speed, intervene: this.intervene, origins: this.option.origins ?? [], destination: this.option.destination ?? null, tick: this.tickIndex, time_s: this.sim.timeS, duration_s: this.scenario.durationS, computing_ms: 0 };
   }
   subscribe(listener: (envelope: TickEnvelope) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  note(kind: ConsoleEvent['kind'], severity: ConsoleEvent['severity'], message: string, zoneId?: string): ConsoleEvent { return this.log(kind, severity, message, zoneId); }
   control(action: 'play' | 'pause' | 'step' | 'speed', speed?: number): SessionInfo {
     if (action === 'play' && this.status !== 'finished') { this.status = 'running'; this.schedule(); }
     else if (action === 'pause') { this.status = 'paused'; if (this.timer) clearTimeout(this.timer); }

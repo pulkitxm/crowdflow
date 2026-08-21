@@ -91,13 +91,14 @@ button {
   gap: 1px;
   background: var(--line-soft);
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 0.75fr) minmax(0, 1.1fr) auto;
+  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 0.75fr) minmax(0, 1.1fr) minmax(0, 0.85fr) auto;
   grid-template-areas:
     "header       header"
     "map          prediction"
     "map          intervention"
     "map          live"
     "zones        gates"
+    "agent        agent"
     "metrics      metrics";
 }
 
@@ -225,6 +226,7 @@ button {
 .panel--zones { grid-area: zones; }
 .panel--gates { grid-area: gates; }
 .panel--live { grid-area: live; }
+.panel--agent { grid-area: agent; }
 
 .panel__head {
   display: flex;
@@ -748,6 +750,127 @@ button:focus-visible {
 .metric--warn .metric__value { color: var(--building); }
 .metric--info { border-top-color: var(--info); }
 
+.panel__body--agent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.agent__form {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.agent__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel-head);
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+}
+
+.agent__input::placeholder { color: var(--ink-faint); }
+
+.agent__ask:disabled { opacity: 0.6; }
+
+.agent__warn { color: var(--building); }
+
+.agent__exchanges {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-exchange {
+  border-left: 2px solid var(--info);
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-exchange--failed { border-left-color: var(--critical); }
+
+.agent-exchange__q { color: var(--ink-dim); }
+.agent-exchange__q::before { content: "Q  "; color: var(--ink-faint); }
+
+.agent-exchange__a { white-space: pre-wrap; }
+
+.agent-exchange__wait { color: var(--ink-faint); }
+
+.agent-exchange__error { color: var(--critical); }
+
+.agent-proposal { color: var(--ink-dim); }
+.agent-proposal__word { color: var(--building); }
+.agent-proposal--approved .agent-proposal__word { color: var(--nominal); }
+.agent-proposal--rejected .agent-proposal__word { color: var(--critical); }
+.agent-proposal__approve { margin-left: 8px; }
+.agent-proposal__dispatched { color: var(--nominal); }
+
+.agent__control { display: none; }
+.agent__control--active {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+  border: 1px solid var(--building);
+  padding: 5px 8px;
+}
+.agent-command { color: var(--ink); }
+.agent-command__word { color: var(--building); font-weight: 700; }
+.agent-command__meta { color: var(--ink-dim); }
+.agent-command__cohort { color: var(--info); }
+
+.agent-trace__summary {
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.agent-trace__call {
+  margin: 4px 0 4px 12px;
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+.agent-trace__name { color: var(--info); }
+
+.agent-trace__result {
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.agent-md { margin: 1px 0; }
+.agent-md--heading {
+  color: var(--ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+.agent-md--indent-1 { padding-left: 14px; }
+.agent-md--indent-2 { padding-left: 28px; }
+.agent-md--indent-3 { padding-left: 42px; }
+.agent-md__dot { color: var(--ink-faint); }
+.agent-md__bold { font-weight: 700; color: var(--ink); }
+.agent-md__code { color: var(--info); }
+
+.agent-zone {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--info);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.agent-zone:hover { color: var(--ink); }
+
 /* Narrow screens are not the target — this is a wall — but a laptop at a desk
    should still be usable rather than clipped. */
 @media (max-width: 1200px) {
@@ -758,7 +881,7 @@ button:focus-visible {
        instead of itself. Every area named here — including metrics; an item
        whose grid-area matches no name lands in an implicit track and drags the
        whole layout with it. */
-    grid-template-rows: auto 320px 300px 320px 260px 360px 360px auto;
+    grid-template-rows: auto 320px 300px 320px 260px 360px 360px 320px auto;
     grid-template-areas:
       "header"
       "map"
@@ -767,6 +890,7 @@ button:focus-visible {
       "live"
       "zones"
       "gates"
+      "agent"
       "metrics";
     height: auto;
     min-height: 100vh;
@@ -784,7 +908,7 @@ button:focus-visible {
 
   .console {
     min-width: 0;
-    grid-template-rows: auto 280px 330px 360px 260px 360px 360px auto;
+    grid-template-rows: auto 280px 330px 360px 260px 360px 360px 320px auto;
   }
 
   .strip--header {

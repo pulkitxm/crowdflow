@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { PeopleQueryResult, Position, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
+import type { AgentAskResponse, AgentCommandStatus, AgentStatus, PeopleQueryResult, Position, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 
@@ -37,6 +37,26 @@ export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ coordinates, zoom, count, since: Date.now() / 1000 - 30 }),
   });
+}
+
+export function askAgent(question: string): Promise<AgentAskResponse> {
+  return json<AgentAskResponse>("/api/agent/ask", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+}
+
+export function fetchAgentStatus(): Promise<AgentStatus> {
+  return json<AgentStatus>("/api/agent");
+}
+
+export function approveProposal(commandId: string): Promise<AgentCommandStatus> {
+  return json<AgentCommandStatus>(`/api/agent/proposals/${encodeURIComponent(commandId)}/approve`, { method: "POST" });
+}
+
+export function fetchAgentCommands(): Promise<{ commands: AgentCommandStatus[] }> {
+  return json<{ commands: AgentCommandStatus[] }>("/api/agent/commands");
 }
 
 export function control(action: string, speed?: number): Promise<SessionInfo> {

@@ -4,6 +4,8 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
 import { CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_SPEED_MS, JAM_DENSITY_PERSONS_M2, LOS_A_MAX, LOS_B_MAX, LOS_C_MAX, LOS_D_MAX, LOS_E_MAX, MEASURED_NOT_ASSUMED } from '@crowdflow/contracts';
 import { capacityFlow } from '@crowdflow/core';
+import { AgentService } from './agent.js';
+import { CrowdControl } from './control.js';
 import { anchorPack, availableCircuits, geometry, loadCircuit, summary, type LoadedCircuit } from './packs.js';
 import { LiveIngest } from './live.js';
 import { currentRace, race, races } from './events.js';
@@ -11,7 +13,7 @@ import { ScenarioSession } from './session.js';
 import { ASSUMED_DEMO_POPULATION, buildScenario, scenarioOptions } from './scenarios.js';
 import { SpectatorFeed } from './spectator.js';
 import { PeopleStore, type PeopleQuery } from './people.js';
-import type { LiveRequest, PersonLoginRequest, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
+import type { AgentAskRequest, LiveRequest, PersonLoginRequest, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
 import type { NodeReport } from '@crowdflow/contracts';
 
 export function standardsReport(): StandardsReport {
@@ -35,13 +37,16 @@ export class CrowdFlowServer {
    */
   live: LiveIngest | null = null;
   private circuits = new Map<string, LoadedCircuit>();
+  agent = new AgentService();
   readonly people: PeopleStore;
+  readonly control: CrowdControl;
   private unsubscribeLive: (() => void) | null = null;
   readonly server = createServer((request, response) => void this.handle(request, response));
   readonly sockets = new WebSocketServer({ noServer: true });
   private upgrades = new Set<Duplex>();
   constructor(readonly root: string, options: { databasePath?: string } = {}) {
     this.people = new PeopleStore(options.databasePath ?? (process.env.NODE_ENV === 'test' ? ':memory:' : join(root, '.data', 'crowdflow.sqlite')));
+    this.control = new CrowdControl(this.people);
     this.server.on('upgrade', (request, socket, head) => {
       if (new URL(request.url ?? '/', 'http://localhost').pathname !== '/ws') { socket.destroy(); return; }
       this.upgrades.add(socket); socket.once('close', () => this.upgrades.delete(socket));
@@ -76,7 +81,7 @@ export class CrowdFlowServer {
     const circuit = this.load(request.circuit_id ?? 'silverstone');
     const count = request.population ?? ASSUMED_DEMO_POPULATION; const seed = request.seed ?? 42;
     const { scenario, option } = buildScenario(circuit, request.scenario ?? 'egress', count, seed, request.origins, request.destination);
-    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); return this.session;
+    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); this.session.subscribe((tick) => this.agent.observe(circuit.pack, tick.state)); return this.session;
   }
   /**
    * Arm live ingest.
@@ -92,6 +97,7 @@ export class CrowdFlowServer {
     this.unsubscribeLive?.();
     this.live = new LiveIngest(this.load(request.circuit_id ?? 'silverstone'), request.window_s == null ? { participation } : { participation, window_s: request.window_s }, this.people);
     this.unsubscribeLive = this.live.subscribe((snapshot) => {
+      this.agent.observe(this.live!.circuit.pack, snapshot.state);
       if (!this.session) return;
       this.broadcast({ type: 'live', session: this.session.info(), live: snapshot });
     });
@@ -169,6 +175,26 @@ export class CrowdFlowServer {
         if (!this.live) return json(response, 503, { detail: 'live ingest is not running' });
         const command = await body(request) as { reports?: NodeReport[]; emit?: boolean };
         return json(response, 200, this.live.reportMany(command.reports ?? [], Date.now() / 1000, command.emit !== false));
+      }
+      if (request.method === 'GET' && path === '/api/agent') return json(response, 200, this.agent.status(this.session, this.live));
+      if (request.method === 'POST' && path === '/api/agent/ask') return json(response, 200, await this.agent.ask(await body(request) as AgentAskRequest, this.session, this.live, Date.now() / 1000));
+      if (request.method === 'GET' && path === '/api/agent/commands') return json(response, 200, { commands: this.control.status(Date.now() / 1000) });
+      const approveMatch = path.match(/^\/api\/agent\/proposals\/([^/]+)\/approve$/);
+      if (request.method === 'POST' && approveMatch) {
+        const pending = this.agent.proposal(approveMatch[1]!);
+        if (!pending) return json(response, 404, { detail: `no proposal ${approveMatch[1]} — ask the agent first; proposals do not survive a restart` });
+        const status = this.control.dispatch(pending.proposal, this.load(pending.circuit_id), this.session, Date.now() / 1000);
+        if (this.session) {
+          const event = this.session.note('command', 'warning', `operator approved ${status.command_id}: divert ${Math.round(status.target_fraction * 100)}% of ${status.source_zone} to ${status.destination_zone}${status.applied_to_simulation ? '' : ' (guidance only; no simulation running here)'}`, status.source_zone);
+          this.broadcast({ type: 'command', session: this.session.info(), event, command: status });
+        }
+        return json(response, 200, status);
+      }
+      const guidanceMatch = path.match(/^\/api\/circuits\/([^/]+)\/guidance$/);
+      if (request.method === 'GET' && guidanceMatch) {
+        this.load(guidanceMatch[1]!);
+        const person = url.searchParams.get('person_id');
+        return json(response, 200, { circuit_id: guidanceMatch[1]!, guidance: this.control.guidance(guidanceMatch[1]!, Date.now() / 1000, person == null ? undefined : Number(person)) });
       }
       if (request.method === 'POST' && path === '/api/session') return json(response, 200, this.startSession(await body(request)).info());
       if (request.method === 'POST' && path === '/api/session/control') { if (!this.session) return json(response, 404, { detail: 'no session started' }); const command = await body(request) as { action: 'play' | 'pause' | 'step' | 'speed'; speed?: number }; return json(response, 200, this.session.control(command.action, command.speed)); }

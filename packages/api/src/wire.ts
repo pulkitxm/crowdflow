@@ -451,7 +451,7 @@ export interface ControlRequest {
   speed?: number | null;
 }
 
-export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" | "people_joined";
+export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" | "people_joined" | "command";
 
 /**
  * Every WebSocket message, one shape.
@@ -488,6 +488,8 @@ export interface SocketFrame {
   person?: PersonRecord | null;
   people?: PersonRecord[];
   note?: string | null;
+  event?: ConsoleEvent | null;
+  command?: AgentCommandStatus | null;
 }
 
 /**
@@ -553,4 +555,73 @@ export interface LiveRequest {
 export interface PersonLoginRequest {
   person_id: number;
   circuit_id: string;
+}
+
+export type AgentStateSource = 'live' | 'scenario';
+
+export interface AgentAskRequest {
+  question?: string;
+  provider?: string;
+}
+
+export interface AgentToolCallWire {
+  name: string;
+  arguments: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
+export interface AgentTurnWire {
+  text: string | null;
+  calls: AgentToolCallWire[];
+}
+
+export interface AgentAskResponse {
+  question: string;
+  answer: string | null;
+  provider: string;
+  model: string | null;
+  state_source: AgentStateSource;
+  truncated: boolean;
+  turns: AgentTurnWire[];
+  proposals: Record<string, unknown>[];
+}
+
+export interface AgentStatus {
+  provider: string;
+  configured: boolean;
+  detail: string | null;
+  state_source: AgentStateSource | null;
+}
+
+export interface AgentCommandStatus {
+  command_id: string;
+  circuit_id: string;
+  source_zone: string;
+  destination_zone: string;
+  via: string[];
+  target_fraction: number;
+  reason: string;
+  dispatched_at: number;
+  expires_at: number;
+  expires_in_s: number;
+  walk_time_s: number;
+  applied_to_simulation: boolean;
+  cohort: {
+    targeted: number;
+    pinged: number;
+    moved: number;
+    still_near_source: number;
+  };
+}
+
+export interface GuidanceRecord {
+  person_id: number;
+  command_id: string;
+  from_zone: string;
+  to_zone: string;
+  via: string[];
+  avoid: string[];
+  prefer: string[];
+  reason: string;
+  expires_at: number;
 }
