@@ -7,7 +7,7 @@ The self-contained Reveal.js decks are available at two stable routes:
 
 The route index at `/` links to both decks. Run the presentation site locally with:
 
-![Final round preview](./assets/final-round-preview.png)
+![Final round preview](./assets/final-round-preview.jpg)
 
 ```sh
 bunx serve presentation
