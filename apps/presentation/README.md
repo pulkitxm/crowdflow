@@ -1,19 +1,32 @@
-# VMAX presentation
+# VMAX presentations
 
-The Reveal.js pitch deck is self-contained and intended for local use.
+The self-contained Reveal.js decks are available at two stable routes:
+
+- `/online-round/` contains the full online-round pitch.
+- `/final-round/` contains the concise four-slide final-round pitch.
+
+The route index at `/` links to both decks. Run the presentation site locally with:
+
+![Final round preview](./assets/final-round-preview.jpg)
 
 ```sh
-bunx serve presentation
+bunx serve apps/presentation
 ```
 
 Open the printed URL, use the arrow keys to navigate, `S` for speaker view, `O` for the overview,
 and `F` for full screen. Add `?print-pdf` to the URL and print from Chromium to export a PDF.
 
+Validate the route structure and local asset references with:
+
+```sh
+bun run presentation:check
+```
+
 The deck vendors Reveal.js and does not require a runtime CDN. Regenerate the circuit wall and
 Silverstone venue graph with:
 
 ```sh
-node presentation/scripts/build-circuit-wall.mjs
+node apps/presentation/scripts/build-circuit-wall.mjs
 ```
 
 Circuit outlines come from
