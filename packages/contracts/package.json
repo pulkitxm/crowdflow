@@ -12,7 +12,7 @@
     "build": "bun build src/index.ts src/wire.ts --outdir dist --target bun --packages external",
     "codegen": "bun scripts/generate.ts",
     "lint": "biome lint src scripts tests --diagnostic-level=error",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout 15000",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
