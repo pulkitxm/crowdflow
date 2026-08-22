@@ -11,7 +11,7 @@
   "scripts": {
     "codegen": "bun run --filter @crowdflow/contracts codegen",
     "comments:check": "bun scripts/check-comments.mjs --selftest && bun scripts/check-comments.mjs",
-    "dev": "turbo run dev --filter=app",
+    "dev": "turbo run dev --filter=app --",
     "lint": "turbo run lint && biome lint scripts presentation --diagnostic-level=error",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
