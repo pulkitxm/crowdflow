@@ -21,28 +21,35 @@
  *   * **Static geometry is cached.** Track and edges are re-rasterised only when
  *     the view changes, so a tick costs one blit plus the live marks.
  */
-import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
-import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry , RaceStateWire } from "@crowdflow/contracts/wire";
-import { el, clear } from "../dom";
-import { NO_VALUE, fixed, integer } from "../format";
-import { easeOutCubic, layerTransform, revealProgress } from "../mapMotion";
-import type { ZoneRow } from "../model";
-import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
-import { HEAT_BANDS, heatSpots } from "../heatmap";
-import type { Basemap, CrowdLayer, Theme } from "../mapState";
-import { satelliteTileUrl, satelliteZoom, tileVenueCorners, visibleTiles, type TileCoordinate } from "../satellite";
-import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
+import type { LOSBand, Position, Zone, ZoneKind } from '@crowdflow/contracts';
+import type {
+  LiveSnapshot,
+  PeopleQueryResult,
+  StandardsReport,
+  TickEnvelope,
+  VenueGeometry,
+  RaceStateWire,
+} from '@crowdflow/contracts/wire';
+import { el, clear } from '../dom';
+import { NO_VALUE, fixed, integer } from '../format';
+import { easeOutCubic, layerTransform, revealProgress } from '../mapMotion';
+import type { ZoneRow } from '../model';
+import { COHORT_CAPACITY, buildPeopleCohorts } from '../cohorts';
+import { HEAT_BANDS, heatSpots } from '../heatmap';
+import type { Basemap, CrowdLayer, Theme } from '../mapState';
+import { satelliteTileUrl, satelliteZoom, tileVenueCorners, visibleTiles, type TileCoordinate } from '../satellite';
+import { buildSectorAreas, type SectorArea, type SectorRow } from '../sectors';
 
 const BAND_COLOUR: Record<LOSBand, string> = {
-  nominal: "#46da89",
-  building: "#f3b539",
-  critical: "#ff6367",
+  nominal: '#46da89',
+  building: '#f3b539',
+  critical: '#ff6367',
 };
 
-const SILENT_COLOUR = "#95a0ab";
-const UNKNOWN_COLOUR = "#7a8189";
-const EDGE_COLOUR = "#232a31";
-const TRACK_COLOUR = "#606a74";
+const SILENT_COLOUR = '#95a0ab';
+const UNKNOWN_COLOUR = '#7a8189';
+const EDGE_COLOUR = '#232a31';
+const TRACK_COLOUR = '#606a74';
 
 /**
  * Zone-kind palette. Categorical hues validated against the map's dark
@@ -54,9 +61,9 @@ const TRACK_COLOUR = "#606a74";
  * stays on the same muted ink already used for "no data", rather than
  * spending a fourth identity hue on the background.
  */
-const GATE_COLOUR = "#53a3f2";
-const PARK_COLOUR = "#3eaf86";
-const STAND_COLOUR = "#d4ab4f";
+const GATE_COLOUR = '#53a3f2';
+const PARK_COLOUR = '#3eaf86';
+const STAND_COLOUR = '#d4ab4f';
 const KIND_COLOUR: Record<ZoneKind, string> = {
   gate: GATE_COLOUR,
   parking: PARK_COLOUR,
@@ -67,13 +74,13 @@ const KIND_COLOUR: Record<ZoneKind, string> = {
   exit: UNKNOWN_COLOUR,
 };
 const KIND_LABEL: Record<ZoneKind, string> = {
-  gate: "GATE",
-  parking: "PARKING",
-  viewing: "STAND",
-  concourse: "CONCOURSE",
-  crossing: "CROSSING",
-  amenity: "AMENITY",
-  exit: "EXIT",
+  gate: 'GATE',
+  parking: 'PARKING',
+  viewing: 'STAND',
+  concourse: 'CONCOURSE',
+  crossing: 'CROSSING',
+  amenity: 'AMENITY',
+  exit: 'EXIT',
 };
 
 /**
@@ -84,11 +91,11 @@ const KIND_LABEL: Record<ZoneKind, string> = {
  * the literal name "Car park"; showing that tier before the view is zoomed
  * in just stacks duplicate text, so it waits for room to breathe.
  */
-const CAR_COLOUR = "#e8ebef";
-const CAR_LEADER_COLOUR = "#f3b539";
-const CAR_EDGE_COLOUR = "#1b1f24";
-const CAR_CARD_COLOUR = "rgba(16, 20, 26, 0.92)";
-const CAR_TEXT_COLOUR = "#f4fbff";
+const CAR_COLOUR = '#e8ebef';
+const CAR_LEADER_COLOUR = '#f3b539';
+const CAR_EDGE_COLOUR = '#1b1f24';
+const CAR_CARD_COLOUR = 'rgba(16, 20, 26, 0.92)';
+const CAR_TEXT_COLOUR = '#f4fbff';
 const PARK_LABEL_FADE_START = 1.8;
 const PARK_LABEL_FADE_END = 3;
 const ZOOM_ANIMATION_MS = 260;
@@ -124,7 +131,7 @@ export class MapPanel {
   // Luffield down the left edge, Stowe/Vale/Club as the right-hand loop.
   private rotation: 0 | 90 | 180 | 270 = 270;
   private statics: HTMLCanvasElement | null = null;
-  private staticKey = "";
+  private staticKey = '';
   private staticView: View | null = null;
   private staticDpr = 1;
   private staticRotation: 0 | 90 | 180 | 270 = 270;
@@ -136,7 +143,7 @@ export class MapPanel {
   private grid: PeopleQueryResult | null = null;
   private previousGrid: PeopleQueryResult | null = null;
   private showGrid = false;
-  private crowd: CrowdLayer = "cohorts";
+  private crowd: CrowdLayer = 'cohorts';
   private sectors: SectorArea[] = [];
   private sectorRows = new Map<string, SectorRow>();
   private showSectors = true;
@@ -147,11 +154,11 @@ export class MapPanel {
   private zoomTargetScale: number | null = null;
   private gridFrame: number | null = null;
   private gridFadeStarted = 0;
-  private basemap: Basemap = "schematic";
-  private theme: Theme = "dark";
+  private basemap: Basemap = 'schematic';
+  private theme: Theme = 'dark';
   private tileImages = new Map<string, HTMLImageElement>();
   private satelliteLayer: HTMLCanvasElement | null = null;
-  private satelliteKey = "";
+  private satelliteKey = '';
   private satelliteView: View | null = null;
   private satelliteDpr = 1;
   private satelliteRotation: 0 | 90 | 180 | 270 = 270;
@@ -168,15 +175,15 @@ export class MapPanel {
     this.canvas = canvas;
     this.readout = readout;
     this.legend = legend;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("canvas 2d context unavailable");
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('canvas 2d context unavailable');
     this.context = context;
 
-    canvas.addEventListener("wheel", this.onWheel, { passive: false });
-    canvas.addEventListener("pointerdown", this.onPointerDown);
-    canvas.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
-    canvas.addEventListener("pointerleave", () => {
+    canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    canvas.addEventListener('pointerdown', this.onPointerDown);
+    canvas.addEventListener('pointermove', this.onPointerMove);
+    window.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointerleave', () => {
       this.hovered = null;
       this.paintReadout();
     });
@@ -226,7 +233,9 @@ export class MapPanel {
     return this.showGrid;
   }
 
-  get gridVisible(): boolean { return this.showGrid; }
+  get gridVisible(): boolean {
+    return this.showGrid;
+  }
 
   setCrowdMode(mode: CrowdLayer): CrowdLayer {
     this.crowd = mode;
@@ -236,7 +245,9 @@ export class MapPanel {
     return this.crowd;
   }
 
-  get crowdMode(): CrowdLayer { return this.crowd; }
+  get crowdMode(): CrowdLayer {
+    return this.crowd;
+  }
 
   setSectors(rows: SectorRow[]): void {
     this.sectorRows = new Map(rows.map((row) => [row.id, row]));
@@ -253,7 +264,9 @@ export class MapPanel {
     return this.showSectors;
   }
 
-  get sectorsVisible(): boolean { return this.showSectors; }
+  get sectorsVisible(): boolean {
+    return this.showSectors;
+  }
 
   setBasemap(basemap: Basemap): Basemap {
     this.basemap = basemap;
@@ -262,7 +275,9 @@ export class MapPanel {
     return this.basemap;
   }
 
-  get basemapMode(): Basemap { return this.basemap; }
+  get basemapMode(): Basemap {
+    return this.basemap;
+  }
 
   setTheme(theme: Theme): Theme {
     this.theme = theme;
@@ -273,7 +288,9 @@ export class MapPanel {
     return this.theme;
   }
 
-  get themeMode(): Theme { return this.theme; }
+  get themeMode(): Theme {
+    return this.theme;
+  }
 
   private invalidateBaseLayers(): void {
     this.statics = null;
@@ -301,8 +318,9 @@ export class MapPanel {
     return this.showKinds;
   }
 
-  get kindView(): boolean { return this.showKinds; }
-
+  get kindView(): boolean {
+    return this.showKinds;
+  }
 
   /**
    * Set the map orientation. Landscape (0°) shows the venue in its natural
@@ -326,21 +344,27 @@ export class MapPanel {
 
   /** Toggle between Landscape (0°) and Portrait (90°) views */
   togglePortrait(): boolean {
-    this.rotation = (this.rotation === 90 ? 0 : 90);
+    this.rotation = this.rotation === 90 ? 0 : 90;
     this.invalidateBaseLayers();
     this.fit();
     return this.rotation === 90;
   }
 
-  get orientationDeg(): 0 | 90 | 180 | 270 { return this.rotation; }
+  get orientationDeg(): 0 | 90 | 180 | 270 {
+    return this.rotation;
+  }
 
   /** Rotate world coordinates by the current orientation angle. */
   private rotateCoord(x: number, y: number): [number, number] {
     switch (this.rotation) {
-      case 0:   return [x, y];
-      case 90:  return [y, -x];
-      case 180: return [-x, -y];
-      case 270: return [-y, x];
+      case 0:
+        return [x, y];
+      case 90:
+        return [y, -x];
+      case 180:
+        return [-x, -y];
+      case 270:
+        return [-y, x];
     }
   }
 
@@ -364,9 +388,7 @@ export class MapPanel {
    */
   private contentBounds(): [number, number, number, number] {
     const geometry = this.geometry;
-    const fallback = geometry?.pack.frame.venue_bounds_m as unknown as
-      | [number, number, number, number]
-      | undefined;
+    const fallback = geometry?.pack.frame.venue_bounds_m as unknown as [number, number, number, number] | undefined;
     if (!geometry) return fallback ?? [0, 0, 1, 1];
 
     let minX = Infinity;
@@ -398,10 +420,7 @@ export class MapPanel {
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
     const pad = 18;
-    const scale = Math.min(
-      (width - pad * 2) / Math.max(maxX - minX, 1),
-      (height - pad * 2) / Math.max(maxY - minY, 1),
-    );
+    const scale = Math.min((width - pad * 2) / Math.max(maxX - minX, 1), (height - pad * 2) / Math.max(maxY - minY, 1));
     this.fitScale = scale;
     this.view = {
       scale,
@@ -448,7 +467,7 @@ export class MapPanel {
       offsetY: height / 2 + ry * targetScale,
     };
     const started = performance.now();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const frame = (now: number): void => {
       const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
       this.view = {
@@ -503,10 +522,14 @@ export class MapPanel {
     const rx = (x - this.view.offsetX) / this.view.scale;
     const ry = (this.view.offsetY - y) / this.view.scale;
     switch (this.rotation) {
-      case 0: return { x: rx, y: ry };
-      case 90: return { x: -ry, y: rx };
-      case 180: return { x: -rx, y: -ry };
-      case 270: return { x: ry, y: -rx };
+      case 0:
+        return { x: rx, y: ry };
+      case 90:
+        return { x: -ry, y: rx };
+      case 180:
+        return { x: -rx, y: -ry };
+      case 270:
+        return { x: ry, y: -rx };
     }
   }
 
@@ -581,7 +604,7 @@ export class MapPanel {
     if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
     if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
     const started = performance.now();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const frame = (now: number): void => {
       const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
       const scale = startView.scale + (targetScale - startView.scale) * progress;
@@ -614,7 +637,7 @@ export class MapPanel {
   }
 
   private emitZoom(): void {
-    this.canvas.dispatchEvent(new CustomEvent("mapzoom", { detail: this.zoomRatio }));
+    this.canvas.dispatchEvent(new CustomEvent('mapzoom', { detail: this.zoomRatio }));
   }
 
   private animateGridFade(): void {
@@ -692,7 +715,6 @@ export class MapPanel {
     return best;
   }
 
-
   // -- drawing -------------------------------------------------------------
 
   private drawStatics(): HTMLCanvasElement {
@@ -701,10 +723,10 @@ export class MapPanel {
     if (this.statics && this.staticView && this.viewIsMoving) return this.statics;
 
     const dpr = window.devicePixelRatio || 1;
-    const layer = document.createElement("canvas");
+    const layer = document.createElement('canvas');
     layer.width = this.canvas.width;
     layer.height = this.canvas.height;
-    const ctx = layer.getContext("2d");
+    const ctx = layer.getContext('2d');
     const geometry = this.geometry;
     if (!ctx || !geometry) {
       this.statics = layer;
@@ -717,23 +739,23 @@ export class MapPanel {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = this.basemap === "satellite" ? "rgba(231, 242, 251, 0.34)" : this.theme === "light" ? "#b1bec9" : EDGE_COLOUR;
+    ctx.strokeStyle =
+      this.basemap === 'satellite' ? 'rgba(231, 242, 251, 0.34)' : this.theme === 'light' ? '#b1bec9' : EDGE_COLOUR;
     ctx.beginPath();
     const zones = geometry.pack.zones ?? {};
     for (const edge of Object.values(geometry.pack.edges ?? {})) {
-      const a = zones[edge.source];
-      const b = zones[edge.destination];
-      if (!a || !b) continue;
-      const [ax, ay] = this.toScreen(a.position.x, a.position.y);
-      const [bx, by] = this.toScreen(b.position.x, b.position.y);
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
+      edge.geometry.forEach((point, index) => {
+        const [x, y] = this.toScreen(point.x, point.y);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
     }
     ctx.stroke();
 
     if (geometry.track && geometry.track.length > 1) {
       ctx.lineWidth = 2;
-      ctx.strokeStyle = this.basemap === "satellite" ? "rgba(255, 255, 255, 0.72)" : this.theme === "light" ? "#536b7d" : TRACK_COLOUR;
+      ctx.strokeStyle =
+        this.basemap === 'satellite' ? 'rgba(255, 255, 255, 0.72)' : this.theme === 'light' ? '#536b7d' : TRACK_COLOUR;
       ctx.beginPath();
       geometry.track.forEach((point, index) => {
         const [x, y] = this.toScreen(point.x, point.y);
@@ -744,7 +766,6 @@ export class MapPanel {
       ctx.stroke();
     }
 
-
     const zoomRatio = this.view.scale / (this.fitScale || this.view.scale || 1);
     const cssWidth = this.canvas.width / dpr;
     const cssHeight = this.canvas.height / dpr;
@@ -752,9 +773,9 @@ export class MapPanel {
     const overlaps = (a: [number, number, number, number]): boolean =>
       placed.some(([px, py, pw, ph]) => a[0] < px + pw && a[0] + a[2] > px && a[1] < py + ph && a[1] + a[3] > py);
 
-    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textBaseline = "middle";
-    const placeLabels = (kind: "viewing" | "parking", colour: string, opacity = 1): void => {
+    ctx.font = '9px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'middle';
+    const placeLabels = (kind: 'viewing' | 'parking', colour: string, opacity = 1): void => {
       ctx.save();
       ctx.globalAlpha = opacity;
       for (const zone of Object.values(zones)) {
@@ -766,22 +787,23 @@ export class MapPanel {
         if (overlaps(box)) continue;
         placed.push(box);
         ctx.fillStyle = colour;
-        if (kind === "viewing") ctx.fillRect(x - 2, y - 2, 4, 4);
+        if (kind === 'viewing') ctx.fillRect(x - 2, y - 2, 4, 4);
         else {
           ctx.beginPath();
           ctx.arc(x, y, 2, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255,255,255,0.82)" : "rgba(8,11,14,0.75)";
+        ctx.fillStyle =
+          this.theme === 'light' && this.basemap === 'schematic' ? 'rgba(255,255,255,0.82)' : 'rgba(8,11,14,0.75)';
         ctx.fillRect(...box);
         ctx.fillStyle = colour;
         ctx.fillText(zone.name, x + 7, y);
       }
       ctx.restore();
     };
-    if (!this.showSectors) placeLabels("viewing", STAND_COLOUR);
+    if (!this.showSectors) placeLabels('viewing', STAND_COLOUR);
     const parkingOpacity = revealProgress(zoomRatio, PARK_LABEL_FADE_START, PARK_LABEL_FADE_END);
-    if (parkingOpacity > 0) placeLabels("parking", PARK_COLOUR, parkingOpacity);
+    if (parkingOpacity > 0) placeLabels('parking', PARK_COLOUR, parkingOpacity);
 
     this.statics = layer;
     this.staticKey = key;
@@ -790,7 +812,6 @@ export class MapPanel {
     this.staticRotation = this.rotation;
     return layer;
   }
-
 
   /** Live operator view: nominal/building/critical, silent, unreportable. */
   private drawStateGlyphs(
@@ -805,15 +826,15 @@ export class MapPanel {
       const [x, y] = this.toScreen(zone.position.x, zone.position.y);
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
       const row = this.byId.get(id);
-      const visibility = row?.visibility ?? "unknown";
+      const visibility = row?.visibility ?? 'unknown';
 
-      if (visibility === "unknown") {
+      if (visibility === 'unknown') {
         // Unknown zones are still counted in the legend, just not drawn — the
         // crosses were burying the signal. Revisit if that trade feels wrong.
         continue;
       }
 
-      if (visibility === "silent") {
+      if (visibility === 'silent') {
         ctx.strokeStyle = SILENT_COLOUR;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -830,14 +851,14 @@ export class MapPanel {
       }
       const band = row.band;
       ctx.fillStyle = BAND_COLOUR[band];
-      if (band === "nominal") {
+      if (band === 'nominal') {
         ctx.beginPath();
         ctx.arc(x, y, GLYPH_R, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        const size = band === "critical" ? GLYPH_R * 2.4 : GLYPH_R * 1.9;
+        const size = band === 'critical' ? GLYPH_R * 2.4 : GLYPH_R * 1.9;
         ctx.fillRect(x - size / 2, y - size / 2, size, size);
-        if (band === "critical") {
+        if (band === 'critical') {
           ctx.strokeStyle = BAND_COLOUR.critical;
           ctx.lineWidth = 1.4;
           ctx.beginPath();
@@ -849,7 +870,7 @@ export class MapPanel {
       if (row && !row.reportable) {
         // A reading exists but the contract says do not lean on it. Hollow ring,
         // so the mark reads as provisional rather than measured.
-        ctx.strokeStyle = this.theme === "light" ? "#f7fafc" : "#0b0e12";
+        ctx.strokeStyle = this.theme === 'light' ? '#f7fafc' : '#0b0e12';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(x, y, GLYPH_R * 0.6, 0, Math.PI * 2);
@@ -862,11 +883,12 @@ export class MapPanel {
     // labelling them too puts a hundred captions over the venue and buries the
     // three that need reading. The whole point of a schematic is that the quiet
     // 97% does not compete for attention.
-    ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textBaseline = "middle";
+    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'middle';
     for (const { x, y, row } of labelled.slice(0, 40)) {
       const text = `${row.name} ${row.word} ${row.value}`;
-      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255,255,255,0.88)" : "rgba(8,11,14,0.82)";
+      ctx.fillStyle =
+        this.theme === 'light' && this.basemap === 'schematic' ? 'rgba(255,255,255,0.88)' : 'rgba(8,11,14,0.82)';
       const w = ctx.measureText(text).width;
       ctx.fillRect(x + 7, y - 7, w + 6, 14);
       ctx.fillStyle = row.band ? BAND_COLOUR[row.band] : UNKNOWN_COLOUR;
@@ -888,14 +910,14 @@ export class MapPanel {
     height: number,
   ): void {
     for (const zone of Object.values(zones)) {
-      if (zone.kind === "concourse" || zone.kind === "crossing" || zone.kind === "amenity" || zone.kind === "exit") {
+      if (zone.kind === 'concourse' || zone.kind === 'crossing' || zone.kind === 'amenity' || zone.kind === 'exit') {
         continue;
       }
       const [x, y] = this.toScreen(zone.position.x, zone.position.y);
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
       const colour = KIND_COLOUR[zone.kind];
       ctx.fillStyle = colour;
-      if (zone.kind === "viewing") {
+      if (zone.kind === 'viewing') {
         ctx.fillRect(x - GLYPH_R / 2, y - GLYPH_R / 2, GLYPH_R, GLYPH_R);
       } else {
         ctx.beginPath();
@@ -931,14 +953,14 @@ export class MapPanel {
       ctx.fill();
       if (size * this.view.scale >= 34) {
         const [x, y] = this.toScreen((cell.min_x + cell.max_x) / 2, (cell.min_y + cell.max_y) / 2);
-        ctx.fillStyle = this.theme === "light" ? "#132638" : "#e8ebef";
-        ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        ctx.fillStyle = this.theme === 'light' ? '#132638' : '#e8ebef';
+        ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText(String(cell.count), x, y);
       }
     }
-    ctx.strokeStyle = "rgba(47, 212, 236, 0.22)";
+    ctx.strokeStyle = 'rgba(47, 212, 236, 0.22)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = minX; x <= maxX; x += size) {
@@ -957,7 +979,13 @@ export class MapPanel {
     ctx.restore();
   }
 
-  private drawCohorts(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+  private drawCohorts(
+    ctx: CanvasRenderingContext2D,
+    grid: PeopleQueryResult,
+    width: number,
+    height: number,
+    opacity = 1,
+  ): void {
     const cohorts = buildPeopleCohorts(grid);
     ctx.save();
     ctx.globalAlpha = opacity;
@@ -965,33 +993,39 @@ export class MapPanel {
       const [x, y] = this.toScreen(cohort.x, cohort.y);
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
       const radius = 9 + Math.sqrt(cohort.count / COHORT_CAPACITY) * 5;
-      ctx.fillStyle = "rgba(20, 91, 145, 0.92)";
-      ctx.strokeStyle = "#75caf2";
+      ctx.fillStyle = 'rgba(20, 91, 145, 0.92)';
+      ctx.strokeStyle = '#75caf2';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#f4fbff";
-      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.fillStyle = '#f4fbff';
+      ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(String(cohort.count), x, y);
     }
     ctx.restore();
   }
 
-  private drawHeatMap(ctx: CanvasRenderingContext2D, grid: PeopleQueryResult, width: number, height: number, opacity = 1): void {
+  private drawHeatMap(
+    ctx: CanvasRenderingContext2D,
+    grid: PeopleQueryResult,
+    width: number,
+    height: number,
+    opacity = 1,
+  ): void {
     const spots = heatSpots(grid);
     const colours = Object.fromEntries(HEAT_BANDS.map((band) => [band.band, band.colour]));
     ctx.save();
     ctx.globalAlpha = opacity;
-    ctx.globalCompositeOperation = this.theme === "dark" && this.basemap === "schematic" ? "screen" : "source-over";
+    ctx.globalCompositeOperation = this.theme === 'dark' && this.basemap === 'schematic' ? 'screen' : 'source-over';
     for (const spot of spots) {
       const [x, y] = this.toScreen(spot.x, spot.y);
       const radius = Math.min(90, Math.max(20, grid.grid_size_m * this.view.scale * 0.9));
       if (x < -radius || y < -radius || x > width + radius || y > height + radius) continue;
-      const colour = colours[spot.band] ?? "#3186e9";
+      const colour = colours[spot.band] ?? '#3186e9';
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
       gradient.addColorStop(0, `${colour}d9`);
       gradient.addColorStop(0.42, `${colour}80`);
@@ -1001,23 +1035,30 @@ export class MapPanel {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.globalCompositeOperation = "source-over";
+    ctx.globalCompositeOperation = 'source-over';
     const labelled = [...spots].sort((a, b) => b.density - a.density || b.count - a.count).slice(0, 16);
     const placed: Array<[number, number, number, number]> = [];
-    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     for (const spot of labelled) {
       const [x, y] = this.toScreen(spot.x, spot.y);
       if (x < 28 || y < 12 || x > width - 28 || y > height - 12) continue;
       const text = `${spot.count} · ${spot.density.toFixed(3)}`;
       const boxWidth = ctx.measureText(text).width + 12;
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 9, boxWidth, 18];
-      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py)) continue;
+      if (
+        placed.some(
+          ([px, py, pw, ph]) =>
+            box[0] < px + pw + 4 && box[0] + box[2] + 4 > px && box[1] < py + ph + 4 && box[1] + box[3] + 4 > py,
+        )
+      )
+        continue;
       placed.push(box);
-      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "rgba(255, 255, 255, 0.92)" : "rgba(7, 12, 18, 0.88)";
+      ctx.fillStyle =
+        this.theme === 'light' && this.basemap === 'schematic' ? 'rgba(255, 255, 255, 0.92)' : 'rgba(7, 12, 18, 0.88)';
       ctx.fillRect(...box);
-      ctx.fillStyle = this.theme === "light" && this.basemap === "schematic" ? "#132638" : "#f4fbff";
+      ctx.fillStyle = this.theme === 'light' && this.basemap === 'schematic' ? '#132638' : '#f4fbff';
       ctx.fillText(text, x, y);
     }
     ctx.restore();
@@ -1025,11 +1066,11 @@ export class MapPanel {
 
   private drawSectors(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     const placed: Array<[number, number, number, number]> = [];
-    const lightSchematic = this.theme === "light" && this.basemap === "schematic";
-    const sectorStroke = lightSchematic ? "rgba(42, 118, 176, 0.58)" : "rgba(117, 202, 242, 0.58)";
-    const selectedStroke = lightSchematic ? "rgba(26, 98, 158, 0.95)" : "rgba(117, 202, 242, 0.95)";
+    const lightSchematic = this.theme === 'light' && this.basemap === 'schematic';
+    const sectorStroke = lightSchematic ? 'rgba(42, 118, 176, 0.58)' : 'rgba(117, 202, 242, 0.58)';
+    const selectedStroke = lightSchematic ? 'rgba(26, 98, 158, 0.95)' : 'rgba(117, 202, 242, 0.95)';
     ctx.save();
-    ctx.lineJoin = "round";
+    ctx.lineJoin = 'round';
     for (const sector of this.sectors) {
       if (sector.polygon.length < 3) continue;
       ctx.beginPath();
@@ -1041,7 +1082,7 @@ export class MapPanel {
       ctx.closePath();
       const isSelected = sector.id === this.selected;
       if (isSelected) {
-        ctx.fillStyle = "rgba(47, 212, 236, 0.10)";
+        ctx.fillStyle = 'rgba(47, 212, 236, 0.10)';
         ctx.fill();
       }
       ctx.strokeStyle = isSelected ? selectedStroke : sectorStroke;
@@ -1051,32 +1092,42 @@ export class MapPanel {
     }
     this.drawVenueEnvelope(ctx);
     ctx.setLineDash([]);
-    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     for (const sector of this.sectors) {
       const [x, y] = this.toScreen(sector.x, sector.y);
       if (x < 40 || y < 22 || x > width - 40 || y > height - 22) continue;
       const row = this.sectorRows.get(sector.id);
       const name = sector.name.toUpperCase();
-      const detail = this.crowd === "none" || !row ? "SECTOR" : `${integer(row.people)} PEOPLE · ${row.word}`;
+      const detail = this.crowd === 'none' || !row ? 'SECTOR' : `${integer(row.people)} PEOPLE · ${row.word}`;
       const boxWidth = Math.max(ctx.measureText(name).width, ctx.measureText(detail).width) + 14;
       const box: [number, number, number, number] = [x - boxWidth / 2, y - 17, boxWidth, 34];
-      if (placed.some(([px, py, pw, ph]) => box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py)) continue;
+      if (
+        placed.some(
+          ([px, py, pw, ph]) =>
+            box[0] < px + pw + 6 && box[0] + box[2] + 6 > px && box[1] < py + ph + 6 && box[1] + box[3] + 6 > py,
+        )
+      )
+        continue;
       placed.push(box);
       ctx.fillStyle = lightSchematic
-        ? sector.id === this.selected ? "rgba(218, 237, 252, 0.96)" : "rgba(255, 255, 255, 0.90)"
-        : sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
-      ctx.strokeStyle = sector.id === this.selected ? "#75caf2" : "rgba(117, 202, 242, 0.48)";
+        ? sector.id === this.selected
+          ? 'rgba(218, 237, 252, 0.96)'
+          : 'rgba(255, 255, 255, 0.90)'
+        : sector.id === this.selected
+          ? 'rgba(18, 42, 65, 0.96)'
+          : 'rgba(7, 12, 18, 0.88)';
+      ctx.strokeStyle = sector.id === this.selected ? '#75caf2' : 'rgba(117, 202, 242, 0.48)';
       ctx.lineWidth = 1;
       ctx.fillRect(...box);
       ctx.strokeRect(...box);
-      ctx.fillStyle = lightSchematic ? "#132638" : "#e8ebef";
+      ctx.fillStyle = lightSchematic ? '#132638' : '#e8ebef';
       ctx.fillText(name, x, y - 6);
-      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === "light" ? "#52667a" : "#a2a8af";
-      ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === 'light' ? '#52667a' : '#a2a8af';
+      ctx.font = '9px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.fillText(detail, x, y + 7);
-      ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
     }
     ctx.restore();
   }
@@ -1098,12 +1149,12 @@ export class MapPanel {
       else ctx.lineTo(x, y);
     });
     ctx.closePath();
-    const lightSchematic = this.theme === "light" && this.basemap === "schematic";
+    const lightSchematic = this.theme === 'light' && this.basemap === 'schematic';
     ctx.setLineDash([]);
-    ctx.strokeStyle = lightSchematic ? "rgba(42, 118, 176, 0.18)" : "rgba(117, 202, 242, 0.22)";
+    ctx.strokeStyle = lightSchematic ? 'rgba(42, 118, 176, 0.18)' : 'rgba(117, 202, 242, 0.22)';
     ctx.lineWidth = 7;
     ctx.stroke();
-    ctx.strokeStyle = lightSchematic ? "rgba(26, 98, 158, 0.88)" : "rgba(168, 220, 255, 0.88)";
+    ctx.strokeStyle = lightSchematic ? 'rgba(26, 98, 158, 0.88)' : 'rgba(168, 220, 255, 0.88)';
     ctx.lineWidth = 2;
     ctx.setLineDash([12, 5]);
     ctx.stroke();
@@ -1122,7 +1173,7 @@ export class MapPanel {
     if (!this.geometry) return;
 
     const dpr = window.devicePixelRatio || 1;
-    if (this.basemap === "satellite") {
+    if (this.basemap === 'satellite') {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const satellite = this.drawSatelliteLayer(width, height);
@@ -1146,10 +1197,10 @@ export class MapPanel {
     if (this.showGrid && this.grid) this.drawGrid(ctx, this.grid, gridProgress);
     if (this.showKinds) this.drawKindGlyphs(ctx, zones, width, height);
     else this.drawStateGlyphs(ctx, zones, width, height);
-    if (this.crowd === "heatmap") {
+    if (this.crowd === 'heatmap') {
       if (this.previousGrid) this.drawHeatMap(ctx, this.previousGrid, width, height, 1 - gridProgress);
       if (this.grid) this.drawHeatMap(ctx, this.grid, width, height, gridProgress);
-    } else if (this.crowd === "cohorts") {
+    } else if (this.crowd === 'cohorts') {
       if (this.previousGrid) this.drawCohorts(ctx, this.previousGrid, width, height, 1 - gridProgress);
       if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
     }
@@ -1160,7 +1211,7 @@ export class MapPanel {
       const zone = zones[id];
       if (!zone) continue;
       const [x, y] = this.toScreen(zone.position.x, zone.position.y);
-      ctx.strokeStyle = id === this.selected ? (this.theme === "light" ? "#102437" : "#e8eef4") : "#8fa3b5";
+      ctx.strokeStyle = id === this.selected ? (this.theme === 'light' ? '#102437' : '#e8eef4') : '#8fa3b5';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(x, y, 9, 0, Math.PI * 2);
@@ -1184,12 +1235,14 @@ export class MapPanel {
       for (let index = 1; index < track.length; index++) {
         const previous = track[index - 1]!;
         const current = track[index]!;
-        this.trackLengths.push(this.trackLengths[index - 1]! + Math.hypot(current.x - previous.x, current.y - previous.y));
+        this.trackLengths.push(
+          this.trackLengths[index - 1]! + Math.hypot(current.x - previous.x, current.y - previous.y),
+        );
       }
     }
     const total = this.trackLengths[this.trackLengths.length - 1]!;
     if (total <= 0) return null;
-    const target = ((fraction % 1) + 1) % 1 * total;
+    const target = (((fraction % 1) + 1) % 1) * total;
     let index = 1;
     while (index < this.trackLengths.length - 1 && this.trackLengths[index]! < target) index++;
     const before = track[index - 1]!;
@@ -1218,7 +1271,7 @@ export class MapPanel {
       ctx.stroke();
       if (!labelled.has(car.number)) continue;
       const text = `P${car.position} ${car.label}`;
-      ctx.font = "600 10px ui-sans-serif, system-ui, sans-serif";
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
       const width = ctx.measureText(text).width + 10;
       ctx.fillStyle = CAR_CARD_COLOUR;
       ctx.fillRect(x + 8, y - 8, width, 15);
@@ -1249,10 +1302,10 @@ export class MapPanel {
     if (this.satelliteLayer && this.satelliteKey === key) return this.satelliteLayer;
     if (this.satelliteLayer && this.satelliteView && this.viewIsMoving) return this.satelliteLayer;
 
-    const layer = document.createElement("canvas");
+    const layer = document.createElement('canvas');
     layer.width = this.canvas.width;
     layer.height = this.canvas.height;
-    const ctx = layer.getContext("2d");
+    const ctx = layer.getContext('2d');
     if (ctx) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.paintSatellite(ctx, width, height);
@@ -1270,7 +1323,12 @@ export class MapPanel {
     if (!geometry) return;
     const frame = geometry.pack.frame;
     const zoom = satelliteZoom(this.view.scale, frame.origin_lat);
-    const corners = [this.fromScreen(0, 0), this.fromScreen(width, 0), this.fromScreen(width, height), this.fromScreen(0, height)];
+    const corners = [
+      this.fromScreen(0, 0),
+      this.fromScreen(width, 0),
+      this.fromScreen(width, height),
+      this.fromScreen(0, height),
+    ];
     for (const tile of visibleTiles(frame, corners, zoom)) {
       const image = this.tileImage(tile);
       if (!image?.complete || image.naturalWidth === 0) continue;
@@ -1290,7 +1348,7 @@ export class MapPanel {
       ctx.drawImage(image, -0.25, -0.25, 256.5, 256.5);
       ctx.restore();
     }
-    ctx.fillStyle = this.theme === "light" ? "rgba(255, 255, 255, 0.06)" : "rgba(2, 8, 14, 0.24)";
+    ctx.fillStyle = this.theme === 'light' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(2, 8, 14, 0.24)';
     ctx.fillRect(0, 0, width, height);
   }
 
@@ -1307,22 +1365,21 @@ export class MapPanel {
       if (oldest) this.tileImages.delete(oldest);
     }
     const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.decoding = "async";
-    image.addEventListener("load", () => {
+    image.crossOrigin = 'anonymous';
+    image.decoding = 'async';
+    image.addEventListener('load', () => {
       if (this.satelliteRedrawFrame != null) return;
       this.satelliteRedrawFrame = window.requestAnimationFrame(() => {
         this.satelliteRedrawFrame = null;
         this.satelliteRevision += 1;
         if (!this.viewIsMoving) this.satelliteLayer = null;
-        if (this.basemap === "satellite") this.draw();
+        if (this.basemap === 'satellite') this.draw();
       });
     });
     image.src = satelliteTileUrl(tile);
     this.tileImages.set(key, image);
     return image;
   }
-
 
   // -- chrome --------------------------------------------------------------
 
@@ -1348,39 +1405,57 @@ export class MapPanel {
     const zone = this.geometry?.pack.zones?.[id];
     const sector = this.sectorRows.get(id);
     this.readout.append(
-      el("div", { class: "readout__name", text: zone?.name ?? id }),
-      el("div", { class: "readout__id", text: `${id} · ${sector ? "sector" : zone?.kind ?? "unknown"}` }),
+      el('div', { class: 'readout__name', text: zone?.name ?? id }),
+      el('div', { class: 'readout__id', text: `${id} · ${sector ? 'sector' : (zone?.kind ?? 'unknown')}` }),
     );
     if (sector) {
       this.readout.append(
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "LIVE CROWD" }), el("span", { class: "readout__value", text: integer(sector.people) })),
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "STATE" }), el("span", { class: "readout__value", text: sector.word })),
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "ZONES LIVE" }), el("span", { class: "readout__value", text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}` })),
+        el(
+          'div',
+          { class: 'readout__row' },
+          el('span', { class: 'readout__label', text: 'LIVE CROWD' }),
+          el('span', { class: 'readout__value', text: integer(sector.people) }),
+        ),
+        el(
+          'div',
+          { class: 'readout__row' },
+          el('span', { class: 'readout__label', text: 'STATE' }),
+          el('span', { class: 'readout__value', text: sector.word }),
+        ),
+        el(
+          'div',
+          { class: 'readout__row' },
+          el('span', { class: 'readout__label', text: 'ZONES LIVE' }),
+          el('span', {
+            class: 'readout__value',
+            text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}`,
+          }),
+        ),
       );
       return;
     }
     if (!row) return;
     const facts: Array<[string, string]> =
-      row.visibility === "observed"
+      row.visibility === 'observed'
         ? [
-            [row.word, fixed(row.density, 2) + " ped/m²"],
-            ["FLOW", fixed(row.flow, 1) + " ped/m/min"],
-            ["LOS", row.losGrade],
-            ["NODES", integer(row.nodes)],
-            ["EST PEOPLE", integer(row.people)],
-            ["SPEED", fixed(row.speed, 2) + " m/s"],
-            ["NET", fixed(row.net, 1) + " /min"],
-            ["QUEUE", integer(row.queue)],
-            ["CONF", fixed(row.confidence, 2) + (row.reportable ? "" : " LOW")],
+            [row.word, fixed(row.density, 2) + ' ped/m²'],
+            ['FLOW', fixed(row.flow, 1) + ' ped/m/min'],
+            ['LOS', row.losGrade],
+            ['NODES', integer(row.nodes)],
+            ['EST PEOPLE', integer(row.people)],
+            ['SPEED', fixed(row.speed, 2) + ' m/s'],
+            ['NET', fixed(row.net, 1) + ' /min'],
+            ['QUEUE', integer(row.queue)],
+            ['CONF', fixed(row.confidence, 2) + (row.reportable ? '' : ' LOW')],
           ]
         : [[row.word, row.value]];
     for (const [label, value] of facts) {
       this.readout.append(
         el(
-          "div",
-          { class: "readout__row" },
-          el("span", { class: "readout__label", text: label }),
-          el("span", { class: "readout__value", text: value }),
+          'div',
+          { class: 'readout__row' },
+          el('span', { class: 'readout__label', text: label }),
+          el('span', { class: 'readout__value', text: value }),
         ),
       );
     }
@@ -1500,31 +1575,42 @@ export class MapPanel {
   private paintKindLegend(): void {
     const zones = this.geometry?.pack.zones ?? {};
     const counts: Record<ZoneKind, number> = {
-      concourse: 0, gate: 0, parking: 0, viewing: 0, crossing: 0, amenity: 0, exit: 0,
+      concourse: 0,
+      gate: 0,
+      parking: 0,
+      viewing: 0,
+      crossing: 0,
+      amenity: 0,
+      exit: 0,
     };
     for (const zone of Object.values(zones)) counts[zone.kind] += 1;
-    const glyph = (kind: ZoneKind): string => (kind === "concourse" || kind === "viewing" ? "■" : "●");
+    const glyph = (kind: ZoneKind): string => (kind === 'concourse' || kind === 'viewing' ? '■' : '●');
     const note = (kind: ZoneKind): string => {
       switch (kind) {
-        case "concourse": return "plain pedestrian network";
-        case "gate": return "entry / exit point";
-        case "parking": return "car park";
-        case "viewing": return "grandstand";
-        default: return "";
+        case 'concourse':
+          return 'plain pedestrian network';
+        case 'gate':
+          return 'entry / exit point';
+        case 'parking':
+          return 'car park';
+        case 'viewing':
+          return 'grandstand';
+        default:
+          return '';
       }
     };
-    const order: ZoneKind[] = ["concourse", "gate", "parking", "viewing", "crossing", "amenity", "exit"];
+    const order: ZoneKind[] = ['concourse', 'gate', 'parking', 'viewing', 'crossing', 'amenity', 'exit'];
     for (const kind of order) {
       if (counts[kind] === 0) continue;
       const word = KIND_LABEL[kind];
       this.legend.append(
         el(
-          "div",
+          'div',
           { class: `legend__item legend__item--${word.toLowerCase()}` },
-          el("span", { class: "legend__glyph", text: glyph(kind) }),
-          el("span", { class: "legend__word", text: word }),
-          el("span", { class: "legend__count", text: `${counts[kind]}` }),
-          el("span", { class: "legend__note", text: note(kind) }),
+          el('span', { class: 'legend__glyph', text: glyph(kind) }),
+          el('span', { class: 'legend__word', text: word }),
+          el('span', { class: 'legend__count', text: `${counts[kind]}` }),
+          el('span', { class: 'legend__note', text: note(kind) }),
         ),
       );
     }

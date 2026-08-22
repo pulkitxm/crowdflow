@@ -56,12 +56,18 @@ function anchor(id: string, x: number, y: number, kind: RadioAnchor['kind'] = 'w
 /** The forward model, used to manufacture a scan from a known position. Tests
  *  that solve a position out of RSSI must put it in through the same law, or
  *  they are testing two implementations of path loss against each other. */
-function scanFrom(truth: Position, anchors: RadioAnchor[], at: number, noise?: { rng: Random; sigmaDb: number }): RadioObservation[] {
+function scanFrom(
+  truth: Position,
+  anchors: RadioAnchor[],
+  at: number,
+  noise?: { rng: Random; sigmaDb: number },
+): RadioObservation[] {
   return anchors.map((a) => ({
     anchor_id: a.anchor_id,
     kind: a.kind,
-    rssi_dbm: rssiFromDistance(Math.hypot(truth.x - a.position.x, truth.y - a.position.y), curveFor(a))
-      + (noise ? noise.rng.gauss(0, noise.sigmaDb) : 0),
+    rssi_dbm:
+      rssiFromDistance(Math.hypot(truth.x - a.position.x, truth.y - a.position.y), curveFor(a)) +
+      (noise ? noise.rng.gauss(0, noise.sigmaDb) : 0),
     timestamp: at,
   }));
 }
@@ -138,7 +144,12 @@ describe('path loss', () => {
   it('charges an assumed curve more uncertainty than a measured one', () => {
     const guessed = { ...anchor('a', 0, 0), rssi_at_1m_dbm: assumed(-40), path_loss_exponent: assumed(2.2) };
     const walked = anchor('b', 0, 0);
-    const observation = (id: string): RadioObservation => ({ anchor_id: id, kind: 'wifi_ap', rssi_dbm: -60, timestamp: 0 });
+    const observation = (id: string): RadioObservation => ({
+      anchor_id: id,
+      kind: 'wifi_ap',
+      rssi_dbm: -60,
+      timestamp: 0,
+    });
     const map = new AnchorMap({ circuit_id: 't', anchors: { a: guessed, b: walked } });
     const ranges = map.resolve([observation('a'), observation('b')], 0).ranges;
     const a = ranges.find((r) => r.anchor_id === 'a')!;
@@ -284,7 +295,13 @@ describe('anchor map', () => {
 
 describe('fusion ladder', () => {
   const fix = (over: Partial<PositionFix> & Pick<PositionFix, 'source' | 'timestamp'>): PositionFix => ({
-    position: { x: 0, y: 0 }, accuracy_m: 10, anchors_used: 0, residual_m: null, speed_ms: null, heading_deg: null, ...over,
+    position: { x: 0, y: 0 },
+    accuracy_m: 10,
+    anchors_used: 0,
+    residual_m: null,
+    speed_ms: null,
+    heading_deg: null,
+    ...over,
   });
 
   it('prefers the tighter of two live sources', () => {
@@ -395,7 +412,14 @@ describe('fusion ladder', () => {
 
 describe('reporting', () => {
   const pack: CircuitPack = {
-    id: 't', name: 'Toy', geometry_source: 'synthetic', track_length_m: 100, altitude_m: 0,
+    id: 't',
+    name: 'Toy',
+    geometry_source: 'synthetic',
+    layout_id: 'toy-1',
+    capability: 'synthetic_simulation',
+    track_length_m: 100,
+    altitude_m: 0,
+    track_clearance_m: { value: 10, provenance: 'assumed' },
     frame: FRAME,
     zones: { a: { id: 'a', kind: 'gate', position: { x: 0, y: 0 } } },
     edges: {},
@@ -419,10 +443,20 @@ describe('reporting', () => {
 
   it('shapes a fix into a node the contract validator accepts', () => {
     const identity = new NodeIdentity(1000, 900, (bytes) => 'ab'.repeat(bytes));
-    const node = crowdNodeFrom({
-      position: { x: 12.34567, y: -7.65432 }, accuracy_m: 9.87654, source: 'wifi',
-      timestamp: 1000.7, anchors_used: 4, residual_m: 1.2, speed_ms: 1.234, heading_deg: 371.2,
-    }, identity, pack)!;
+    const node = crowdNodeFrom(
+      {
+        position: { x: 12.34567, y: -7.65432 },
+        accuracy_m: 9.87654,
+        source: 'wifi',
+        timestamp: 1000.7,
+        anchors_used: 4,
+        residual_m: 1.2,
+        speed_ms: 1.234,
+        heading_deg: 371.2,
+      },
+      identity,
+      pack,
+    )!;
     expect(() => validateCrowdNode(node)).not.toThrow();
     // Decimetres: everything past the first decimal of a metre is noise that
     // would be stored and eventually joined against something.
@@ -434,10 +468,17 @@ describe('reporting', () => {
 
   it('refuses to report a position outside the venue', () => {
     const identity = new NodeIdentity(1000, 900, (bytes) => 'cd'.repeat(bytes));
-    const outside = crowdNodeFrom({
-      position: { x: 9000, y: 9000 }, accuracy_m: 8, source: 'gnss',
-      timestamp: 1000, anchors_used: 0,
-    }, identity, pack);
+    const outside = crowdNodeFrom(
+      {
+        position: { x: 9000, y: 9000 },
+        accuracy_m: 8,
+        source: 'gnss',
+        timestamp: 1000,
+        anchors_used: 0,
+      },
+      identity,
+      pack,
+    );
     expect(outside).toBeNull();
   });
 });

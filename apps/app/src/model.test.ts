@@ -6,18 +6,12 @@
  * that removes a field these tests rely on is a compile error rather than a
  * silently passing test.
  */
-import { describe, expect, it } from "vitest";
-import type { LOSBand, ZoneState } from "@crowdflow/contracts";
-import type { TickEnvelope, VenueGeometry } from "@crowdflow/contracts/wire";
-import { ZoneMemory, buildRows, coverageLines, sortRows } from "./model";
+import { describe, expect, it } from 'vitest';
+import type { LOSBand, ZoneState } from '@crowdflow/contracts';
+import type { TickEnvelope, VenueGeometry } from '@crowdflow/contracts/wire';
+import { ZoneMemory, buildRows, coverageLines, sortRows } from './model';
 
-function zoneState(
-  id: string,
-  density: number,
-  band: LOSBand = "nominal",
-  nodes = 40,
-  reportable = true,
-): ZoneState {
+function zoneState(id: string, density: number, band: LOSBand = 'nominal', nodes = 40, reportable = true): ZoneState {
   return {
     zone_id: id,
     timestamp: 100,
@@ -40,19 +34,22 @@ function zoneState(
     },
     estimated_population: Math.round(nodes / 0.18),
     band,
-    over_capacity: band === "critical",
-    los_grade: "D",
+    over_capacity: band === 'critical',
+    los_grade: 'D',
     net_flow_per_min: 8,
   };
 }
 
 const geometry = {
   pack: {
-    id: "toy",
-    name: "Toy",
-    geometry_source: "synthetic",
+    id: 'toy',
+    name: 'Toy',
+    geometry_source: 'synthetic',
+    layout_id: 'toy-1',
+    capability: 'synthetic_simulation',
     track_length_m: 1000,
     altitude_m: 0,
+    track_clearance_m: { value: 10, provenance: 'assumed' },
     frame: {
       origin_lat: 0,
       origin_lon: 0,
@@ -60,10 +57,10 @@ const geometry = {
       venue_bounds_m: [0, 0, 100, 100],
     },
     zones: {
-      busy: { id: "busy", kind: "concourse", name: "Bridge", position: { x: 1, y: 1 } },
-      quiet: { id: "quiet", kind: "amenity", name: "Kiosks", position: { x: 2, y: 2 } },
-      gone: { id: "gone", kind: "gate", name: "Gate 4", position: { x: 3, y: 3 } },
-      never: { id: "never", kind: "parking", name: "Car Park 9", position: { x: 4, y: 4 } },
+      busy: { id: 'busy', kind: 'concourse', name: 'Bridge', position: { x: 1, y: 1 } },
+      quiet: { id: 'quiet', kind: 'amenity', name: 'Kiosks', position: { x: 2, y: 2 } },
+      gone: { id: 'gone', kind: 'gate', name: 'Gate 4', position: { x: 3, y: 3 } },
+      never: { id: 'never', kind: 'parking', name: 'Car Park 9', position: { x: 4, y: 4 } },
     },
     edges: {},
   },
@@ -77,13 +74,13 @@ function envelope(overrides: Partial<TickEnvelope> = {}): TickEnvelope {
     time_s: 240,
     compute_ms: 31,
     state: {
-      circuit_id: "toy",
+      circuit_id: 'toy',
       timestamp: 240,
       zones: {
-        busy: zoneState("busy", 2.3, "critical"),
-        quiet: zoneState("quiet", 0.2),
+        busy: zoneState('busy', 2.3, 'critical'),
+        quiet: zoneState('quiet', 0.2),
       },
-      unobserved_zones: ["never"],
+      unobserved_zones: ['never'],
     },
     forecasts: [],
     actionable: [],
@@ -91,7 +88,7 @@ function envelope(overrides: Partial<TickEnvelope> = {}): TickEnvelope {
     command: null,
     verdict: null,
     dispatched: false,
-    silent_zones: ["gone"],
+    silent_zones: ['gone'],
     low_confidence_zones: [],
     coverage: {
       zones_total: 4,
@@ -128,36 +125,36 @@ function envelope(overrides: Partial<TickEnvelope> = {}): TickEnvelope {
   };
 }
 
-describe("buildRows", () => {
-  it("splits zones three ways, and every pack zone gets a row", () => {
+describe('buildRows', () => {
+  it('splits zones three ways, and every pack zone gets a row', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(rows).toHaveLength(4);
-    expect(byId.get("busy")?.visibility).toBe("observed");
-    expect(byId.get("quiet")?.visibility).toBe("observed");
-    expect(byId.get("gone")?.visibility).toBe("silent");
-    expect(byId.get("never")?.visibility).toBe("unknown");
+    expect(byId.get('busy')?.visibility).toBe('observed');
+    expect(byId.get('quiet')?.visibility).toBe('observed');
+    expect(byId.get('gone')?.visibility).toBe('silent');
+    expect(byId.get('never')?.visibility).toBe('unknown');
   });
 
-  it("gives an unobserved zone no density at all — not a zero one", () => {
+  it('gives an unobserved zone no density at all — not a zero one', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
-    const unknown = rows.find((r) => r.id === "never")!;
+    const unknown = rows.find((r) => r.id === 'never')!;
     expect(unknown.density).toBeNull();
     expect(unknown.band).toBeNull();
     expect(unknown.people).toBeNull();
-    expect(unknown.word).toBe("UNKNOWN");
+    expect(unknown.word).toBe('UNKNOWN');
     // The number beside UNKNOWN is the device count that produced it.
-    expect(unknown.value).toBe("0 nodes");
+    expect(unknown.value).toBe('0 nodes');
   });
 
-  it("never labels an unseen zone with a band word", () => {
+  it('never labels an unseen zone with a band word', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
-    for (const row of rows.filter((r) => r.visibility !== "observed")) {
-      expect(["NOMINAL", "BUILDING", "CRITICAL"]).not.toContain(row.word);
+    for (const row of rows.filter((r) => r.visibility !== 'observed')) {
+      expect(['NOMINAL', 'BUILDING', 'CRITICAL']).not.toContain(row.word);
     }
   });
 
-  it("carries a word AND a number for every single row", () => {
+  it('carries a word AND a number for every single row', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     for (const row of rows) {
       expect(row.word.length).toBeGreaterThan(0);
@@ -165,62 +162,62 @@ describe("buildRows", () => {
     }
   });
 
-  it("reports how long a zone has been silent, once it has seen one", () => {
+  it('reports how long a zone has been silent, once it has seen one', () => {
     const memory = new ZoneMemory();
     memory.observe(
       envelope({
-        state: { ...envelope().state, zones: { gone: zoneState("gone", 1, "building") } },
+        state: { ...envelope().state, zones: { gone: zoneState('gone', 1, 'building') } },
       }),
     );
     const rows = buildRows(envelope({ time_s: 300 }), geometry, memory);
-    const gone = rows.find((r) => r.id === "gone")!;
+    const gone = rows.find((r) => r.id === 'gone')!;
     expect(gone.silentFor).toBe(60);
-    expect(gone.value).toContain("silent");
+    expect(gone.value).toContain('silent');
   });
 
-  it("says so honestly when it has never seen a reading for a silent zone", () => {
+  it('says so honestly when it has never seen a reading for a silent zone', () => {
     // A console that has just connected does not know how long the silence has
     // lasted, and must not imply that it does.
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
-    const gone = rows.find((r) => r.id === "gone")!;
+    const gone = rows.find((r) => r.id === 'gone')!;
     expect(gone.silentFor).toBeNull();
-    expect(gone.value).toBe("—");
+    expect(gone.value).toBe('—');
   });
 
-  it("flags a reading the contract says not to lean on, without hiding it", () => {
+  it('flags a reading the contract says not to lean on, without hiding it', () => {
     const thin = envelope({
       state: {
-        circuit_id: "toy",
+        circuit_id: 'toy',
         timestamp: 240,
-        zones: { busy: zoneState("busy", 2.3, "critical", 2, false) },
+        zones: { busy: zoneState('busy', 2.3, 'critical', 2, false) },
         unobserved_zones: [],
       },
       silent_zones: [],
     });
-    const busy = buildRows(thin, geometry, new ZoneMemory()).find((r) => r.id === "busy")!;
+    const busy = buildRows(thin, geometry, new ZoneMemory()).find((r) => r.id === 'busy')!;
     expect(busy.reportable).toBe(false);
     expect(busy.density).toBe(2.3); // shown, not withheld
   });
 
-  it("falls back to the zone id when geometry has not arrived", () => {
+  it('falls back to the zone id when geometry has not arrived', () => {
     const rows = buildRows(envelope(), null, new ZoneMemory());
-    expect(rows.find((r) => r.id === "busy")?.name).toBe("busy");
+    expect(rows.find((r) => r.id === 'busy')?.name).toBe('busy');
   });
 });
 
-describe("sortRows", () => {
-  it("sorts observed zones by density, worst first", () => {
+describe('sortRows', () => {
+  it('sorts observed zones by density, worst first', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
-    const sorted = sortRows(rows, { key: "density", descending: true });
-    expect(sorted[0]?.id).toBe("busy");
+    const sorted = sortRows(rows, { key: 'density', descending: true });
+    expect(sorted[0]?.id).toBe('busy');
   });
 
-  it("keeps zones with no measurement at the bottom in BOTH directions", () => {
+  it('keeps zones with no measurement at the bottom in BOTH directions', () => {
     // The failure this prevents: ascending by density putting every zone the
     // system cannot see at the top, presenting blindness as emptiness.
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     for (const descending of [true, false]) {
-      const sorted = sortRows(rows, { key: "density", descending });
+      const sorted = sortRows(rows, { key: 'density', descending });
       const measured = sorted.filter((r) => r.density !== null);
       const absent = sorted.filter((r) => r.density === null);
       expect(sorted.slice(0, measured.length)).toEqual(measured);
@@ -228,28 +225,28 @@ describe("sortRows", () => {
     }
   });
 
-  it("is stable on ties, by name", () => {
+  it('is stable on ties, by name', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
-    const sorted = sortRows(rows, { key: "queue", descending: true });
-    expect(sorted.map((r) => r.id).slice(0, 2)).toEqual(["busy", "quiet"]);
+    const sorted = sortRows(rows, { key: 'queue', descending: true });
+    expect(sorted.map((r) => r.id).slice(0, 2)).toEqual(['busy', 'quiet']);
   });
 
-  it("does not mutate its input", () => {
+  it('does not mutate its input', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     const order = rows.map((r) => r.id);
-    sortRows(rows, { key: "density", descending: false });
+    sortRows(rows, { key: 'density', descending: false });
     expect(rows.map((r) => r.id)).toEqual(order);
   });
 });
 
-describe("coverageLines", () => {
-  it("states the denominator as the whole venue", () => {
+describe('coverageLines', () => {
+  it('states the denominator as the whole venue', () => {
     const [observed] = coverageLines(envelope());
-    expect(observed?.word).toBe("OBSERVED");
-    expect(observed?.detail).toContain("of 4 zones");
+    expect(observed?.word).toBe('OBSERVED');
+    expect(observed?.detail).toContain('of 4 zones');
   });
 
-  it("gives each category a word and a number", () => {
+  it('gives each category a word and a number', () => {
     for (const line of coverageLines(envelope())) {
       expect(line.word).toMatch(/^[A-Z ]+$/);
       expect(line.value).toMatch(/\d/);
