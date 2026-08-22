@@ -1,5 +1,5 @@
 
-import type { RaceSummary } from '@crowdflow/api/wire';
+import type { RaceSummary } from '@crowdflow/contracts/wire';
 
 import { DEMO_RACES } from './demo';
 

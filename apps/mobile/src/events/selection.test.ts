@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RaceSummary } from '@crowdflow/api/wire';
+import type { RaceSummary } from '@crowdflow/contracts/wire';
 
 
 const store = new Map<string, string>();

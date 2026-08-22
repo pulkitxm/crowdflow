@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
-import type { RaceSummary, VenueGeometry } from '@crowdflow/api/wire';
+import type { RaceSummary, VenueGeometry } from '@crowdflow/contracts/wire';
 
 import { MapView } from '../circuits/MapView';
 import type { CircuitSource } from '../circuits/registry';

@@ -1,5 +1,5 @@
 
-import type { Session } from '@crowdflow/api/wire';
+import type { Session } from '@crowdflow/contracts/wire';
 
 export interface RaceTiming {
   date: string;
