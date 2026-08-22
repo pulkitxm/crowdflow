@@ -1,19 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  circuitIntegrityProblems,
-  type CircuitCapability,
-  type CircuitPack,
-  type Position,
-} from '@crowdflow/contracts';
-import {
-  arrival,
-  egress,
-  pointToPolylineDistanceM,
-  type Scenario,
-  validateCircuitGeometry,
-  VenueGraph,
-} from '@crowdflow/core';
+import { circuitIntegrityProblems, type CircuitCapability, type CircuitPack, type Position } from '@crowdflow/contracts';
+import { arrival, egress, pointToPolylineDistanceM, type Scenario, validateCircuitGeometry, VenueGraph } from '@crowdflow/core';
 
 export const CIRCUIT_SELF_TEST_SCHEMA = 'circuit-self-test.v1';
 export const CIRCUIT_SELF_TEST_POPULATIONS = [1, 2, 100] as const;
@@ -112,17 +100,8 @@ export function selfTestCircuit(pack: CircuitPack, track: Position[], seed = 42)
 
 function selfTestCandidate(candidate: LoadedCandidate, seed: number): CircuitSelfTestResult {
   const capability: CircuitCapability | 'unknown' = candidate.pack?.capability ?? 'unknown';
-  const profile: CircuitSelfTestResult['profile'] =
-    capability === 'synthetic_simulation'
-      ? 'simulation_only'
-      : capability === 'venue_imported'
-        ? 'review_required'
-        : capability === 'venue_reviewed'
-          ? 'operational'
-          : 'unknown';
-  const contractProblems = candidate.pack
-    ? [...candidate.problems, ...circuitIntegrityProblems(candidate.pack)]
-    : [...candidate.problems];
+  const profile: CircuitSelfTestResult['profile'] = capability === 'synthetic_simulation' ? 'simulation_only' : capability === 'venue_imported' ? 'review_required' : capability === 'venue_reviewed' ? 'operational' : 'unknown';
+  const contractProblems = candidate.pack ? [...candidate.problems, ...circuitIntegrityProblems(candidate.pack)] : [...candidate.problems];
   const base = {
     id: candidate.id,
     capability,
@@ -152,11 +131,7 @@ function selfTestCandidate(candidate: LoadedCandidate, seed: number): CircuitSel
     };
   }
   const graph = new VenueGraph(candidate.pack);
-  const simulations = buildSimulationCases(candidate.pack, graph, seed).flatMap((testCase) =>
-    CIRCUIT_SELF_TEST_POPULATIONS.map((population) =>
-      testSimulation(candidate.pack!, candidate.track, graph, testCase, population, seed),
-    ),
-  );
+  const simulations = buildSimulationCases(candidate.pack, graph, seed).flatMap((testCase) => CIRCUIT_SELF_TEST_POPULATIONS.map((population) => testSimulation(candidate.pack!, candidate.track, graph, testCase, population, seed)));
   if (!simulations.length) {
     simulations.push({
       kind: 'arrival',
@@ -181,11 +156,7 @@ function selfTestCandidate(candidate: LoadedCandidate, seed: number): CircuitSel
   };
 }
 
-function buildSimulationCases(
-  pack: CircuitPack,
-  graph: VenueGraph,
-  seed: number,
-): Array<{ kind: 'arrival' | 'egress'; build: (population: number) => Scenario }> {
+function buildSimulationCases(pack: CircuitPack, graph: VenueGraph, seed: number): Array<{ kind: 'arrival' | 'egress'; build: (population: number) => Scenario }> {
   const zones = Object.values(pack.zones ?? {}).sort((left, right) => left.id.localeCompare(right.id));
   const gates = zones.filter((zone) => zone.kind === 'gate');
   const views = zones.filter((zone) => zone.kind === 'viewing');
@@ -193,21 +164,14 @@ function buildSimulationCases(
   const arrivalPair = gates
     .flatMap((gate) => views.map((view) => ({ gate: gate.id, view: view.id, route: graph.route(gate.id, view.id) })))
     .filter((pair) => pair.route.path.length > 1)
-    .sort(
-      (left, right) =>
-        left.route.cost_s - right.route.cost_s ||
-        left.gate.localeCompare(right.gate) ||
-        left.view.localeCompare(right.view),
-    )[0];
+    .sort((left, right) => left.route.cost_s - right.route.cost_s || left.gate.localeCompare(right.gate) || left.view.localeCompare(right.view))[0];
   const egressPair = destinations
     .map((destination) => ({
       destination: destination.id,
       origins: views.filter((view) => graph.route(view.id, destination.id).path.length > 1).map((view) => view.id),
     }))
     .filter((pair) => pair.origins.length > 0)
-    .sort(
-      (left, right) => right.origins.length - left.origins.length || left.destination.localeCompare(right.destination),
-    )[0];
+    .sort((left, right) => right.origins.length - left.origins.length || left.destination.localeCompare(right.destination))[0];
   const cases: Array<{ kind: 'arrival' | 'egress'; build: (population: number) => Scenario }> = [];
   if (arrivalPair) {
     cases.push({
@@ -224,14 +188,7 @@ function buildSimulationCases(
   return cases;
 }
 
-function testSimulation(
-  pack: CircuitPack,
-  track: Position[],
-  graph: VenueGraph,
-  testCase: { kind: 'arrival' | 'egress'; build: (population: number) => Scenario },
-  population: number,
-  seed: number,
-): CircuitSimulationSelfTest {
+function testSimulation(pack: CircuitPack, track: Position[], graph: VenueGraph, testCase: { kind: 'arrival' | 'egress'; build: (population: number) => Scenario }, population: number, seed: number): CircuitSimulationSelfTest {
   const first = advanceSimulation(pack, track, graph, testCase.build(population), population, seed);
   const second = advanceSimulation(pack, track, graph, testCase.build(population), population, seed);
   const deterministic = first.signature === second.signature;
@@ -251,14 +208,7 @@ function testSimulation(
   };
 }
 
-function advanceSimulation(
-  pack: CircuitPack,
-  track: Position[],
-  graph: VenueGraph,
-  scenario: Scenario,
-  population: number,
-  seed: number,
-): SimulationOutcome {
+function advanceSimulation(pack: CircuitPack, track: Position[], graph: VenueGraph, scenario: Scenario, population: number, seed: number): SimulationOutcome {
   const tickS = 30;
   const maximumTicks = 20_000;
   const simulation = scenario.build(graph, { seed, tick_s: tickS, participation: 1, speed_sigma: 0, compliance: 1 });
@@ -267,8 +217,7 @@ function advanceSimulation(
   let finitePositions = true;
   let trackClearanceViolations = 0;
   let ticks = 0;
-  if (simulation.agents.length !== population)
-    problems.push(`expected ${population} agents, built ${simulation.agents.length}`);
+  if (simulation.agents.length !== population) problems.push(`expected ${population} agents, built ${simulation.agents.length}`);
   while (simulation.arrived < simulation.agents.length && ticks < maximumTicks) {
     simulation.step();
     ticks += 1;
@@ -276,16 +225,10 @@ function advanceSimulation(
     for (const occupant of simulation.occupantPositions()) {
       if (!Number.isFinite(occupant.position.x) || !Number.isFinite(occupant.position.y)) finitePositions = false;
       const edgeId = agents.get(occupant.id)?.edge_id;
-      if (
-        !edgeId ||
-        crossingEdges.has(edgeId) ||
-        pointToPolylineDistanceM(occupant.position, track) + 1e-6 >= pack.track_clearance_m.value
-      )
-        continue;
+      if (!edgeId || crossingEdges.has(edgeId) || pointToPolylineDistanceM(occupant.position, track) + 1e-6 >= pack.track_clearance_m.value) continue;
       trackClearanceViolations += 1;
     }
-    for (const node of simulation.emit())
-      if (!Number.isFinite(node.position.x) || !Number.isFinite(node.position.y)) finitePositions = false;
+    for (const node of simulation.emit()) if (!Number.isFinite(node.position.x) || !Number.isFinite(node.position.y)) finitePositions = false;
   }
   if (!finitePositions) problems.push('simulation emitted a non-finite position');
   if (trackClearanceViolations) problems.push(`${trackClearanceViolations} positions entered track clearance`);
@@ -319,13 +262,7 @@ function loadCandidate(root: string, id: string): LoadedCandidate {
     const constraints = readJson(join(directory, 'constraints.json')) as CircuitPack['constraints'];
     const rawTrack = readJson(join(directory, 'track.json'));
     if (!Array.isArray(rawTrack)) problems.push('track.json must contain an array');
-    const track = Array.isArray(rawTrack)
-      ? rawTrack.map((point) =>
-          Array.isArray(point) && point.length >= 2
-            ? { x: Number(point[0]), y: Number(point[1]) }
-            : { x: Number.NaN, y: Number.NaN },
-        )
-      : [];
+    const track = Array.isArray(rawTrack) ? rawTrack.map((point) => (Array.isArray(point) && point.length >= 2 ? { x: Number(point[0]), y: Number(point[1]) } : { x: Number.NaN, y: Number.NaN })) : [];
     const pack: CircuitPack = {
       ...metadata,
       ...(graph.zones ? { zones: graph.zones } : {}),

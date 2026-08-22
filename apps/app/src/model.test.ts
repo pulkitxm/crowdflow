@@ -136,7 +136,7 @@ describe('buildRows', () => {
     expect(byId.get('never')?.visibility).toBe('unknown');
   });
 
-  it('gives an unobserved zone no density at all — not a zero one', () => {
+  it("gives an unobserved zone no density at all — not a zero one", () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     const unknown = rows.find((r) => r.id === 'never')!;
     expect(unknown.density).toBeNull();
@@ -181,7 +181,7 @@ describe('buildRows', () => {
     const rows = buildRows(envelope(), geometry, new ZoneMemory());
     const gone = rows.find((r) => r.id === 'gone')!;
     expect(gone.silentFor).toBeNull();
-    expect(gone.value).toBe('—');
+    expect(gone.value).toBe("—");
   });
 
   it('flags a reading the contract says not to lean on, without hiding it', () => {

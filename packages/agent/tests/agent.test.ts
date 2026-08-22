@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CircuitPack, VenueState } from '@crowdflow/contracts';
 import { SafetyEngine, VenueGraph } from '@crowdflow/core';
-import {
-  CrowdOpsAgent,
-  DEFAULT_ANTHROPIC_MODEL,
-  DEFAULT_THINKING_BUDGET_TOKENS,
-  FakeModelClient,
-  InsightEngine,
-  Toolbox,
-  toAnthropic,
-} from '../src/index.js';
+import { CrowdOpsAgent, DEFAULT_ANTHROPIC_MODEL, DEFAULT_THINKING_BUDGET_TOKENS, FakeModelClient, InsightEngine, Toolbox, toAnthropic } from '../src/index.js';
 
 const sourced = { value: 2, provenance: 'measured' as const, samples: 64 };
 const pack: CircuitPack = {
@@ -94,21 +86,13 @@ describe('TypeScript Crowd Ops Agent', () => {
 
   it('round-trips provider continuity blocks before tool calls', () => {
     const thinking = { type: 'thinking', thinking: 'opaque', signature: 'signed' };
-    const rendered = toAnthropic([
-      {
-        role: 'assistant',
-        text: 'checking',
-        thinking_blocks: [thinking],
-        tool_calls: [{ id: '1', name: 'get_venue_state', arguments: {} }],
-      },
-    ]);
+    const rendered = toAnthropic([{ role: 'assistant', text: 'checking', thinking_blocks: [thinking], tool_calls: [{ id: '1', name: 'get_venue_state', arguments: {} }] }]);
     expect((rendered[0]!.content as any[])[0]).toEqual(thinking);
     expect((rendered[0]!.content as any[])[2].type).toBe('tool_use');
   });
 
   it('uses a currently supported Anthropic model family and permits explicit configuration', () => {
-    expect(DEFAULT_ANTHROPIC_MODEL).toMatch(/^claude-/);
-    expect(DEFAULT_THINKING_BUDGET_TOKENS).toBeGreaterThanOrEqual(1024);
+    expect(DEFAULT_ANTHROPIC_MODEL).toMatch(/^claude-/); expect(DEFAULT_THINKING_BUDGET_TOKENS).toBeGreaterThanOrEqual(1024);
   });
 
   it('detects a gate departing from its own baseline without model arithmetic', () => {
@@ -139,8 +123,7 @@ describe('TypeScript Crowd Ops Agent', () => {
       los_grade: 'A',
       net_flow_per_min: 0,
     });
-    for (const density of [1, 1.1, 0.9, 1.05, 0.95, 1.02, 0.98, 1.08, 2])
-      engine.observe({ ...state, session_id: 'practice', zones: { a: zone(density) } });
+    for (const density of [1, 1.1, 0.9, 1.05, 0.95, 1.02, 0.98, 1.08, 2]) engine.observe({ ...state, session_id: 'practice', zones: { a: zone(density) } });
     expect(engine.insights()[0]?.kind).toBe('self_baseline');
   });
 

@@ -7,7 +7,7 @@ import { CrowdControl, PeopleStore, type LoadedCircuit, type ScenarioSession } f
 let people: PeopleStore | null = null;
 afterEach(() => people?.close());
 
-function circuit(capability: CircuitCapability): LoadedCircuit {
+function circuit(capability: CircuitCapability, operational = capability === 'venue_reviewed'): LoadedCircuit {
   const pack: CircuitPack = {
     id: 'toy', name: 'Toy', geometry_source: 'test', layout_id: 'toy-1', capability,
     track_length_m: 1000, altitude_m: 0, track_clearance_m: { value: 10, provenance: 'assumed' },
@@ -21,7 +21,7 @@ function circuit(capability: CircuitCapability): LoadedCircuit {
     },
     crossings: {}, constraints: { never_route_through: [], never_route_edges: [], emergency_exits: [], accessible_routes: [] },
   };
-  return { pack, track: [], graph: new VenueGraph(pack) };
+  return { pack, track: [], graph: new VenueGraph(pack), operational };
 }
 
 function proposal(circuit: LoadedCircuit) {
@@ -45,6 +45,12 @@ describe('circuit capability guidance boundary', () => {
 
   it('refuses operational guidance until a pack is venue reviewed', () => {
     const selected = circuit('venue_imported');
+    people = new PeopleStore(':memory:');
+    expect(() => new CrowdControl(people!).dispatch(proposal(selected), selected, null, 2)).toThrow('operational guidance requires venue_reviewed');
+  });
+
+  it('refuses a reviewed label without validated operational status', () => {
+    const selected = circuit('venue_reviewed', false);
     people = new PeopleStore(':memory:');
     expect(() => new CrowdControl(people!).dispatch(proposal(selected), selected, null, 2)).toThrow('operational guidance requires venue_reviewed');
   });

@@ -3,12 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CircuitCapability, CircuitPack, Position } from '@crowdflow/contracts';
-import {
-  CIRCUIT_SELF_TEST_POPULATIONS,
-  committedCircuitIds,
-  selfTestCircuit,
-  selfTestCommittedCircuits,
-} from '../src/circuit-self-test.js';
+import { CIRCUIT_SELF_TEST_POPULATIONS, committedCircuitIds, selfTestCircuit, selfTestCommittedCircuits } from '../src/circuit-self-test.js';
 
 const temporaryRoots: string[] = [];
 const sourced = (value: number) => ({ value, provenance: 'assumed' as const });
@@ -142,9 +137,7 @@ describe('all-circuit self-test', () => {
     expect(report.totals).toEqual({ circuits: 1, passed: 1, failed: 0, simulations: 6, simulation_failures: 0 });
     expect(report.circuits[0]).toMatchObject({
       profile: 'simulation_only',
-      simulations: expect.arrayContaining([
-        expect.objectContaining({ population: 100, deterministic: true, track_clearance_violations: 0 }),
-      ]),
+      simulations: expect.arrayContaining([expect.objectContaining({ population: 100, deterministic: true, track_clearance_violations: 0 })]),
     });
     expect(JSON.parse(JSON.stringify(report))).toEqual(report);
   });

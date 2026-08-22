@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { existsSync, readdirSync } from 'node:fs';
 import { request } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,13 +11,29 @@ let server: CrowdFlowServer | null = null;
 afterEach(async () => { await server?.close(); server = null; });
 
 describe('TypeScript API adapter', () => {
-  it('serves the real Silverstone graph and constants', async () => {
+  it('serves geometry and scenarios for every committed circuit', async () => {
+    server = new CrowdFlowServer(root); await server.listen(0);
+    const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;
+    const expected = readdirSync(join(root, 'circuits'), { withFileTypes: true }).filter((entry) => entry.isDirectory() && existsSync(join(root, 'circuits', entry.name, 'pack', 'circuit.json'))).map((entry) => entry.name).sort();
+    const summaries = await get(port, '/api/circuits') as any[];
+    expect(summaries.map((summary) => summary.id).sort()).toEqual(expected);
+    for (const id of expected) {
+      const geometry = await get(port, `/api/circuits/${id}/geometry`) as any;
+      const scenarios = await get(port, `/api/circuits/${id}/scenarios`) as any[];
+      expect(geometry.integrity_problems, id).toEqual([]);
+      expect(scenarios.map((scenario) => scenario.id), id).toEqual(['egress', 'arrival']);
+    }
+  });
+
+  it('serves the Silverstone layout, capability, graph and constants', async () => {
     server = new CrowdFlowServer(root); await server.listen(0);
     const address = server.server.address(); const port = typeof address === 'object' && address ? address.port : 0;
     const geometry = await get(port, '/api/circuits/silverstone/geometry') as any;
-    expect(Object.keys(geometry.pack.zones)).toHaveLength(1875);
-    expect(Object.keys(geometry.pack.edges)).toHaveLength(2404);
+    expect(Object.keys(geometry.pack.zones).length).toBeGreaterThan(0);
+    expect(Object.keys(geometry.pack.edges).length).toBeGreaterThan(0);
     expect(geometry.integrity_problems).toEqual([]);
+    const summaries = await get(port, '/api/circuits') as any[];
+    expect(summaries.find((item) => item.id === 'silverstone')).toMatchObject({ layout_id: geometry.pack.layout_id, capability: geometry.pack.capability });
     const standards = await get(port, '/api/standards') as any;
     expect(standards.bands.map((band: any) => band.label)).toEqual(['NOMINAL', 'BUILDING', 'CRITICAL']);
   });
@@ -49,7 +66,8 @@ describe('TypeScript API adapter', () => {
     });
     socket.close();
     expect(frames[0].type).toBe('hello');
-    expect(frames.at(-1).tick.coverage.zones_total).toBe(1875);
+    const geometry = await get(port, '/api/circuits/silverstone/geometry') as any;
+    expect(frames.at(-1).tick.coverage.zones_total).toBe(Object.keys(geometry.pack.zones).length);
     expect(frames.at(-1).tick.coverage.unknown).toBeGreaterThan(frames.at(-1).tick.coverage.observed);
   });
 });

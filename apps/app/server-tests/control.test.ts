@@ -6,8 +6,8 @@ import { FakeModelClient } from '@crowdflow/agent';
 import { AgentService, CrowdFlowServer, loadCircuit } from '../server/index.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-const SOURCE = 'n3517';
-const DESTINATION = 'n3514';
+const SOURCE = 'view_n';
+const DESTINATION = 'view_e';
 let server: CrowdFlowServer | null = null;
 afterEach(async () => { await server?.close(); server = null; });
 
@@ -18,6 +18,8 @@ async function askedForReroute(): Promise<{ port: number; commandId: string }> {
     { text: 'Proposed.', tool_calls: [], thinking_blocks: [] },
   ]));
   server.startSession({ circuit_id: 'silverstone', scenario: 'egress', population: 300, seed: 42 });
+  server.session!.circuit.pack.capability = 'venue_reviewed';
+  server.session!.circuit.operational = true;
   server.session!.tickOnce();
   const origin = loadCircuit(root, 'silverstone').pack.zones?.[SOURCE]?.position;
   if (!origin) throw new Error(`${SOURCE} has no position in the pack`);

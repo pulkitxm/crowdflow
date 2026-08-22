@@ -10,6 +10,7 @@
  */
 import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/contracts/wire";
 import { ConsoleLink, approveAdvisory, approveProposal, askAgent, control, fetchAdvisories, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid, fetchRaceDay } from "./client";
+import { allowsSatelliteBasemap, circuitCapabilityDetails } from "./circuitCapability";
 import type { LinkState } from "./client";
 import { must } from "./dom";
 import { integer } from "./format";
@@ -197,10 +198,12 @@ basemapView.append("MAP");
 const basemapSelect = document.createElement("select");
 basemapSelect.className = "crowd-view__select crowd-view__select--map";
 basemapSelect.setAttribute("aria-label", "Map background");
+let satelliteOption: HTMLOptionElement | null = null;
 for (const [value, label] of [["schematic", "SCHEMATIC"], ["satellite", "SATELLITE"]] as const) {
   const option = document.createElement("option");
   option.value = value;
   option.textContent = label;
+  if (value === "satellite") satelliteOption = option;
   basemapSelect.append(option);
 }
 basemapSelect.value = map.basemapMode;
@@ -434,13 +437,25 @@ async function loadGeometry(circuitId: string): Promise<void> {
     geometry = await fetchGeometry(circuitId);
     const edges = Object.values(geometry.pack.edges ?? {});
     const assumedWidths = edges.filter((edge) => edge.width_m?.provenance !== "measured").length;
+    const capability = circuitCapabilityDetails(geometry.pack.capability);
+    const satelliteAllowed = allowsSatelliteBasemap(geometry.pack.capability);
+    if (satelliteOption) { satelliteOption.disabled = !satelliteAllowed; satelliteOption.hidden = !satelliteAllowed; }
+    basemapSelect.title = satelliteAllowed ? "Map background" : "Satellite is unavailable for synthetic layouts because their SVG coordinates are not georeferenced";
+    if (!satelliteAllowed && map.basemapMode === "satellite") {
+      map.setBasemap("schematic");
+      basemapSelect.value = "schematic";
+      attribution.classList.remove("map__attribution--visible");
+      persistMapControls();
+    }
     const circuitLine = must("map-circuit");
     circuitLine.textContent =
-      `${geometry.pack.name.toUpperCase()} · ${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
+      `${geometry.pack.name.toUpperCase()} · LAYOUT ${geometry.pack.layout_id.toUpperCase()} · ${capability.label} · ` +
+      `${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
       `${edges.length} EDGES · ${integer(assumedWidths)} ASSUMED WIDTHS`;
-    circuitLine.title = assumedWidths
+    const widthNotice = assumedWidths
       ? `${assumedWidths} of ${edges.length} corridor widths are assumed rather than measured. Density is people per metre of width, so every band on those edges is provisional.`
       : "every corridor width in this pack is measured";
+    circuitLine.title = `${capability.notice} ${widthNotice}`;
     map.setGeometry(geometry, standards);
     map.restoreView(mapState.zoom, mapState.center);
     const restored = sectorSource();
