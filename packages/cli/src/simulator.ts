@@ -99,9 +99,11 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
       newcomers.push(buildWalker(personId, gateId, pack, graph, destinations, rng));
     }
     if (newcomers.length) {
-      await postJson(`${api}/api/people/login/batch`, {
-        people: newcomers.map((walker) => ({ person_id: walker.personId, circuit_id: options.circuitId })),
-      });
+      for (let offset = 0; offset < newcomers.length; offset += 1000) {
+        await postJson(`${api}/api/people/login/batch`, {
+          people: newcomers.slice(offset, offset + 1000).map((walker) => ({ person_id: walker.personId, circuit_id: options.circuitId })),
+        });
+      }
       walkers.push(...newcomers);
       joined += newcomers.length;
     }
@@ -110,6 +112,7 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
     const batch = walkers.map((walker) => reportFor(walker, options.circuitId, now, tickSeconds, options.movementScale ?? 90));
     for (let offset = 0; offset < batch.length; offset += 1000) {
       const chunk = batch.slice(offset, offset + 1000);
+      restamp(chunk, Date.now() / 1000);
       const ack = await postJson<{ accepted: number; rejected: number; problems?: string[] }>(`${api}/api/nodes/batch`, { reports: chunk, emit: offset + 1000 >= batch.length });
       if (ack.rejected) throw new Error(`simulator reports rejected: ${(ack.problems ?? []).join(', ')}`);
       reports += ack.accepted;
@@ -124,6 +127,18 @@ export async function simulateLiveCrowd(options: CrowdSimulatorOptions): Promise
   }
 
   return { tick: ticks, joined, active: walkers.length, reports, guided, gates, duration_s: duration, reset, removed };
+}
+
+export function restamp(reports: NodeReport[], sentAt: number): void {
+  const epoch = Math.floor(sentAt / ASSUMED_ID_ROTATION_S);
+  const timestamp = Math.round(sentAt);
+  for (const report of reports) {
+    report.epoch = epoch;
+    for (const node of report.nodes ?? []) {
+      node.epoch = epoch;
+      node.timestamp = timestamp;
+    }
+  }
 }
 
 export function applyGuidance(orders: GuidanceOrder[], walkers: SimulatedWalker[], pack: CircuitPack, graph: VenueGraph): number {

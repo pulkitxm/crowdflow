@@ -1,4 +1,5 @@
-import type { LiveSnapshot, PeopleQueryResult, VenueGeometry, ZoneState } from "@crowdflow/api/wire";
+import type { PeopleQueryResult, VenueGeometry, VenueState, ZoneState } from "@crowdflow/api/wire";
+import { NO_VALUE } from "./format";
 
 export type SectorVisibility = "observed" | "silent" | "unknown";
 export type SectorSortKey = "name" | "density" | "flow" | "nodes" | "people" | "queue" | "net" | "confidence";
@@ -40,7 +41,13 @@ export interface SectorArea extends SectorAnchor {
   polygon: Array<{ x: number; y: number }>;
 }
 
-export function buildSectorRows(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
+export interface SectorSource {
+  state: VenueState;
+  reporting_devices?: number;
+  coverage?: { zones_total: number; observed: number; unknown: number; silent: number; low_confidence: number; fraction_observed: number };
+}
+
+export function buildSectorRows(live: SectorSource, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
   const zones = Object.values(geometry.pack.zones ?? {});
   const anchors = sectorAnchors(geometry);
   if (!anchors.length) return [];
@@ -179,7 +186,7 @@ function aggregateSector(
     net: observed.length ? observed.reduce((total, state) => total + state.net_flow_per_min, 0) : null,
     confidence: weighted((state) => state.confidence.value),
     reportable: observed.length > 0 && observed.every((state) => state.confidence.reportable),
-    losGrade: observed.reduce((grade, state) => state.los_grade > grade ? state.los_grade : grade, "A"),
+    losGrade: observed.length ? observed.reduce((grade, state) => (state.los_grade > grade ? state.los_grade : grade), observed[0]!.los_grade) : NO_VALUE,
     overCapacity: observed.some((state) => state.over_capacity),
   };
 }

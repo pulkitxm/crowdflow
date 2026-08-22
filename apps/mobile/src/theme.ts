@@ -17,14 +17,86 @@ export const space = {
 
 export const radius = { sm: 8, md: 14, lg: 20, pill: 999 } as const;
 
-export const type = {
-  display: { size: 60, lineHeight: 64, weight: '700' as const, letterSpacing: -1.5 },
-  title: { size: 30, lineHeight: 36, weight: '700' as const, letterSpacing: -0.4 },
-  headline: { size: 22, lineHeight: 30, weight: '600' as const, letterSpacing: -0.2 },
-  body: { size: 18, lineHeight: 26, weight: '400' as const, letterSpacing: 0 },
-  label: { size: 15, lineHeight: 20, weight: '600' as const, letterSpacing: 0.3 },
-  micro: { size: 13, lineHeight: 18, weight: '600' as const, letterSpacing: 0.6 },
+export const fonts = {
+  displaySemi: 'BarlowSemiCondensed_600SemiBold',
+  displayBold: 'BarlowSemiCondensed_700Bold',
+  bodyRegular: 'PublicSans_400Regular',
+  bodyMedium: 'PublicSans_500Medium',
+  bodySemi: 'PublicSans_600SemiBold',
+  bodyBold: 'PublicSans_700Bold',
 } as const;
+
+export type FontName = (typeof fonts)[keyof typeof fonts];
+
+export const type = {
+  display: {
+    size: 56,
+    lineHeight: 58,
+    weight: '700' as const,
+    letterSpacing: -1.2,
+    family: fonts.displayBold,
+    maxScale: 1.25,
+  },
+  title: {
+    size: 30,
+    lineHeight: 34,
+    weight: '700' as const,
+    letterSpacing: -0.4,
+    family: fonts.displayBold,
+    maxScale: 1.3,
+  },
+  headline: {
+    size: 23,
+    lineHeight: 28,
+    weight: '600' as const,
+    letterSpacing: -0.1,
+    family: fonts.displaySemi,
+    maxScale: 1.4,
+  },
+  body: {
+    size: 17,
+    lineHeight: 25,
+    weight: '400' as const,
+    letterSpacing: 0,
+    family: fonts.bodyRegular,
+    maxScale: 1.7,
+  },
+  label: {
+    size: 15,
+    lineHeight: 20,
+    weight: '600' as const,
+    letterSpacing: 0.1,
+    family: fonts.bodySemi,
+    maxScale: 1.7,
+  },
+  micro: {
+    size: 12,
+    lineHeight: 16,
+    weight: '700' as const,
+    letterSpacing: 0.9,
+    family: fonts.bodyBold,
+    maxScale: 1.8,
+  },
+} as const;
+
+export type TypeVariant = keyof typeof type;
+
+export const BREAKPOINTS = { tiny: 340, small: 360, large: 414, wide: 600 } as const;
+
+export function typeScaleFor(width: number): number {
+  if (width < BREAKPOINTS.tiny) return 0.9;
+  if (width < BREAKPOINTS.small) return 0.94;
+  if (width < BREAKPOINTS.large) return 1;
+  if (width < BREAKPOINTS.wide) return 1.05;
+  return 1.1;
+}
+
+export function spaceScaleFor(width: number): number {
+  if (width < BREAKPOINTS.tiny) return 0.85;
+  if (width < BREAKPOINTS.small) return 0.92;
+  if (width < BREAKPOINTS.wide) return 1;
+  return 1.15;
+}
 
 interface StatusColors {
   fill: string;

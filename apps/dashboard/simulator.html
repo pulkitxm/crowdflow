@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CrowdFlow — Race Day Simulator</title>
+  </head>
+  <body>
+    <div id="sim" class="sim">
+      <header class="strip strip--command sim__command">
+        <div class="cmd">
+          <div class="cmd__primary">
+            <div class="brand">
+              <span class="brand__mark">RACE DAY</span>
+              <span class="brand__sub">SIMULATOR — NOT THE OPERATOR CONSOLE</span>
+            </div>
+            <div class="hstat" title="simulated clock, venue local time">
+              <span class="hstat__label">DAY CLOCK</span>
+              <span class="hstat__value" id="sim-clock">--:--:--</span>
+            </div>
+            <div class="hstat" title="the phase of the race day this clock falls in">
+              <span class="hstat__label">PHASE</span>
+              <span class="hstat__value" id="sim-phase">—</span>
+            </div>
+            <div class="controls" id="sim-controls"></div>
+          </div>
+          <div class="cmd__params" id="sim-params"></div>
+        </div>
+        <div class="cmd__actions" id="sim-actions"></div>
+      </header>
+
+      <section class="panel sim__timeline">
+        <div class="panel__head"><h2>RACE DAY CHECKLIST</h2><div class="panel__tools" id="sim-timeline-tools"></div></div>
+        <div class="sim__race" id="sim-race"></div>
+        <div class="panel__body panel__body--table" id="sim-timeline">
+          <div class="empty">No race day is running. Start one to populate the checklist.</div>
+        </div>
+      </section>
+
+      <section class="panel sim__crowd">
+        <div class="panel__head"><h2>CROWD</h2><div class="panel__tools" id="sim-crowd-tools"></div></div>
+        <div class="panel__body" id="sim-crowd">
+          <div class="empty">Waiting for the first simulated tick…</div>
+        </div>
+      </section>
+
+      <section class="panel sim__anomalies">
+        <div class="panel__head"><h2>ANOMALIES</h2><div class="panel__tools" id="sim-anomaly-tools"></div></div>
+        <div class="panel__body" id="sim-anomalies">
+          <div class="empty">Start a race day to arm anomaly injection.</div>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/simulator.ts"></script>
+  </body>
+</html>

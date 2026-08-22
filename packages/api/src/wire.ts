@@ -47,6 +47,7 @@ export interface PeopleQueryResult {
   returned_count: number;
   people: PersonLocation[];
   cells: GridCell[];
+  source?: 'handsets' | 'simulation';
 }
 
 /**
@@ -361,7 +362,7 @@ export interface TickEnvelope {
   events?: ConsoleEvent[];
 }
 
-export type SessionStatus = "idle" | "running" | "paused" | "computing" | "finished";
+export type SessionStatus = "idle" | "running" | "paused" | "finished";
 
 /**
  * What is running, and under exactly which parameters.
@@ -399,10 +400,6 @@ export interface SessionInfo {
   tick?: number;
   time_s?: number;
   duration_s?: number;
-  /**
-   * wall time spent in the tick currently being computed
-   */
-  computing_ms?: number;
 }
 
 /**
@@ -520,7 +517,10 @@ export interface LiveSnapshot {
    * where the participation rate came from. ASSUMED until a capture-recapture measurement exists — and `estimated_population` is observed devices divided by it, so this label decides how much the population number is worth.
    */
   participation_provenance: Provenance;
+  window_s: number;
   state: VenueState;
+  forecasts?: Forecast[];
+  actionable?: string[];
   /**
    * one mark per reporting device in the window, undownsampled
    */
@@ -584,6 +584,116 @@ export interface AgentAskResponse {
   truncated: boolean;
   turns: AgentTurnWire[];
   proposals: Record<string, unknown>[];
+}
+
+export interface AgentAdvisory {
+  id: string;
+  kind: string;
+  severity: 'info' | 'warning' | 'critical';
+  headline: string;
+  detail: string;
+  zone_id: string;
+  crowd_message: string;
+  model_id: string;
+  raised_at_s: number;
+  approved: boolean;
+}
+
+export interface SpectatorNotice {
+  id: string;
+  advisory_id: string;
+  severity: 'info' | 'warning' | 'critical';
+  message: string;
+  zone_id: string;
+  published_at_s: number;
+  expires_at_s: number;
+  approved_by: string;
+}
+
+export interface RaceCarWire {
+  number: number;
+  label: string;
+  position: number;
+  lap: number;
+  lap_progress: number;
+  gap_to_leader_s: number;
+  retired: boolean;
+}
+
+export interface RaceStateWire {
+  running: boolean;
+  finished: boolean;
+  lap: number;
+  total_laps: number;
+  lap_s: number;
+  elapsed_s: number;
+  remaining_s: number;
+  leader_lap_progress: number;
+  grid_provenance: string;
+  grid_note: string;
+  cars: RaceCarWire[];
+}
+
+export interface AnomalyRecord {
+  id: string;
+  kind: string;
+  label: string;
+  injected_at_s: number;
+  duration_s: number;
+  affected_agents: number;
+  effect: string;
+}
+
+export interface AnomalyOption {
+  kind: string;
+  label: string;
+  effect: string;
+  default_duration_s: number;
+}
+
+export interface RaceDayRequest {
+  circuit_id?: string;
+  population?: number;
+  speed?: number;
+  participation?: number;
+  tick_s?: number;
+  seed?: number;
+  intervene?: boolean;
+}
+
+export interface RaceDayPhaseWire {
+  id: string;
+  kind: string;
+  name: string;
+  start_s: number;
+  end_s: number;
+  provenance: string;
+  source: string;
+  crowd_effect: string;
+  state: 'done' | 'active' | 'pending';
+}
+
+export interface RaceDayStatus {
+  circuit_id: string;
+  event_name: string;
+  date: string | null;
+  utc_offset: string | null;
+  population: number;
+  day_s: number;
+  clock_s: number;
+  clock_local: string;
+  day_state: 'pre_event' | 'running' | 'complete';
+  race_start_s: number;
+  race_end_s: number;
+  race_provenance: string;
+  current_phase_id: string | null;
+  phases: RaceDayPhaseWire[];
+  crowd: { offsite: number; walking: number; dwelling: number; departed: number; stranded: number; total: number };
+  by_area: Array<{ kind: string; label: string; count: number }>;
+  anomalies: AnomalyRecord[];
+  catalogue: AnomalyOption[];
+  race: RaceStateWire;
+  crowd_source: 'handsets' | 'simulation';
 }
 
 export interface AgentStatus {

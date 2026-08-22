@@ -10,9 +10,10 @@
  */
 import "./style.css";
 import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
-import { ConsoleLink, approveProposal, askAgent, control, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid } from "./client";
+import { ConsoleLink, approveAdvisory, approveProposal, askAgent, control, fetchAdvisories, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid, fetchRaceDay } from "./client";
 import type { LinkState } from "./client";
 import { must } from "./dom";
+import { integer } from "./format";
 import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
@@ -25,6 +26,8 @@ import { MapPanel } from "./panels/map";
 import { MetricsStrip } from "./panels/metrics";
 import { PredictionPanel } from "./panels/prediction";
 import { SectorTable } from "./panels/table";
+
+const DEFAULT_FRESHNESS_WINDOW_S = 30;
 
 const memory = new ZoneMemory();
 
@@ -75,7 +78,8 @@ map.setTheme(mapState.theme);
 
 const table = new SectorTable(must("zones-body"), must("zones-tools"), (zoneId) => focusSector(zoneId));
 table.onResort(() => {
-  if (latestLive && geometry) map.setSectors(table.update(latestLive, geometry, sectorGrid));
+  const source = sectorSource();
+  if (source && geometry) map.setSectors(table.update(source, geometry, sectorGrid));
 });
 
 const prediction = new PredictionPanel(must("prediction-body"), must("prediction-model"));
@@ -99,6 +103,14 @@ const agent = new AgentPanel(
   approveProposal,
 );
 window.setInterval(() => {
+  fetchAdvisories().then(
+    (result) => agent.setAdvisories(result.advisories, result.notices, approveAdvisory),
+    () => {},
+  );
+  fetchRaceDay().then(
+    (day) => map.setRace(day.race),
+    () => map.setRace(null),
+  );
   fetchAgentCommands().then(
     (result) => agent.setCommands(result.commands),
     () => {},
@@ -114,6 +126,19 @@ const consoleElement = must("console");
 const attribution = must("map-attribution");
 consoleElement.classList.toggle("console--map-focus", mapState.full);
 attribution.classList.toggle("map__attribution--visible", mapState.basemap === "satellite");
+
+function controlGroup(label: string): HTMLElement {
+  const group = document.createElement("div");
+  group.className = "ctlgroup";
+  const caption = document.createElement("span");
+  caption.className = "ctlgroup__label";
+  caption.textContent = label;
+  group.append(caption);
+  return group;
+}
+
+const viewGroup = controlGroup("VIEW");
+const layerGroup = controlGroup("LAYERS");
 
 const zoomControls = document.createElement("div");
 zoomControls.className = "zoom-tools";
@@ -137,7 +162,7 @@ zoomInButton.title = "Zoom in";
 zoomInButton.setAttribute("aria-label", "Zoom in");
 zoomInButton.addEventListener("click", () => { map.zoomBy(1.5); });
 zoomControls.append(zoomValue, zoomOutButton, zoomInButton);
-mapControls.append(zoomControls);
+viewGroup.append(zoomControls);
 
 const portraitButton = document.createElement("button");
 portraitButton.type = "button";
@@ -152,7 +177,7 @@ portraitButton.addEventListener("click", () => {
 const initialPortrait = map.orientationDeg === 90 || map.orientationDeg === 270;
 portraitButton.classList.toggle("tool--on", initialPortrait);
 portraitButton.textContent = initialPortrait ? "LANDSCAPE" : "PORTRAIT";
-mapControls.append(portraitButton);
+viewGroup.append(portraitButton);
 
 const rotateButton = document.createElement("button");
 rotateButton.type = "button";
@@ -165,7 +190,7 @@ rotateButton.addEventListener("click", () => {
   portraitButton.classList.toggle("tool--on", deg === 90 || deg === 270);
   portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
 });
-mapControls.append(rotateButton);
+viewGroup.append(rotateButton);
 
 const basemapView = document.createElement("label");
 basemapView.className = "crowd-view";
@@ -186,7 +211,7 @@ basemapSelect.addEventListener("change", () => {
   persistMapControls();
 });
 basemapView.append(basemapSelect);
-mapControls.append(basemapView);
+layerGroup.append(basemapView);
 
 const themeButton = document.createElement("button");
 themeButton.type = "button";
@@ -205,7 +230,7 @@ themeButton.addEventListener("click", () => {
   persistMapControls();
 });
 updateThemeButton();
-mapControls.append(themeButton);
+must("command-actions").append(themeButton);
 
 const kindButton = document.createElement("button");
 kindButton.type = "button";
@@ -220,7 +245,7 @@ kindButton.addEventListener("click", () => {
 });
 kindButton.classList.toggle("tool--on", map.kindView);
 kindButton.textContent = map.kindView ? "LIVE STATE" : "ZONE KINDS";
-mapControls.append(kindButton);
+layerGroup.append(kindButton);
 
 const gridButton = document.createElement("button");
 gridButton.type = "button";
@@ -236,7 +261,7 @@ gridButton.addEventListener("click", () => {
   persistMapControls();
 });
 updateGridButton();
-mapControls.append(gridButton);
+layerGroup.append(gridButton);
 
 const crowdView = document.createElement("label");
 crowdView.className = "crowd-view";
@@ -256,7 +281,7 @@ crowdSelect.addEventListener("change", () => {
   persistMapControls();
 });
 crowdView.append(crowdSelect);
-mapControls.append(crowdView);
+layerGroup.append(crowdView);
 
 const sectorButton = document.createElement("button");
 sectorButton.type = "button";
@@ -272,14 +297,14 @@ sectorButton.addEventListener("click", () => {
   persistMapControls();
 });
 updateSectorButton();
-mapControls.append(sectorButton);
+layerGroup.append(sectorButton);
 
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
 fitButton.textContent = "FIT";
 fitButton.addEventListener("click", () => { map.fit(); updateZoomValue(); });
-mapControls.append(fitButton);
+viewGroup.append(fitButton);
 
 const focusButton = document.createElement("button");
 focusButton.type = "button";
@@ -292,13 +317,14 @@ focusButton.addEventListener("click", () => {
   setMapFocused(!consoleElement.classList.contains("console--map-focus"));
   persistMapControls();
 });
-mapControls.append(focusButton);
+viewGroup.append(focusButton);
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !consoleElement.classList.contains("console--map-focus")) return;
   event.preventDefault();
   setMapFocused(false);
   persistMapControls();
 });
+mapControls.append(viewGroup, layerGroup);
 updateZoomValue();
 
 function setMapFocused(focused: boolean): void {
@@ -369,21 +395,53 @@ function redraw(envelope: TickEnvelope): void {
   const byId = new Map(rows.map((row) => [row.id, row]));
   map.update(envelope, rows);
   table.setSelected(selected);
-  prediction.update(envelope, byId, zoneName);
   intervention.update(envelope, zoneName);
   gates.update(rows, geometry);
+  const sectors = sectorSource();
+  if (geometry && sectors) { map.setSectors(table.update(sectors, geometry, sectorGrid)); scheduleCohortRefresh(); }
   if (latestSession) metrics.update(envelope, latestSession);
+  paintPrediction(byId);
+}
+
+function freshnessWindowS(): number {
+  return latestLive?.window_s ?? DEFAULT_FRESHNESS_WINDOW_S;
+}
+
+function sectorSource(): { state: import("@crowdflow/api/wire").VenueState; reporting_devices?: number; coverage?: { zones_total: number; observed: number; unknown: number; silent: number; low_confidence: number; fraction_observed: number } } | null {
+  const liveZones = latestLive ? Object.keys(latestLive.state.zones ?? {}).length : 0;
+  if (latestLive && liveZones > 0) return latestLive;
+  return latest ?? latestLive;
+}
+
+function paintPrediction(scenarioRows?: Map<string, ZoneRow>): void {
+  const liveZones = latestLive ? Object.keys(latestLive.state.zones ?? {}).length : 0;
+  if (latestLive && liveZones > 0) {
+    const rows = buildRows({ state: latestLive.state, time_s: latestLive.server_time }, geometry, memory);
+    prediction.update(latestLive, new Map(rows.map((row) => [row.id, row])), zoneName, "LIVE");
+    return;
+  }
+  if (latest) {
+    const rows = scenarioRows ?? new Map(buildRows(latest, geometry, memory).map((row) => [row.id, row]));
+    prediction.update(latest, rows, zoneName, "SCENARIO");
+  }
 }
 
 async function loadGeometry(circuitId: string): Promise<void> {
   try {
     geometry = await fetchGeometry(circuitId);
-    must("map-circuit").textContent =
+    const edges = Object.values(geometry.pack.edges ?? {});
+    const assumedWidths = edges.filter((edge) => edge.width_m?.provenance !== "measured").length;
+    const circuitLine = must("map-circuit");
+    circuitLine.textContent =
       `${geometry.pack.name.toUpperCase()} · ${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
-      `${Object.keys(geometry.pack.edges ?? {}).length} EDGES`;
+      `${edges.length} EDGES · ${integer(assumedWidths)} ASSUMED WIDTHS`;
+    circuitLine.title = assumedWidths
+      ? `${assumedWidths} of ${edges.length} corridor widths are assumed rather than measured. Density is people per metre of width, so every band on those edges is provisional.`
+      : "every corridor width in this pack is measured";
     map.setGeometry(geometry, standards);
     map.restoreView(mapState.zoom, mapState.center);
-    if (latestLive) map.setSectors(table.update(latestLive, geometry, sectorGrid));
+    const restored = sectorSource();
+    if (restored) map.setSectors(table.update(restored, geometry, sectorGrid));
     void loadSectorGrid();
     if ((geometry.integrity_problems ?? []).length > 0) {
       // Shown, never swallowed: a console rendering a broken pack while looking
@@ -416,10 +474,11 @@ async function loadSectorGrid(): Promise<void> {
     { x: minX, y: maxY },
   ];
   try {
-    const result = await fetchPeopleGrid(circuitId, coordinates, 1);
+    const result = await fetchPeopleGrid(circuitId, coordinates, 1, freshnessWindowS());
     if (request !== sectorGridRequest) return;
     sectorGrid = result;
-    if (latestLive) map.setSectors(table.update(latestLive, venue, result));
+    const withGrid = sectorSource();
+    if (withGrid) map.setSectors(table.update(withGrid, venue, result));
   } catch (error) {
     console.error("sector crowd unavailable", error);
   }
@@ -430,7 +489,7 @@ async function loadGrid(coordinates: Position[], zoom: number): Promise<void> {
   if (!circuitId) return;
   const request = ++gridRequest;
   try {
-    const result = await fetchPeopleGrid(circuitId, coordinates, zoom);
+    const result = await fetchPeopleGrid(circuitId, coordinates, zoom, freshnessWindowS());
     if (request === gridRequest) map.setGrid(result);
   } catch (error) {
     console.error("grid unavailable", error);
@@ -444,8 +503,9 @@ function handleFrame(frame: SocketFrame): void {
     latestLive = frame.live;
     live.update(frame.live);
     map.updateLive(frame.live);
-    if (geometry) map.setSectors(table.update(frame.live, geometry, sectorGrid));
+    if (geometry) { const src = sectorSource(); if (src) map.setSectors(table.update(src, geometry, sectorGrid)); }
     scheduleCohortRefresh();
+    paintPrediction();
   }
 
   if (frame.type === "hello") {

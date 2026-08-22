@@ -74,8 +74,12 @@ function OptionRow({
       ]}
     >
       <View style={styles.head}>
-        <Headline>{option.label}</Headline>
-        <Title>{journeyText(option.total_s)}</Title>
+        <Headline numberOfLines={2} style={{ flex: 1, minWidth: 0 }}>
+          {option.label}
+        </Headline>
+        <Title numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>
+          {journeyText(option.total_s)}
+        </Title>
       </View>
       <Body tone="soft" style={{ fontSize: 16, lineHeight: 22 }}>
         {option.spent}
@@ -100,6 +104,12 @@ const styles = StyleSheet.create({
     minHeight: 96,
     justifyContent: 'center',
   },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: space.sm,
+    flexWrap: 'wrap',
+  },
   meta: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
 });

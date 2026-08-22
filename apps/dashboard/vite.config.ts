@@ -30,5 +30,14 @@ export default defineConfig({
       "/ws": { target: API, ws: true, changeOrigin: true },
     },
   },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        console: fileURLToPath(new URL("index.html", import.meta.url)),
+        simulator: fileURLToPath(new URL("simulator.html", import.meta.url)),
+      },
+    },
+  },
 });

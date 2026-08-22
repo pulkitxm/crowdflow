@@ -9,6 +9,7 @@ declare module 'bun:sqlite' {
     exec(sql: string): void;
     run(sql: string, ...parameters: unknown[]): void;
     query<Result, Parameters extends unknown[]>(sql: string): Statement<Result, Parameters>;
+    transaction<Result>(work: () => Result): () => Result;
     close(): void;
   }
 }

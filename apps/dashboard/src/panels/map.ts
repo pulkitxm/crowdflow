@@ -22,9 +22,9 @@
  *     the view changes, so a tick costs one blit plus the live marks.
  */
 import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
-import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
+import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry , RaceStateWire } from "@crowdflow/api/wire";
 import { el, clear } from "../dom";
-import { fixed, integer } from "../format";
+import { NO_VALUE, fixed, integer } from "../format";
 import { easeOutCubic, layerTransform, revealProgress } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
@@ -34,15 +34,15 @@ import { satelliteTileUrl, satelliteZoom, tileVenueCorners, visibleTiles, type T
 import { buildSectorAreas, type SectorArea, type SectorRow } from "../sectors";
 
 const BAND_COLOUR: Record<LOSBand, string> = {
-  nominal: "#37d67a",
-  building: "#ffb02e",
-  critical: "#ff4d4d",
+  nominal: "#46da89",
+  building: "#f3b539",
+  critical: "#ff6367",
 };
 
-const SILENT_COLOUR = "#7f8f9e";
-const UNKNOWN_COLOUR = "#4d5a66";
-const EDGE_COLOUR = "#1e262e";
-const TRACK_COLOUR = "#55636f";
+const SILENT_COLOUR = "#95a0ab";
+const UNKNOWN_COLOUR = "#7a8189";
+const EDGE_COLOUR = "#232a31";
+const TRACK_COLOUR = "#606a74";
 
 /**
  * Zone-kind palette. Categorical hues validated against the map's dark
@@ -54,9 +54,9 @@ const TRACK_COLOUR = "#55636f";
  * stays on the same muted ink already used for "no data", rather than
  * spending a fourth identity hue on the background.
  */
-const GATE_COLOUR = "#3987e5";
-const PARK_COLOUR = "#199e70";
-const STAND_COLOUR = "#c98500";
+const GATE_COLOUR = "#53a3f2";
+const PARK_COLOUR = "#3eaf86";
+const STAND_COLOUR = "#d4ab4f";
 const KIND_COLOUR: Record<ZoneKind, string> = {
   gate: GATE_COLOUR,
   parking: PARK_COLOUR,
@@ -84,7 +84,11 @@ const KIND_LABEL: Record<ZoneKind, string> = {
  * the literal name "Car park"; showing that tier before the view is zoomed
  * in just stacks duplicate text, so it waits for room to breathe.
  */
-const STAND_LABEL_MIN_RATIO = 0;
+const CAR_COLOUR = "#e8ebef";
+const CAR_LEADER_COLOUR = "#f3b539";
+const CAR_EDGE_COLOUR = "#1b1f24";
+const CAR_CARD_COLOUR = "rgba(16, 20, 26, 0.92)";
+const CAR_TEXT_COLOUR = "#f4fbff";
 const PARK_LABEL_FADE_START = 1.8;
 const PARK_LABEL_FADE_END = 3;
 const ZOOM_ANIMATION_MS = 260;
@@ -108,6 +112,8 @@ export class MapPanel {
   private readonly legend: HTMLElement;
 
   private geometry: VenueGeometry | null = null;
+  private race: RaceStateWire | null = null;
+  private trackLengths: number[] = [];
   private standards: StandardsReport | null = null;
   private rows: ZoneRow[] = [];
   private byId = new Map<string, ZoneRow>();
@@ -773,7 +779,7 @@ export class MapPanel {
       }
       ctx.restore();
     };
-    if (!this.showSectors && zoomRatio >= STAND_LABEL_MIN_RATIO) placeLabels("viewing", STAND_COLOUR);
+    if (!this.showSectors) placeLabels("viewing", STAND_COLOUR);
     const parkingOpacity = revealProgress(zoomRatio, PARK_LABEL_FADE_START, PARK_LABEL_FADE_END);
     if (parkingOpacity > 0) placeLabels("parking", PARK_COLOUR, parkingOpacity);
 
@@ -921,18 +927,18 @@ export class MapPanel {
       for (const [x, y] of corners.slice(1)) ctx.lineTo(x, y);
       ctx.closePath();
       const alpha = Math.min(0.48, 0.08 + Math.log2(cell.count + 1) * 0.07);
-      ctx.fillStyle = `rgba(88, 182, 255, ${alpha})`;
+      ctx.fillStyle = `rgba(47, 212, 236, ${alpha})`;
       ctx.fill();
       if (size * this.view.scale >= 34) {
         const [x, y] = this.toScreen((cell.min_x + cell.max_x) / 2, (cell.min_y + cell.max_y) / 2);
-        ctx.fillStyle = this.theme === "light" ? "#132638" : "#d8e2ec";
+        ctx.fillStyle = this.theme === "light" ? "#132638" : "#e8ebef";
         ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(String(cell.count), x, y);
       }
     }
-    ctx.strokeStyle = "rgba(88, 182, 255, 0.22)";
+    ctx.strokeStyle = "rgba(47, 212, 236, 0.22)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = minX; x <= maxX; x += size) {
@@ -960,7 +966,7 @@ export class MapPanel {
       if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
       const radius = 9 + Math.sqrt(cohort.count / COHORT_CAPACITY) * 5;
       ctx.fillStyle = "rgba(20, 91, 145, 0.92)";
-      ctx.strokeStyle = "#79c7ff";
+      ctx.strokeStyle = "#75caf2";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -985,7 +991,7 @@ export class MapPanel {
       const [x, y] = this.toScreen(spot.x, spot.y);
       const radius = Math.min(90, Math.max(20, grid.grid_size_m * this.view.scale * 0.9));
       if (x < -radius || y < -radius || x > width + radius || y > height + radius) continue;
-      const colour = colours[spot.band] ?? "#2b83f6";
+      const colour = colours[spot.band] ?? "#3186e9";
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
       gradient.addColorStop(0, `${colour}d9`);
       gradient.addColorStop(0.42, `${colour}80`);
@@ -1020,8 +1026,8 @@ export class MapPanel {
   private drawSectors(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     const placed: Array<[number, number, number, number]> = [];
     const lightSchematic = this.theme === "light" && this.basemap === "schematic";
-    const sectorStroke = lightSchematic ? "rgba(42, 118, 176, 0.58)" : "rgba(121, 199, 255, 0.58)";
-    const selectedStroke = lightSchematic ? "rgba(26, 98, 158, 0.95)" : "rgba(121, 199, 255, 0.95)";
+    const sectorStroke = lightSchematic ? "rgba(42, 118, 176, 0.58)" : "rgba(117, 202, 242, 0.58)";
+    const selectedStroke = lightSchematic ? "rgba(26, 98, 158, 0.95)" : "rgba(117, 202, 242, 0.95)";
     ctx.save();
     ctx.lineJoin = "round";
     for (const sector of this.sectors) {
@@ -1035,7 +1041,7 @@ export class MapPanel {
       ctx.closePath();
       const isSelected = sector.id === this.selected;
       if (isSelected) {
-        ctx.fillStyle = "rgba(88, 182, 255, 0.10)";
+        ctx.fillStyle = "rgba(47, 212, 236, 0.10)";
         ctx.fill();
       }
       ctx.strokeStyle = isSelected ? selectedStroke : sectorStroke;
@@ -1061,13 +1067,13 @@ export class MapPanel {
       ctx.fillStyle = lightSchematic
         ? sector.id === this.selected ? "rgba(218, 237, 252, 0.96)" : "rgba(255, 255, 255, 0.90)"
         : sector.id === this.selected ? "rgba(18, 42, 65, 0.96)" : "rgba(7, 12, 18, 0.88)";
-      ctx.strokeStyle = sector.id === this.selected ? "#79c7ff" : "rgba(121, 199, 255, 0.48)";
+      ctx.strokeStyle = sector.id === this.selected ? "#75caf2" : "rgba(117, 202, 242, 0.48)";
       ctx.lineWidth = 1;
       ctx.fillRect(...box);
       ctx.strokeRect(...box);
-      ctx.fillStyle = lightSchematic ? "#132638" : "#d8e2ec";
+      ctx.fillStyle = lightSchematic ? "#132638" : "#e8ebef";
       ctx.fillText(name, x, y - 6);
-      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === "light" ? "#52667a" : "#8a99a9";
+      ctx.fillStyle = row?.band ? BAND_COLOUR[row.band] : this.theme === "light" ? "#52667a" : "#a2a8af";
       ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.fillText(detail, x, y + 7);
       ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -1094,7 +1100,7 @@ export class MapPanel {
     ctx.closePath();
     const lightSchematic = this.theme === "light" && this.basemap === "schematic";
     ctx.setLineDash([]);
-    ctx.strokeStyle = lightSchematic ? "rgba(42, 118, 176, 0.18)" : "rgba(121, 199, 255, 0.22)";
+    ctx.strokeStyle = lightSchematic ? "rgba(42, 118, 176, 0.18)" : "rgba(117, 202, 242, 0.22)";
     ctx.lineWidth = 7;
     ctx.stroke();
     ctx.strokeStyle = lightSchematic ? "rgba(26, 98, 158, 0.88)" : "rgba(168, 220, 255, 0.88)";
@@ -1161,7 +1167,66 @@ export class MapPanel {
       ctx.stroke();
     }
 
+    this.drawCars(ctx);
     ctx.restore();
+  }
+
+  setRace(race: RaceStateWire | null): void {
+    this.race = race;
+    this.draw();
+  }
+
+  private trackPointAt(fraction: number): Position | null {
+    const track = this.geometry?.track ?? [];
+    if (track.length < 2) return null;
+    if (this.trackLengths.length !== track.length) {
+      this.trackLengths = [0];
+      for (let index = 1; index < track.length; index++) {
+        const previous = track[index - 1]!;
+        const current = track[index]!;
+        this.trackLengths.push(this.trackLengths[index - 1]! + Math.hypot(current.x - previous.x, current.y - previous.y));
+      }
+    }
+    const total = this.trackLengths[this.trackLengths.length - 1]!;
+    if (total <= 0) return null;
+    const target = ((fraction % 1) + 1) % 1 * total;
+    let index = 1;
+    while (index < this.trackLengths.length - 1 && this.trackLengths[index]! < target) index++;
+    const before = track[index - 1]!;
+    const after = track[index]!;
+    const spanStart = this.trackLengths[index - 1]!;
+    const span = Math.max(this.trackLengths[index]! - spanStart, 0.001);
+    const share = Math.max(0, Math.min(1, (target - spanStart) / span));
+    return { x: before.x + (after.x - before.x) * share, y: before.y + (after.y - before.y) * share };
+  }
+
+  private drawCars(ctx: CanvasRenderingContext2D): void {
+    const race = this.race;
+    if (!race || !race.running || !race.cars.length) return;
+    const labelled = new Set(race.cars.slice(0, 3).map((car) => car.number));
+    for (const car of race.cars) {
+      const point = this.trackPointAt(car.lap_progress);
+      if (!point) continue;
+      const [x, y] = this.toScreen(point.x, point.y);
+      const leading = car.position === 1;
+      ctx.beginPath();
+      ctx.fillStyle = leading ? CAR_LEADER_COLOUR : CAR_COLOUR;
+      ctx.arc(x, y, leading ? 5 : 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = CAR_EDGE_COLOUR;
+      ctx.stroke();
+      if (!labelled.has(car.number)) continue;
+      const text = `P${car.position} ${car.label}`;
+      ctx.font = "600 10px ui-sans-serif, system-ui, sans-serif";
+      const width = ctx.measureText(text).width + 10;
+      ctx.fillStyle = CAR_CARD_COLOUR;
+      ctx.fillRect(x + 8, y - 8, width, 15);
+      ctx.strokeStyle = leading ? CAR_LEADER_COLOUR : CAR_EDGE_COLOUR;
+      ctx.strokeRect(x + 8, y - 8, width, 15);
+      ctx.fillStyle = CAR_TEXT_COLOUR;
+      ctx.fillText(text, x + 13, y + 3);
+    }
   }
 
   private drawCachedLayer(
@@ -1376,7 +1441,9 @@ export class MapPanel {
 
   private paintLiveLegend(): void {
     const grid = this.grid;
-    const people = this.live?.reporting_devices ?? 0;
+    const people = this.live?.reporting_devices
+      ? integer(this.live.reporting_devices)
+      : grid ? integer(grid.matched_count) : NO_VALUE;
     const cohorts = buildPeopleCohorts(grid).length;
     if (this.showGrid) {
       this.legend.append(
@@ -1385,7 +1452,7 @@ export class MapPanel {
         { class: "legend__item legend__item--grid" },
         el("span", { class: "legend__glyph", text: "▦" }),
         el("span", { class: "legend__word", text: grid ? `${grid.grid_size_m} M GRID` : "GRID" }),
-        el("span", { class: "legend__count", text: grid ? integer(grid.matched_count) : "0" }),
+        el("span", { class: "legend__count", text: grid ? integer(grid.matched_count) : NO_VALUE }),
         el("span", { class: "legend__note", text: "people in viewport" }),
       ));
     }
@@ -1423,8 +1490,8 @@ export class MapPanel {
         { class: "legend__item legend__item--people" },
         el("span", { class: "legend__glyph", text: "Σ" }),
         el("span", { class: "legend__word", text: "LIVE PEOPLE" }),
-        el("span", { class: "legend__count", text: integer(people) }),
-        el("span", { class: "legend__note", text: "exact reporting total" }),
+        el("span", { class: "legend__count", text: people }),
+        el("span", { class: "legend__note", text: this.live?.reporting_devices ? "exact reporting total" : grid?.source === "simulation" ? "no handsets — crowd is simulated" : "no handset has reported" }),
       ),
     );
   }

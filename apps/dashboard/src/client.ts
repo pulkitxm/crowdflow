@@ -8,7 +8,7 @@
  * in the header, and the age of the last frame counts up in front of the
  * operator whether or not anything is arriving.
  */
-import type { AgentAskResponse, AgentCommandStatus, AgentStatus, PeopleQueryResult, Position, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
+import type { AgentAdvisory, AgentAskResponse, AgentCommandStatus, AgentStatus, RaceDayStatus, SpectatorNotice, PeopleQueryResult, Position, SessionInfo, SocketFrame, VenueGeometry } from "@crowdflow/api/wire";
 
 export type LinkState = "connecting" | "live" | "waiting" | "down";
 
@@ -31,11 +31,11 @@ export function fetchGeometry(circuitId: string): Promise<VenueGeometry> {
   return json<VenueGeometry>(`/api/circuits/${circuitId}/geometry`);
 }
 
-export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom: number, count = 1): Promise<PeopleQueryResult> {
+export function fetchPeopleGrid(circuitId: string, coordinates: Position[], zoom: number, windowS: number, count = 1): Promise<PeopleQueryResult> {
   return json<PeopleQueryResult>(`/api/circuits/${circuitId}/people/query`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ coordinates, zoom, count, since: Date.now() / 1000 - 30 }),
+    body: JSON.stringify({ coordinates, zoom, count, since: Date.now() / 1000 - windowS }),
   });
 }
 
@@ -144,4 +144,16 @@ export class ConsoleLink {
     if (this.lastTickAt === 0) return null;
     return (performance.now() - this.lastTickAt) / 1000;
   }
+}
+
+export function fetchAdvisories(): Promise<{ advisories: AgentAdvisory[]; notices: SpectatorNotice[] }> {
+  return json<{ advisories: AgentAdvisory[]; notices: SpectatorNotice[] }>("/api/agent/advisories");
+}
+
+export function approveAdvisory(id: string): Promise<{ notice: SpectatorNotice; advisories: AgentAdvisory[] }> {
+  return json(`/api/agent/advisories/${encodeURIComponent(id)}/approve`, { method: "POST" });
+}
+
+export function fetchRaceDay(): Promise<RaceDayStatus> {
+  return json<RaceDayStatus>("/api/raceday");
 }

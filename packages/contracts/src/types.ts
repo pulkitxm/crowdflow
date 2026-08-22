@@ -108,6 +108,7 @@ export interface SafetyVerdict {
    */
   reason: string;
   violated_constraints?: string[];
+  unchecked_constraints?: string[];
   emergency_mode?: boolean;
   /**
    * Only the exact command reviewed as APPROVED may leave the gate.

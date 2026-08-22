@@ -63,12 +63,22 @@ export class SafetyEngine {
       violations.push('excessive_diversion');
       reasons.push(`diverting ${(command.target_fraction * 100).toFixed(0)}% risks creating another bottleneck`);
     }
+    const unchecked: string[] = [];
+    if (!forbidden.size) unchecked.push('never_route_through', 'route_traverses_forbidden_zone', 'no_permissible_route');
+    if (!exits.size) unchecked.push('emergency_exit_blocked', 'egress_unreachable');
+
     const approved = violations.length === 0;
+    const cleared = approved
+      ? unchecked.length
+        ? `no checkable constraint engaged; ${unchecked.length} could not be tested because the pack declares no ${[!forbidden.size ? 'forbidden zones' : null, !exits.size ? 'emergency exits' : null].filter(Boolean).join(' or ')}`
+        : 'no hard constraint engaged; emergency egress unaffected'
+      : reasons.join('; ');
     return {
       command_id: command.command_id,
       outcome: approved ? 'approved' : 'rejected',
-      reason: approved ? 'no hard constraint engaged; emergency egress unaffected' : reasons.join('; '),
+      reason: cleared,
       violated_constraints: violations,
+      unchecked_constraints: unchecked,
       emergency_mode: this.emergencyMode,
       dispatchable: approved,
     };

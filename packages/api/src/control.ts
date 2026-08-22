@@ -8,6 +8,7 @@ import type { AgentCommandStatus, GuidanceRecord } from './wire.js';
 
 export const COHORT_RADIUS_M = 75;
 export const MOVED_PROGRESS_M = 15;
+export const FRACTION_BUCKETS = 100;
 
 interface TargetedPerson {
   person_id: number;
@@ -53,9 +54,8 @@ export class CrowdControl {
     const cohort = new Map<number, TargetedPerson>();
     const origin = circuit.pack.zones?.[command.source_zone]?.position;
     if (origin) {
-      for (const person of this.people.list(circuit.pack.id, 1000)) {
-        const distance = Math.hypot(person.position.x - origin.x, person.position.y - origin.y);
-        if (distance <= radiusM && person.person_id % 100 < command.target_fraction * 100) {
+      for (const person of this.people.near(circuit.pack.id, origin, radiusM)) {
+        if (person.person_id % FRACTION_BUCKETS < command.target_fraction * FRACTION_BUCKETS) {
           cohort.set(person.person_id, { person_id: person.person_id, start: person.position, pinged_at: null });
         }
       }
@@ -96,7 +96,9 @@ export class CrowdControl {
   }
 
   private describe(entry: ActiveDispatch, now: number): AgentCommandStatus {
-    const positions = new Map(this.people.list(entry.circuit.pack.id, 1000).map((person) => [person.person_id, person.position]));
+    const positions = new Map(
+      this.people.locationsFor(entry.circuit.pack.id, [...entry.cohort.keys()]).map((person) => [person.person_id, person.position]),
+    );
     const destination = entry.circuit.pack.zones?.[entry.command.destination_zone]?.position;
     const origin = entry.circuit.pack.zones?.[entry.command.source_zone]?.position;
     let moved = 0;

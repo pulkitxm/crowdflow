@@ -20,6 +20,10 @@ export class AgentService {
   private pending = new Map<string, PendingProposal>();
   constructor(readonly resolveClient: (provider: ModelProvider) => ModelClient = resolveModelClient) {}
 
+  insightsFor(pack: CircuitPack): InsightEngine {
+    return this.insights(pack);
+  }
+
   proposal(commandId: string): PendingProposal | null {
     return this.pending.get(commandId) ?? null;
   }
@@ -44,10 +48,11 @@ export class AgentService {
     const source = pickSource(session, live);
     if (!source) throw new Error('no crowd state yet — start a session (POST /api/session) or arm live ingest (POST /api/live)');
     const circuit = source === 'live' ? live!.circuit : session!.circuit;
-    const state = source === 'live' ? live!.snapshot(now, false).state : session!.lastEnvelope!.state;
+    const picture = source === 'live' ? live!.snapshot(now, false) : session!.lastEnvelope!;
+    const state = picture.state;
 
     const context: OpsContext = { pack: circuit.pack, graph: circuit.graph, safety: new SafetyEngine(circuit.pack), state, now, insights: this.insights(circuit.pack) };
-    if (session?.lastEnvelope?.forecasts) context.forecasts = session.lastEnvelope.forecasts;
+    if (picture.forecasts?.length) context.forecasts = picture.forecasts;
     if (session) { context.simulation = session.sim; context.intervention = new InterventionEngine(); }
 
     const client = this.resolveClient(provider);

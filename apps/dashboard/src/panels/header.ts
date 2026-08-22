@@ -24,7 +24,6 @@ const STATUS_WORD: Record<string, string> = {
   idle: "IDLE",
   running: "RUNNING",
   paused: "PAUSED",
-  computing: "COMPUTING",
   finished: "FINISHED",
 };
 
@@ -70,7 +69,10 @@ export class HeaderPanel {
     const since = this.frameAge();
     clear(this.host);
 
-    this.host.append(
+    const primary = el("div", { class: "cmd__primary" });
+    const params = el("div", { class: "cmd__params" });
+
+    primary.append(
       el(
         "div",
         { class: "brand" },
@@ -78,19 +80,6 @@ export class HeaderPanel {
         el("span", { class: "brand__sub", text: "OPERATOR CONSOLE" }),
       ),
     );
-
-    if (!s) {
-      this.host.append(
-        el(
-          "div",
-          { class: "hstat hstat--link hstat--down" },
-          el("span", { class: "hstat__label", text: "SESSION" }),
-          el("span", { class: "hstat__value", text: "NONE" }),
-        ),
-      );
-      this.appendLink(since);
-      return;
-    }
 
     const stat = (label: string, value: string, title: string, tone = "") =>
       el(
@@ -100,15 +89,25 @@ export class HeaderPanel {
         el("span", { class: "hstat__value", text: value }),
       );
 
-    this.host.append(
-      stat("CIRCUIT", s.circuit_id.toUpperCase(), "circuit pack loaded"),
-      stat("SCENARIO", s.scenario.toUpperCase(), s.description),
+    const param = (label: string, value: string, title: string, tone = "") =>
+      el(
+        "div",
+        { class: `param ${tone}`, title },
+        el("span", { class: "param__label", text: label }),
+        el("span", { class: "param__value", text: value }),
+      );
+
+    if (!s) {
+      primary.append(stat("SESSION", "NONE", "no session started", "hstat--down"), this.linkNode(since));
+      this.host.append(primary);
+      return;
+    }
+
+    primary.append(
       stat(
         "STATUS",
         STATUS_WORD[s.status] ?? s.status.toUpperCase(),
-        s.status === "computing"
-          ? `the loop is inside a tick — ${Math.round(s.computing_ms ?? 0)}ms so far`
-          : "run state",
+        "run state",
         `hstat--${s.status}`,
       ),
       stat(
@@ -116,30 +115,34 @@ export class HeaderPanel {
         `${clock(s.time_s)} / ${clock(s.duration_s)}`,
         "simulation clock and scenario duration",
       ),
-      stat("TICK", `#${integer(s.tick)}`, "ticks completed"),
-      stat("SEED", String(s.seed), "same seed, same run — every time"),
-      stat("SPECTATORS", integer(s.population), "simulated population"),
-      stat(
+      this.linkNode(since),
+    );
+
+    params.append(
+      param("CIRCUIT", s.circuit_id.toUpperCase(), "circuit pack loaded"),
+      param("SCENARIO", s.scenario.toUpperCase(), s.description),
+      param("TICK", `#${integer(s.tick)}`, "ticks completed"),
+      param("SEED", String(s.seed), "same seed, same run — every time"),
+      param("SPECTATORS", integer(s.population), "simulated population"),
+      param(
         "PARTICIPATION",
         percent(s.participation),
         "simulation input, not measured attendance; every population estimate is scaled by it",
-        "hstat--assumed",
+        "param--assumed",
       ),
-      stat(
+      param(
         "COMPLIANCE",
         percent(s.compliance),
         "share who act on a reroute — ASSUMED in core, not measured",
-        "hstat--assumed",
+        "param--assumed",
       ),
-      stat(
+      param(
         "INTERVENTION",
         s.intervene ? "ON" : "OFF",
         "whether the loop is allowed to propose reroutes",
-        s.intervene ? "" : "hstat--off",
+        s.intervene ? "" : "param--off",
       ),
     );
-
-    this.appendLink(since);
 
     const controls = el("div", { class: "controls" });
     const button = (label: string, action: string, active = false) => {
@@ -152,7 +155,7 @@ export class HeaderPanel {
       return b;
     };
     controls.append(
-      button("PLAY", "play", s.status === "running" || s.status === "computing"),
+      button("PLAY", "play", s.status === "running"),
       button("PAUSE", "pause", s.status === "paused"),
       button("STEP", "step"),
     );
@@ -166,25 +169,24 @@ export class HeaderPanel {
       b.addEventListener("click", () => this.onControl("speed", speed));
       controls.append(b);
     }
-    this.host.append(controls);
+    primary.append(controls);
+    this.host.append(primary, params);
   }
 
-  private appendLink(since: number | null): void {
+  private linkNode(since: number | null): HTMLElement {
     const stale = since !== null && this.session !== null && since > this.staleAfter();
     const tone = this.link === "live" && !stale ? "ok" : this.link === "down" ? "down" : "warn";
-    this.host.append(
-      el(
-        "div",
-        {
-          class: `hstat hstat--link hstat--${tone}`,
-          title: `${this.linkDetail} · counted by this console's own clock, so it keeps moving if the server stops`,
-        },
-        el("span", { class: "hstat__label", text: "FEED" }),
-        el("span", {
-          class: "hstat__value",
-          text: `${LINK_WORD[this.link]} · ${age(since)}`,
-        }),
-      ),
+    return el(
+      "div",
+      {
+        class: `hstat hstat--link hstat--${tone}`,
+        title: `${this.linkDetail} · counted by this console's own clock, so it keeps moving if the server stops`,
+      },
+      el("span", { class: "hstat__label", text: "FEED" }),
+      el("span", {
+        class: "hstat__value",
+        text: `${LINK_WORD[this.link]} · ${age(since)}`,
+      }),
     );
   }
 

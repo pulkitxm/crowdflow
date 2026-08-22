@@ -37,6 +37,7 @@ export class PeopleStore {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.database = new Database(path, { create: true, strict: true });
     this.database.exec('PRAGMA journal_mode = WAL');
+    this.database.exec('PRAGMA synchronous = NORMAL');
     this.database.exec('PRAGMA foreign_keys = ON');
     this.database.exec(`
       CREATE TABLE IF NOT EXISTS people (
@@ -73,6 +74,10 @@ export class PeopleStore {
       now,
     );
     return this.get(personId)!;
+  }
+
+  transaction<T>(work: () => T): T {
+    return this.database.transaction(work)();
   }
 
   exists(personId: number, circuitId: string): boolean {
@@ -145,6 +150,39 @@ export class PeopleStore {
     ).all(circuitId, limit).map(toLocation);
   }
 
+  near(circuitId: string, centre: Position, radiusM: number): PersonLocation[] {
+    if (!(radiusM > 0) || !Number.isFinite(radiusM)) throw new Error('radius_m must be a positive number');
+    const rows = this.database.query<LocationRow, [string, number, number, number, number]>(
+      `SELECT p.person_id, p.circuit_id, p.joined_at, p.last_seen_at, p.status,
+              l.x, l.y, l.speed_ms, l.accuracy_m, l.source, l.gate_id
+       FROM people p JOIN locations l ON l.person_id = p.person_id
+       WHERE p.circuit_id = ? AND p.status = 'active'
+         AND l.x BETWEEN ? AND ? AND l.y BETWEEN ? AND ?`,
+    ).all(circuitId, centre.x - radiusM, centre.x + radiusM, centre.y - radiusM, centre.y + radiusM);
+    const withinSquared = radiusM * radiusM;
+    return rows.map(toLocation).filter((person) => {
+      const dx = person.position.x - centre.x;
+      const dy = person.position.y - centre.y;
+      return dx * dx + dy * dy <= withinSquared;
+    });
+  }
+
+  locationsFor(circuitId: string, personIds: number[]): PersonLocation[] {
+    const found: PersonLocation[] = [];
+    for (let offset = 0; offset < personIds.length; offset += 500) {
+      const chunk = personIds.slice(offset, offset + 500);
+      const holes = chunk.map(() => '?').join(',');
+      const rows = this.database.query<LocationRow, unknown[]>(
+        `SELECT p.person_id, p.circuit_id, p.joined_at, p.last_seen_at, p.status,
+                l.x, l.y, l.speed_ms, l.accuracy_m, l.source, l.gate_id
+         FROM people p JOIN locations l ON l.person_id = p.person_id
+         WHERE p.circuit_id = ? AND p.status = 'active' AND p.person_id IN (${holes})`,
+      ).all(circuitId, ...chunk);
+      found.push(...rows.map(toLocation));
+    }
+    return found;
+  }
+
   query(circuitId: string, request: PeopleQuery): PeopleQueryResult {
     validateCoordinates(request.coordinates);
     if (request.since != null && !Number.isFinite(request.since)) throw new Error('since must be a finite Unix timestamp');
@@ -185,6 +223,7 @@ export class PeopleStore {
       coordinates: request.coordinates.map((position) => ({ ...position })),
       zoom: request.zoom,
       grid_size_m: size,
+      source: 'handsets' as const,
       matched_count: matches.length,
       returned_count: people.length,
       people,

@@ -31,6 +31,12 @@
           "description": "stated even on approval; rejections are explained",
           "type": "string"
         },
+        "unchecked_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "violated_constraints": {
           "items": {
             "type": "string"

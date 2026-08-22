@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CircuitPack } from '@crowdflow/contracts';
 import { VenueGraph } from '@crowdflow/core';
-import { applyGuidance, reportFor, type SimulatedWalker } from '../src/simulator.js';
+import { applyGuidance, reportFor, restamp, type SimulatedWalker } from '../src/simulator.js';
 
 const sourced = (value: number) => ({ value, provenance: 'measured' as const, samples: 64 });
 function toyPack(): CircuitPack {
@@ -83,5 +83,15 @@ describe('live crowd simulator movement', () => {
     const subject = walker({ personId: 42, zoneIds: ['a', 'b'] });
     expect(applyGuidance([{ person_id: 1, command_id: 'cmd-1', to_zone: 'c', avoid: [], prefer: [] }], [subject], pack, graph)).toBe(0);
     expect(subject.commandId).toBeNull();
+  });
+  it('restamps a chunk so late-delivered reports arrive fresh', () => {
+    const subject = walker();
+    const report = reportFor(subject, 'toy', 1000, 1, 1);
+    report.nodes[0]!.timestamp = 1000;
+    restamp([report], 4_000_000);
+    const epoch = Math.floor(4_000_000 / 900);
+    expect(report.epoch).toBe(epoch);
+    expect(report.nodes[0]!.epoch).toBe(epoch);
+    expect(report.nodes[0]!.timestamp).toBe(4_000_000);
   });
 });
