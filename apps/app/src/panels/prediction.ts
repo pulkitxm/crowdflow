@@ -44,12 +44,12 @@ export class PredictionPanel {
     clear(this.meta).append(
       el("span", {
         class: "tool tool--static",
-        text: headline ? `MODEL ${headline.model_id}` : "MODEL —",
+        text: headline ? headline.model_id : "No model",
         title: "which model produced this; a baseline rule is a valid answer and says so",
       }),
       el("span", {
         class: "tool tool--static",
-        text: `HORIZON ${forecasts[0] ? Math.round(forecasts[0].horizon_s) : "—"}s`,
+        text: `Horizon ${forecasts[0] ? Math.round(forecasts[0].horizon_s) : "—"}s`,
       }),
     );
     if (source) {
@@ -69,7 +69,7 @@ export class PredictionPanel {
         el(
           "div",
           { class: "headline headline--calm" },
-          el("div", { class: "headline__time", text: "NO CROSSING" }),
+          el("div", { class: "headline__time", text: "No crossing" }),
           el("div", {
             class: "headline__zone",
             text:
@@ -92,7 +92,7 @@ export class PredictionPanel {
       el(
         "div",
         { class: `headline headline--${actionableNow ? "act" : "watch"}` },
-        el("div", { class: "headline__label", text: "TIME TO EVENT" }),
+        el("div", { class: "headline__label", text: "Time to event" }),
         el("div", { class: "headline__time", text: countdown(headline.time_to_threshold_s) }),
         el(
           "div",
@@ -110,7 +110,7 @@ export class PredictionPanel {
           el(
             "span",
             { class: "claimbit" },
-            el("span", { class: "claimbit__label", text: "PROBABILITY" }),
+            el("span", { class: "claimbit__label", text: "Probability" }),
             el("span", { class: "claimbit__value", text: percent(headline.probability) }),
           ),
           el(
@@ -118,13 +118,13 @@ export class PredictionPanel {
             // Weak is "the contract did not call this actionable", never a
             // number compared here.
             { class: `claimbit ${actionableNow ? "" : "claimbit--weak"}` },
-            el("span", { class: "claimbit__label", text: "CONFIDENCE" }),
+            el("span", { class: "claimbit__label", text: "Confidence" }),
             el("span", { class: "claimbit__value", text: percent(headline.confidence) }),
           ),
           el(
             "span",
             { class: "claimbit" },
-            el("span", { class: "claimbit__label", text: "NOW" }),
+            el("span", { class: "claimbit__label", text: "Now" }),
             el("span", {
               class: "claimbit__value",
               text: row ? `${row.word} ${row.value}` : NO_VALUE,
@@ -133,7 +133,7 @@ export class PredictionPanel {
           el(
             "span",
             { class: "claimbit" },
-            el("span", { class: "claimbit__label", text: "PROJECTED PEAK" }),
+            el("span", { class: "claimbit__label", text: "Projected peak" }),
             // The contract now names and documents this as density. The producer
             // extrapolates density because flow collapses past capacity and can
             // never safely classify a projected crowd state.
@@ -166,12 +166,12 @@ export class PredictionPanel {
         el(
           "tr",
           {},
-          el("th", { text: "ZONE" }),
+          el("th", { text: "Zone" }),
           el("th", { class: "num", text: "T-" }),
-          el("th", { text: "TO" }),
+          el("th", { text: "To" }),
           el("th", { class: "num", text: "P" }),
-          el("th", { class: "num", text: "CONF" }),
-          el("th", { text: "NOW" }),
+          el("th", { class: "num", text: "Conf" }),
+          el("th", { text: "Now" }),
         ),
       ),
     );

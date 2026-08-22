@@ -21,20 +21,21 @@ import { clear, el } from "../dom";
 import { age, clock, integer, percent } from "../format";
 
 const STATUS_WORD: Record<string, string> = {
-  idle: "IDLE",
-  running: "RUNNING",
-  paused: "PAUSED",
-  starting: "STARTING",
-  stopping: "STOPPING",
-  completed: "COMPLETED",
-  failed: "FAILED",
+  idle: "Idle",
+  running: "Running",
+  paused: "Paused",
+  finished: "Finished",
+  starting: "Starting",
+  stopping: "Stopping",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 const LINK_WORD: Record<LinkState, string> = {
-  connecting: "CONNECTING",
-  live: "LIVE",
-  waiting: "WAITING",
-  down: "NO LINK",
+  connecting: "Connecting",
+  live: "Live",
+  waiting: "Waiting",
+  down: "No link",
 };
 
 /** Wall-clock multipliers offered. 1x is real time; the rest exist because a
@@ -79,8 +80,8 @@ export class HeaderPanel {
       el(
         "div",
         { class: "brand" },
-        el("span", { class: "brand__mark", text: "CROWDFLOW" }),
-        el("span", { class: "brand__sub", text: "OPERATOR CONSOLE" }),
+        el("span", { class: "brand__mark", text: "Crowdflow" }),
+        el("span", { class: "brand__sub", text: "Operations" }),
       ),
     );
 
@@ -101,20 +102,20 @@ export class HeaderPanel {
       );
 
     if (!s) {
-      primary.append(stat("SESSION", "NONE", "no session started", "hstat--down"), this.linkNode(since));
+      primary.append(stat("Session", "None", "no session started", "hstat--down"), this.linkNode(since));
       this.host.append(primary);
       return;
     }
 
     primary.append(
       stat(
-        "STATUS",
-        STATUS_WORD[s.status] ?? s.status.toUpperCase(),
+        "Status",
+        STATUS_WORD[s.status] ?? s.status,
         "run state",
         `hstat--${s.status}`,
       ),
       stat(
-        "CLOCK",
+        "Clock",
         `${clock(s.time_s)} / ${clock(s.duration_s)}`,
         "simulation clock and scenario duration",
       ),
@@ -122,26 +123,26 @@ export class HeaderPanel {
     );
 
     params.append(
-      param("CIRCUIT", s.circuit_id.toUpperCase(), "circuit pack loaded"),
-      param("SCENARIO", s.scenario.toUpperCase(), s.description),
-      param("TICK", `#${integer(s.tick)}`, "ticks completed"),
-      param("SEED", String(s.seed), "same seed, same run — every time"),
-      param("SPECTATORS", integer(s.population), "simulated population"),
+      param("Circuit", s.circuit_id, "circuit pack loaded"),
+      param("Scenario", s.scenario, s.description),
+      param("Tick", `#${integer(s.tick)}`, "ticks completed"),
+      param("Seed", String(s.seed), "same seed, same run — every time"),
+      param("Spectators", integer(s.population), "simulated population"),
       param(
-        "PARTICIPATION",
+        "Participation",
         percent(s.participation),
         "simulation input, not measured attendance; every population estimate is scaled by it",
         "param--assumed",
       ),
       param(
-        "COMPLIANCE",
+        "Compliance",
         percent(s.compliance),
         "share who act on a reroute — ASSUMED in core, not measured",
         "param--assumed",
       ),
       param(
-        "INTERVENTION",
-        s.intervene ? "ON" : "OFF",
+        "Intervention",
+        s.intervene ? "On" : "Off",
         "whether the loop is allowed to propose reroutes",
         s.intervene ? "" : "param--off",
       ),
@@ -158,9 +159,9 @@ export class HeaderPanel {
       return b;
     };
     controls.append(
-      button("PLAY", "play", s.status === "running"),
-      button("PAUSE", "pause", s.status === "paused"),
-      button("STEP", "step"),
+      button("Play", "play", s.status === "running"),
+      button("Pause", "pause", s.status === "paused"),
+      button("Step", "step"),
     );
     for (const speed of SPEEDS) {
       const b = el("button", {
@@ -185,7 +186,7 @@ export class HeaderPanel {
         class: `hstat hstat--link hstat--${tone}`,
         title: `${this.linkDetail} · counted by this console's own clock, so it keeps moving if the server stops`,
       },
-      el("span", { class: "hstat__label", text: "FEED" }),
+      el("span", { class: "hstat__label", text: "Feed" }),
       el("span", {
         class: "hstat__value",
         text: `${LINK_WORD[this.link]} · ${age(since)}`,

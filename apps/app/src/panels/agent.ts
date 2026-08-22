@@ -31,7 +31,7 @@ export class AgentPanel {
       placeholder: "Ask about the venue — e.g. which gate is struggling and what would a reroute cost?",
       "aria-label": "Question for the ops agent",
     });
-    this.button = el("button", { class: "tool agent__ask", type: "submit", text: "ASK" });
+    this.button = el("button", { class: "tool agent__ask", type: "submit", text: "Ask" });
     const form = el("form", { class: "agent__form" }, this.input, this.button);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -55,7 +55,7 @@ export class AgentPanel {
         el("span", { class: "advice__headline", text: advisory.headline }),
         el("div", { class: "advice__message", text: `To spectators: “${advisory.crowd_message}”` }),
       );
-      const button = el("button", { class: "tool advice__approve", type: "button", text: "APPROVE FOR APP", title: "publish this wording to every spectator phone" });
+      const button = el("button", { class: "tool advice__approve", type: "button", text: "Approve for app", title: "publish this wording to every spectator phone" });
       button.addEventListener("click", () => {
         button.disabled = true;
         button.textContent = "PUBLISHING…";
@@ -90,7 +90,7 @@ export class AgentPanel {
         el(
           "div",
           { class: "agent-command" },
-          el("span", { class: "agent-command__word", text: "CONTROLLING " }),
+          el("span", { class: "agent-command__word", text: "Controlling " }),
           this.zoneNode(command.source_zone),
           el("span", { text: " → " }),
           this.zoneNode(command.destination_zone),
@@ -105,10 +105,10 @@ export class AgentPanel {
   setStatus(status: AgentStatus | null): void {
     clear(this.meta);
     if (!status) {
-      this.meta.append(el("span", { class: "tool tool--static", text: "AGENT UNREACHABLE" }));
+      this.meta.append(el("span", { class: "tool tool--static", text: "Agent unreachable" }));
       return;
     }
-    this.meta.append(el("span", { class: "tool tool--static", text: `PROVIDER ${status.provider.toUpperCase()}` }));
+    this.meta.append(el("span", { class: "tool tool--static", text: status.provider }));
     if (!status.configured) {
       this.meta.append(el("span", { class: "tool tool--static agent__warn", text: "NO KEY", title: status.detail ?? "model API key is not configured on the server" }));
     }
@@ -216,7 +216,7 @@ export class AgentPanel {
   }
 
   private approveButton(commandId: string, row: HTMLElement): HTMLElement {
-    const button = el("button", { class: "tool agent-proposal__approve", type: "button", text: "APPROVE & DISPATCH", title: "Dispatch this safety-approved reroute: steer the simulation and ping targeted phones with guidance" });
+    const button = el("button", { class: "tool agent-proposal__approve", type: "button", text: "Approve & dispatch", title: "Dispatch this safety-approved reroute: steer the simulation and ping targeted phones with guidance" });
     button.addEventListener("click", () => {
       button.disabled = true;
       button.textContent = "DISPATCHING…";
@@ -228,7 +228,7 @@ export class AgentPanel {
         },
         (error) => {
           button.disabled = false;
-          button.textContent = "APPROVE & DISPATCH";
+          button.textContent = "Approve & dispatch";
           row.append(el("span", { class: "agent-exchange__error", text: ` ${error instanceof Error ? error.message : String(error)}` }));
         },
       );

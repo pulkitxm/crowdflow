@@ -1529,10 +1529,10 @@ export class MapPanel {
       if (this.grid && this.crowd !== "none") {
         this.readout.append(
           el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: this.crowd === "heatmap" ? "HEAT MAP" : "COHORT" }), el("span", { class: "readout__value", text: this.crowd === "heatmap" ? "ped/m²" : `≤ ${COHORT_CAPACITY}` })),
-          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "IN VIEW" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "In view" }), el("span", { class: "readout__value", text: integer(this.grid.matched_count) })),
         );
         if (this.showGrid) this.readout.append(
-          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "GRID" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
+          el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "Grid" }), el("span", { class: "readout__value", text: `${this.grid.grid_size_m} m` })),
         );
       }
       return;
@@ -1545,9 +1545,9 @@ export class MapPanel {
     );
     if (sector) {
       this.readout.append(
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "LIVE CROWD" }), el("span", { class: "readout__value", text: integer(sector.people) })),
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "STATE" }), el("span", { class: "readout__value", text: sector.word })),
-        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "ZONES LIVE" }), el("span", { class: "readout__value", text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}` })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "Live crowd" }), el("span", { class: "readout__value", text: integer(sector.people) })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "State" }), el("span", { class: "readout__value", text: sector.word })),
+        el("div", { class: "readout__row" }, el("span", { class: "readout__label", text: "Zones live" }), el("span", { class: "readout__value", text: `${integer(sector.observedZoneCount)}/${integer(sector.zoneCount)}` })),
       );
       return;
     }
@@ -1601,7 +1601,7 @@ export class MapPanel {
         "div",
         { class: "legend__item legend__item--sectors" },
         el("span", { class: "legend__glyph", text: "◇" }),
-        el("span", { class: "legend__word", text: "SECTORS" }),
+        el("span", { class: "legend__word", text: "Sectors" }),
         el("span", { class: "legend__count", text: integer(this.sectors.length) }),
         el("span", { class: "legend__note", text: "live crowd areas" }),
       ),
@@ -1664,7 +1664,7 @@ export class MapPanel {
         el(
           "div",
           { class: "legend__item legend__item--heatmap" },
-          el("span", { class: "legend__word", text: "LIVE DENSITY" }),
+          el("span", { class: "legend__word", text: "Live density" }),
           el("span", { class: "legend__heat-gradient", text: "" }),
         ),
       );
@@ -1682,7 +1682,7 @@ export class MapPanel {
         "div",
         { class: "legend__item legend__item--people" },
         el("span", { class: "legend__glyph", text: "●" }),
-        el("span", { class: "legend__word", text: "COHORTS" }),
+        el("span", { class: "legend__word", text: "Cohorts" }),
         el("span", { class: "legend__count", text: integer(cohorts) }),
         el("span", { class: "legend__note", text: `up to ${COHORT_CAPACITY} people each` }),
       ),
@@ -1692,7 +1692,7 @@ export class MapPanel {
         "div",
         { class: "legend__item legend__item--people" },
         el("span", { class: "legend__glyph", text: "Σ" }),
-        el("span", { class: "legend__word", text: "LIVE PEOPLE" }),
+        el("span", { class: "legend__word", text: "Live people" }),
         el("span", { class: "legend__count", text: people }),
         el("span", { class: "legend__note", text: this.live?.reporting_devices ? "exact reporting total" : grid?.source === "simulation" ? "no handsets — crowd is simulated" : "no handset has reported" }),
       ),
