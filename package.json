@@ -19,7 +19,8 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "build": "turbo run build",
-    "check": "bun run comments:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "presentation:check": "bun scripts/check-presentation-routes.mjs",
+    "check": "bun run comments:check && bun run lint && bun run typecheck && bun run test && bun run build && bun run presentation:check",
     "crowdflow": "bun packages/cli/src/main.ts"
   },
   "devDependencies": {

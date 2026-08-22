@@ -30,7 +30,7 @@ packages/
   agent/           Safety-constrained operational insights
   cli/             Command-line workflows
 circuits/           Venue indexes, source data, and generated packs
-presentation/       Local Reveal.js pitch deck
+presentation/       Reveal.js online-round and final-round pitch decks
 scripts/            Repository quality tooling
 ```
 
@@ -151,8 +151,8 @@ make build
 ```
 
 The GitHub Actions quality workflow runs the same Turborepo graph used locally. Turborepo caches
-build outputs and schedules each package after its dependencies. The workflow has read-only
-permissions and contains no publishing or deployment job.
+build outputs and schedules each package after its dependencies. The Pages workflow validates and
+publishes the presentation routes after presentation changes land on `main`.
 
 ## Reproducible simulation
 

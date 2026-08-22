@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080b10" />
+    <meta
+      name="description"
+      content="VMAX predicts crowd bottlenecks and recommends safer routes before pressure becomes dangerous."
+    />
+    <meta property="og:title" content="VMAX Final Round: Crowd Flow Optimiser" />
+    <meta
+      property="og:description"
+      content="Simulate, predict, and reroute crowds in real time."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:title" content="VMAX Final Round: Crowd Flow Optimiser" />
+    <meta
+      name="twitter:description"
+      content="Simulate, predict, and reroute crowds in real time."
+    />
+    <title>VMAX | Final Round</title>
+    <link rel="icon" href="../assets/mark.svg?v=rounds-20260822" type="image/svg+xml" />
+    <link rel="stylesheet" href="../vendor/reveal/reveal.css" />
+    <link rel="stylesheet" href="../styles.css?v=rounds-20260822" />
+  </head>
+  <body>
+    <a class="skip-link" href="#deck">Skip to presentation</a>
+    <div class="reveal final-round-deck" id="deck">
+      <div class="slides">
+        <section class="round-hero" data-background-color="#080b10" data-timing="20">
+          <div class="eyebrow">Final Round / Problem Statement 3</div>
+          <div class="round-hero-grid">
+            <div>
+              <div class="brand-lockup" role="img" aria-label="VMAX">
+                <img src="../assets/mark.svg?v=rounds-20260822" alt="" />
+                <span>VMAX</span>
+              </div>
+              <h1>Crowd Flow<br /><em>Optimiser.</em></h1>
+              <p>See the surge. Test the response. Move people safely.</p>
+            </div>
+            <figure class="round-hero-map" aria-label="Venue graph with a predicted bottleneck and reroute">
+              <object
+                data="../assets/circuits/silverstone-venue.svg?v=rounds-20260822"
+                type="image/svg+xml"
+                aria-label="Sample venue walkway graph"
+              ></object>
+              <span class="round-pulse"><b>G3</b><small>RISK</small></span>
+              <div class="round-route-callout">
+                <small>RECOMMENDED NOW</small>
+                <strong>Shift 20% via Village East</strong>
+              </div>
+            </figure>
+          </div>
+          <aside class="notes" role="note">
+            VMAX helps venue teams detect a bottleneck before it becomes dangerous, test an
+            intervention, and guide people along a safer route.
+
+            [Sources]
+            - User-provided Problem Statement 3
+            - Repository venue graph: presentation/assets/circuits/silverstone-venue.svg
+            [/Sources]
+          </aside>
+        </section>
+
+        <section data-background-color="#0b0e14" data-timing="35">
+          <div class="eyebrow">01 / The safety gap</div>
+          <h2>Crowd risk builds faster than<br />manual response.</h2>
+          <div class="round-problem-flow">
+            <article>
+              <span>01</span>
+              <strong>People converge</strong>
+              <p>Gates, counters, platforms, and exits attract sudden surges.</p>
+            </article>
+            <i>→</i>
+            <article>
+              <span>02</span>
+              <strong>Pressure compounds</strong>
+              <p>A normal queue becomes a bottleneck before teams can react.</p>
+            </article>
+            <i>→</i>
+            <article class="risk">
+              <span>03</span>
+              <strong>Safe choices shrink</strong>
+              <p>Once congestion is visible, rerouting is harder and riskier.</p>
+            </article>
+          </div>
+          <div class="round-input-strip">
+            <b>INPUT</b>
+            <span>Venue layout</span>
+            <span>Expected crowd</span>
+            <span>Event schedule</span>
+          </div>
+          <aside class="notes" role="note">
+            The operational gap is prediction. Venue teams need to know where and when pressure
+            will form while safe alternatives are still available.
+
+            [Sources]
+            - User-provided Problem Statement 3
+            [/Sources]
+          </aside>
+        </section>
+
+        <section data-background-color="#080b10" data-timing="45">
+          <div class="eyebrow">02 / The closed loop</div>
+          <h2>Simulate first. Reroute before<br /><em>the bottleneck forms.</em></h2>
+          <div class="round-engine">
+            <div class="round-engine-flow" role="img" aria-label="Model, simulate, predict, reroute, and update loop">
+              <article><span>01</span><strong>Model</strong><small>venue graph</small></article>
+              <i>→</i>
+              <article><span>02</span><strong>Simulate</strong><small>crowd movement</small></article>
+              <i>→</i>
+              <article class="forecast"><span>03</span><strong>Predict</strong><small>where + when</small></article>
+              <i>→</i>
+              <article><span>04</span><strong>Reroute</strong><small>safest path</small></article>
+              <i>↺</i>
+            </div>
+            <div class="round-surfaces">
+              <article>
+                <small>BACKEND</small>
+                <strong>Simulation + bottleneck detection + route scoring</strong>
+              </article>
+              <article>
+                <small>FRONTEND</small>
+                <strong>Live venue map + highlighted risk + clear alternate route</strong>
+              </article>
+            </div>
+          </div>
+          <div class="round-decision glass">
+            <span>OUTPUT</span>
+            <strong>Gate 3 critical in 15 min</strong>
+            <b>Reroute 20% via Village East</b>
+          </div>
+          <aside class="notes" role="note">
+            The backend turns the venue into a graph, simulates scheduled demand, forecasts
+            pressure, compares route alternatives, and refreshes the recommendation as conditions
+            change. The frontend makes that decision obvious.
+
+            [Sources]
+            - User-provided Problem Statement 3
+            - Repository implementation: packages/core and apps/app
+            [/Sources]
+          </aside>
+        </section>
+
+        <section class="round-outcome" data-background-color="#f2f0e9" data-timing="40">
+          <div class="eyebrow dark">03 / Built to work end to end</div>
+          <div class="round-outcome-grid">
+            <figure aria-label="Operator map showing bottleneck and alternate route">
+              <div class="telemetry-head">
+                <span>LIVE VENUE MAP</span><span class="live-dot">UPDATED</span>
+              </div>
+              <object
+                data="../assets/circuits/silverstone-venue.svg?v=rounds-20260822"
+                type="image/svg+xml"
+                aria-label="Sample operator venue map"
+              ></object>
+              <span class="round-map-risk"><b>BOTTLENECK</b><small>Gate 3 / 15 min</small></span>
+              <span class="round-map-route"><b>SAFER ROUTE</b><small>Village East</small></span>
+              <figcaption>Risk is highlighted. The recommended route is actionable.</figcaption>
+            </figure>
+            <div class="round-outcome-copy">
+              <h2>One engine.<br /><em>Any complex venue.</em></h2>
+              <ul>
+                <li><b>Hugging Face Hub</b><span>Versioned tabular congestion model and labelled simulation dataset</span></li>
+                <li><b>Safety constrained</b><span>Blocked paths, capacities, and emergency exits remain hard rules</span></li>
+                <li><b>Deployment ready</b><span>Stadiums, stations, festivals, Kumbh Mela, airports, and IPL venues</span></li>
+              </ul>
+              <p>Predict early. Intervene minimally. Verify continuously.</p>
+            </div>
+          </div>
+          <aside class="notes" role="note">
+            VMAX satisfies the complete challenge: venue and schedule inputs, a simulation and
+            prediction backend, a live map frontend, and rerouting output that changes with the
+            crowd. Hugging Face provides the model and dataset layer while deterministic safety
+            rules remain in control.
+
+            [Sources]
+            - User-provided Problem Statement 3
+            - Repository implementation: packages/hf/src/predictor.ts and packages/hf/src/dataset.ts
+            - Repository safety and routing implementation: packages/core
+            [/Sources]
+          </aside>
+        </section>
+      </div>
+    </div>
+
+    <script src="../vendor/reveal/reveal.js"></script>
+    <script src="../vendor/reveal/notes.js"></script>
+    <script src="../deck.js?v=rounds-20260822"></script>
+  </body>
+</html>
