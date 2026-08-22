@@ -4,14 +4,15 @@ import { Image, Linking, Pressable, StyleSheet, View, type LayoutChangeEvent } f
 
 import { radius, space } from '../theme';
 import { Body } from '../ui/atoms';
+import { useMetrics } from '../ui/responsive';
 import { usePalette } from '../ui/theme';
-import { MAX_ZOOM, TILE, metresPerPixel, tileUrl, tilesFor } from './mercator';
+import { MAX_ZOOM, TILE, TILE_ATTRIBUTION, metresPerPixel, tileUrl, tilesFor } from './mercator';
 
 export function RealLocationMap({
   lat,
   lon,
   accuracyM,
-  height = 280,
+  height,
 }: {
   lat: number;
   lon: number;
@@ -19,12 +20,14 @@ export function RealLocationMap({
   height?: number;
 }) {
   const palette = usePalette();
+  const { height: screenHeight } = useMetrics();
   const [zoom, setZoom] = useState(17);
   const [width, setWidth] = useState(0);
+  const stageHeight = height ?? Math.max(200, Math.min(320, Math.round(screenHeight * 0.32)));
 
   const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
 
-  const tiles = tilesFor(lat, lon, zoom, width, height);
+  const tiles = tilesFor(lat, lon, zoom, width, stageHeight);
 
   const ringPx = accuracyM == null ? 0 : (accuracyM / metresPerPixel(lat, zoom)) * 2;
   const scaleBarM = Math.round(metresPerPixel(lat, zoom) * 80);
@@ -33,7 +36,7 @@ export function RealLocationMap({
     <View style={{ gap: space.sm }}>
       <View
         onLayout={onLayout}
-        style={[styles.stage, { height, borderColor: palette.line, backgroundColor: palette.surface }]}
+        style={[styles.stage, { height: stageHeight, borderColor: palette.line, backgroundColor: palette.surface }]}
       >
         {tiles.map((tile) => (
           <Image
@@ -50,7 +53,7 @@ export function RealLocationMap({
             style={{
               position: 'absolute',
               left: width / 2 - ringPx / 2,
-              top: height / 2 - ringPx / 2,
+              top: stageHeight / 2 - ringPx / 2,
               width: ringPx,
               height: ringPx,
               borderRadius: ringPx / 2,
@@ -61,7 +64,7 @@ export function RealLocationMap({
           />
         ) : null}
 
-        <View pointerEvents="none" style={[styles.dot, { left: width / 2 - 9, top: height / 2 - 9 }]} />
+        <View pointerEvents="none" style={[styles.dot, { left: width / 2 - 9, top: stageHeight / 2 - 9 }]} />
 
         <View style={styles.scale} pointerEvents="none">
           <View style={styles.scaleBar} />
@@ -84,6 +87,10 @@ export function RealLocationMap({
           Open this exact point on openstreetmap.org
         </Body>
       </Pressable>
+
+      <Body tone="soft" style={{ fontSize: 12, lineHeight: 16 }}>
+        {TILE_ATTRIBUTION}
+      </Body>
     </View>
   );
 }

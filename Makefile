@@ -1,6 +1,4 @@
-DASHBOARD := apps/dashboard
-API_PORT ?= 8099
-UI_PORT ?= 5199
+APP_PORT ?= 5199
 CIRCUIT ?= silverstone
 SCENARIO ?= egress
 POPULATION ?= 2500
@@ -15,11 +13,10 @@ SIM_MOVEMENT_SCALE ?= 90
 SIM_GATES ?=
 SIM_RESET ?=
 
-.PHONY: help install console api dashboard simulator comments lint test typecheck codegen build check gate clean
+.PHONY: help install app mobile simulator comments lint test typecheck codegen build check gate clean
 help:
-	@echo "make console     Bun API + dashboard -> http://127.0.0.1:$(UI_PORT)"
-	@echo "make api         Bun API only        -> http://127.0.0.1:$(API_PORT)"
-	@echo "make dashboard   operator console only"
+	@echo "make app         Next.js UI + API + WebSocket -> http://127.0.0.1:$(APP_PORT)"
+	@echo "make mobile      Expo spectator app"
 	@echo "make simulator   populate live people through circuit gates"
 	@echo "make comments    reject new source comments"
 	@echo "make lint        project lint rules"
@@ -31,22 +28,14 @@ help:
 install:
 	bun install --frozen-lockfile
 
-console:
-	@echo "API  http://127.0.0.1:$(API_PORT)"
-	@echo "UI   http://127.0.0.1:$(UI_PORT)"
-	@trap 'kill 0' EXIT INT TERM; \
-	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED) & \
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --host 127.0.0.1 --port $(UI_PORT) & \
-	wait
+app:
+	bun run dev -- --host 127.0.0.1 --port $(APP_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED)
 
-api:
-	bun packages/api/src/main.ts --port $(API_PORT) --circuit $(CIRCUIT) --scenario $(SCENARIO) --population $(POPULATION) --seed $(SEED) --speed $(SPEED)
-
-dashboard:
-	CROWDFLOW_API=http://127.0.0.1:$(API_PORT) bun run --filter crowdflow-dashboard dev -- --host 127.0.0.1 --port $(UI_PORT)
+mobile:
+	EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:$(APP_PORT) bun run --filter mobile start
 
 simulator:
-	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(API_PORT) $(if $(SIM_RESET),--reset,) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --movement-scale $(SIM_MOVEMENT_SCALE) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
+	bun run crowdflow -- live simulate $(CIRCUIT) --api http://127.0.0.1:$(APP_PORT) $(if $(SIM_RESET),--reset,) --people $(SIM_PEOPLE) --rate $(SIM_RATE) --tick-ms $(SIM_TICK_MS) --duration $(SIM_DURATION) --movement-scale $(SIM_MOVEMENT_SCALE) --start-id $(SIM_START_ID) $(if $(SIM_GATES),--gates $(SIM_GATES),)
 
 comments:
 	bun run comments:check
@@ -54,7 +43,7 @@ comments:
 lint:
 	bun run lint
 
-test: typecheck
+test:
 	bun run test
 
 typecheck:
@@ -74,4 +63,4 @@ gate:
 	bun run crowdflow -- sim ab $(CIRCUIT) --count 6000 --ticks 700 --seed $(SEED)
 
 clean:
-	rm -rf node_modules packages/*/dist apps/*/dist apps/*/node_modules/.vite
+	rm -rf node_modules packages/*/dist apps/*/dist apps/*/.next

@@ -91,7 +91,7 @@ export interface Route {
   total_walk_s: number;
 }
 
-export type SafetyOutcome = "approved" | "rejected" | "modified";
+export type SafetyOutcome = 'approved' | 'rejected' | 'modified';
 
 /**
  * The gate every action passes through.
@@ -108,6 +108,7 @@ export interface SafetyVerdict {
    */
   reason: string;
   violated_constraints?: string[];
+  unchecked_constraints?: string[];
   emergency_mode?: boolean;
   /**
    * Only the exact command reviewed as APPROVED may leave the gate.
@@ -137,13 +138,13 @@ export interface Step {
   crossing?: CrossingNotice | null;
 }
 
-export type WayAhead = "nominal" | "building" | "critical" | "unknown";
+export type WayAhead = 'nominal' | 'building' | 'critical' | 'unknown';
 
 export interface AheadView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "ahead";
+  kind: 'ahead';
   step_id: string;
   offer: RerouteOffer;
 }
@@ -161,7 +162,7 @@ export interface ArrivalView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "arrival";
+  kind: 'arrival';
   gates: GateChoice[];
   note: string;
 }
@@ -219,7 +220,7 @@ export interface Crossing {
   availability?: Availability;
 }
 
-export type CrossingKind = "bridge" | "tunnel" | "at_grade";
+export type CrossingKind = 'bridge' | 'tunnel' | 'at_grade';
 
 /**
  * A walkable connection.
@@ -249,6 +250,7 @@ export interface Edge {
    * observed peak sustained flow per metre of width; never invented
    */
   capacity_flow_ped_m_min?: Sourced | null;
+  geometry: Position[];
 }
 
 /**
@@ -271,16 +273,19 @@ export interface Position {
 /**
  * Where a value came from. Never decorative — routing weights it.
  */
-export type Provenance = "osm" | "venue_map" | "f1_circuits" | "authored" | "measured" | "assumed";
+export type Provenance = 'osm' | 'venue_map' | 'f1_circuits' | 'authored' | 'measured' | 'assumed';
 
 /**
  * Hard rules the agent cannot override.
  */
 export interface SafetyConstraints {
   never_route_through?: string[];
+  never_route_edges?: string[];
   emergency_exits?: string[];
   accessible_routes?: string[][];
 }
+
+export type CircuitCapability = 'synthetic_simulation' | 'venue_imported' | 'venue_reviewed';
 
 /**
  * A value with its provenance and, where applicable, its sample count.
@@ -310,7 +315,7 @@ export interface Zone {
   osm_id?: string | null;
 }
 
-export type ZoneKind = "gate" | "concourse" | "crossing" | "viewing" | "amenity" | "parking" | "exit";
+export type ZoneKind = 'gate' | 'concourse' | 'crossing' | 'viewing' | 'amenity' | 'parking' | 'exit';
 
 /**
  * One venue. Swapping circuits must require no code change.
@@ -322,8 +327,11 @@ export interface CircuitPack {
    * f1-circuits id, e.g. gb-1948
    */
   geometry_source: string;
+  layout_id: string;
+  capability: CircuitCapability;
   track_length_m: number;
   altitude_m: number;
+  track_clearance_m: Sourced;
   frame: CoordinateFrame;
   zones?: Record<string, Zone>;
   edges?: Record<string, Edge>;
@@ -465,7 +473,7 @@ export interface EventProfile {
 /**
  * Operational density band. Always rendered with its word and its number.
  */
-export type LOSBand = "nominal" | "building" | "critical";
+export type LOSBand = 'nominal' | 'building' | 'critical';
 
 /**
  * Where congestion will be, when, and why.
@@ -527,7 +535,7 @@ export interface HoldView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "hold";
+  kind: 'hold';
   options: LeaveOption[];
   recommended_id: string;
   headline: string;
@@ -588,9 +596,20 @@ export interface InterventionCandidate {
  * delivery for about 3.1x the radio traffic, so both loss-tolerant classes now
  * use the bounded policy until encounter predictability proves a material gain.
  */
-export type MeshClass = "state" | "uplink" | "urgent";
+export type MeshClass = 'state' | 'uplink' | 'urgent';
 
-export type MeshMessageType = "hello" | "peer_discovery" | "state_update" | "zone_update" | "trace_fragment" | "route_update" | "alert" | "reroute" | "ack" | "heartbeat" | "sync";
+export type MeshMessageType =
+  | 'hello'
+  | 'peer_discovery'
+  | 'state_update'
+  | 'zone_update'
+  | 'trace_fragment'
+  | 'route_update'
+  | 'alert'
+  | 'reroute'
+  | 'ack'
+  | 'heartbeat'
+  | 'sync';
 
 /**
  * Envelope for anything crossing the mesh.
@@ -621,14 +640,14 @@ export interface OfflineView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "offline";
+  kind: 'offline';
 }
 
 export interface ReroutedView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "rerouted";
+  kind: 'rerouted';
   instead_of: Route;
   added_s: number;
   reason: string;
@@ -638,7 +657,7 @@ export interface WalkView {
   now: number;
   link: LinkStatus;
   route: Route;
-  kind: "walk";
+  kind: 'walk';
 }
 
 /**
@@ -800,9 +819,9 @@ export interface VenueState {
  * reading a sparse zone is entitled to know whether the dots there are GNSS
  * fixes in the open or BLE fixes under a stand.
  */
-export type PositionSource = "gnss" | "wifi" | "ble" | "fused" | "dead_reckoning";
+export type PositionSource = 'gnss' | 'wifi' | 'ble' | 'fused' | 'dead_reckoning';
 
-export type AnchorKind = "wifi_ap" | "ble_beacon";
+export type AnchorKind = 'wifi_ap' | 'ble_beacon';
 
 /**
  * One surveyed radio landmark at a known place in the venue.

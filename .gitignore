@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.next/
+apps/app/next-env.d.ts
 coverage/
 .cache/
 .data/
@@ -19,3 +21,5 @@ evidence/
 circuits/*/pack/anchors.json
 .env
 .env.local
+
+.hallmark/

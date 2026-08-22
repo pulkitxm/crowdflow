@@ -2,7 +2,7 @@
 
 CrowdFlow predicts congestion at large venues, evaluates interventions against a counterfactual,
 and only offers reroutes that pass a safety review. The monorepo contains the shared contracts,
-simulation and prediction engines, operator API and dashboard, spectator mobile app, and a
+simulation and prediction engines, unified operator app, spectator mobile app, and a
 reproducible Silverstone scenario.
 
 ## Requirements
@@ -21,7 +21,7 @@ bun install --frozen-lockfile
 
 ```text
 apps/
-  dashboard/       Vite operator console
+  app/             Next.js UI, HTTP API, simulator, and WebSocket server
   mobile/          Expo spectator app and native Android mesh module
 packages/
   contracts/       Wire contracts and JSON Schema generation
@@ -29,37 +29,32 @@ packages/
   hf/              Hugging Face inference adapters
   agent/           Safety-constrained operational insights
   cli/             Command-line workflows
-  api/             Bun HTTP and WebSocket service
 circuits/           Venue indexes, source data, and generated packs
-presentation/       Local Reveal.js pitch deck
-scripts/            Repository quality and affected-project tooling
+apps/
+  presentation/     Reveal.js online-round and final-round pitch decks
+scripts/            Repository quality tooling
 ```
 
-All packages share one Bun lockfile and the strict TypeScript configuration in
+Turborepo runs every workspace through one Bun lockfile and the strict TypeScript configuration in
 `tsconfig.base.json`. Reusable numerical operations live in `@crowdflow/core/statistics` rather
 than being reimplemented by consumers.
 
 ## Run locally
 
-Start the API and dashboard together:
+Start the unified app:
 
 ```sh
-make console
+make app
 ```
 
-The API listens on `http://127.0.0.1:8099` and the dashboard on
-`http://127.0.0.1:5199`. They can also be started separately:
-
-```sh
-make api
-make dashboard
-```
+The dashboard, simulator, HTTP API, and WebSocket server all listen on
+`http://127.0.0.1:5199`.
 
 Run the spectator app:
 
 ```sh
-EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:8099 \
-bun run --filter crowdflow-spectator start
+EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:5199 \
+bun run --filter mobile start
 ```
 
 The first screen accepts a positive sequential person ID. The app registers that ID against the
@@ -70,17 +65,17 @@ WebSocket connection.
 Live mobile guidance requires all three values:
 
 ```sh
-EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:8099 \
+EXPO_PUBLIC_CROWDFLOW_API=http://127.0.0.1:5199 \
 EXPO_PUBLIC_CROWDFLOW_ORIGIN=stand_227342440 \
 EXPO_PUBLIC_CROWDFLOW_DESTINATION=park_1120614867 \
-bun run --filter crowdflow-spectator start
+bun run --filter mobile start
 ```
 
 Without them, the app uses its deterministic demonstration feed.
 
 ## Live crowd simulator
 
-With `make console` running in another terminal, populate the circuit from several connected gates:
+With `make app` running in another terminal, populate the circuit from several connected gates:
 
 ```sh
 make simulator SIM_PEOPLE=500 SIM_RATE=50 SIM_DURATION=30
@@ -129,7 +124,7 @@ LOS, reporting devices, speed, net flow, queue, and confidence for each circuit 
 Query a four-corner area with a result limit and zoom level:
 
 ```sh
-curl -sS http://127.0.0.1:8099/api/circuits/silverstone/people/query \
+curl -sS http://127.0.0.1:5199/api/circuits/silverstone/people/query \
   -H 'content-type: application/json' \
   -d '{"coordinates":[{"x":0,"y":0},{"x":1000,"y":0},{"x":1000,"y":1800},{"x":0,"y":1800}],"zoom":8,"count":100}'
 ```
@@ -156,10 +151,10 @@ make test
 make build
 ```
 
-The GitHub Actions quality workflow calculates the affected workspace set from the changed paths.
-Lint, type-check, test, and build jobs run only for changed projects and their dependents. Changes
-to root tooling or shared configuration intentionally fan out to the full workspace. The workflow
-has read-only permissions and contains no publishing or deployment job.
+The GitHub Actions quality workflow runs the same Turborepo graph used locally. Turborepo caches
+build outputs and schedules each package after its dependencies. The Pages workflow validates and
+publishes only `apps/presentation` after presentation changes land on `main`. Render builds only
+the application workspace and does not publish the presentation site.
 
 ## Reproducible simulation
 
@@ -196,7 +191,7 @@ excluded from version control.
 
 - `packages/core` is deterministic and performs no network or filesystem I/O.
 - `packages/contracts` owns data exchanged across process and application boundaries.
-- `packages/api` translates simulation state into operator and spectator views.
+- `apps/app` owns the operator UI, simulator controls, HTTP API, and WebSocket server.
 - Mobile clients receive spectator-safe guidance, never the operator control envelope.
 - Agent output is advisory and cannot bypass deterministic safety review.
 - Unknown observations remain unknown and are never converted into empty-space evidence.

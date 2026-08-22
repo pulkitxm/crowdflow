@@ -21,6 +21,12 @@
           },
           "type": "array"
         },
+        "never_route_edges": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "never_route_through": {
           "items": {
             "type": "string"

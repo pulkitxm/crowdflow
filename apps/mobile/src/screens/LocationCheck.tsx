@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import * as Location from 'expo-location';
@@ -12,8 +11,9 @@ import { WifiSensor } from '../sensing/wifi';
 import { currentPermissions, requestBluetooth, requestForeground, type PermissionState } from '../sensing/permissions';
 import type { AnchorScanner } from '../sensing/types';
 import { radius, space } from '../theme';
-import { Body, Card } from '../ui/atoms';
+import { Body, Card, PrimaryAction, SecondaryAction } from '../ui/atoms';
 import { Chip, MetaRow, Page, Section } from '../ui/layout';
+import { useStep } from '../ui/responsive';
 import { usePalette } from '../ui/theme';
 
 const FRAME = DEMO_GEOMETRY.pack.frame as unknown as CoordinateFrame;
@@ -28,12 +28,14 @@ const NOT_TRIED: RadioReading = { heard: null, strongestDbm: null, reason: null 
 
 export function LocationCheck({ onContinue }: { onContinue: () => void }) {
   const palette = usePalette();
+  const step = useStep();
   const [permissions, setPermissions] = useState<PermissionState | null>(null);
   const [position, setPosition] = useState<Location.LocationObject | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wifi, setWifi] = useState<RadioReading>(NOT_TRIED);
   const [ble, setBle] = useState<RadioReading>(NOT_TRIED);
   const [scanning, setScanning] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [now, setNow] = useState(() => Date.now() / 1000);
 
   const watch = useRef<Location.LocationSubscription | null>(null);
@@ -105,88 +107,119 @@ export function LocationCheck({ onContinue }: { onContinue: () => void }) {
   const venue: Position | null = coords ? toVenue(FRAME, { lat: coords.latitude, lon: coords.longitude }) : null;
   const inside = venue ? insideVenue(FRAME, venue) : false;
   const ageS = position ? Math.max(0, now - position.timestamp / 1000) : null;
+  const accuracyM = coords?.accuracy == null ? null : Math.round(coords.accuracy);
+
+  const title = coords
+    ? 'Found you.'
+    : permissions?.foreground
+      ? 'Finding you…'
+      : 'Turn on location to continue.';
+
+  const lede = coords
+    ? accuracyM == null
+      ? 'Your phone can place you on the circuit.'
+      : `Your phone can place you to about ${accuracyM} m. That is enough to guide you.`
+    : permissions?.foreground
+      ? 'This usually takes a few seconds outdoors, longer under cover.'
+      : 'The app needs your position before it can guide you anywhere.';
 
   return (
     <Page
-      eyebrow="Location check"
-      title={
-        coords
-          ? `You are here, to about ${Math.round(coords.accuracy ?? 0)} m.`
-          : permissions?.foreground
-            ? 'Waiting for your first fix…'
-            : 'Allow location to see where you are.'
+      eyebrow="Location"
+      title={title}
+      lede={lede}
+      footer={
+        permissions?.foreground
+          ? <PrimaryAction label="Continue" onPress={onContinue} />
+          : <PrimaryAction label="Turn on location" onPress={() => void enable()} />
       }
-      lede="A temporary screen for checking the location feature on this phone. Nothing here is saved or sent anywhere."
-      footer={<Action label="Continue to the app" note="" onPress={onContinue} />}
     >
       {coords ? (
         <RealLocationMap lat={coords.latitude} lon={coords.longitude} accuracyM={coords.accuracy ?? null} />
       ) : null}
 
-      {coords ? (
-        <Card tone="outline" style={{ gap: space.md }}>
-          <MetaRow label="Latitude" value={coords.latitude.toFixed(6)} emphasis />
-          <MetaRow label="Longitude" value={coords.longitude.toFixed(6)} emphasis />
-          <MetaRow label="Accuracy" value={`± ${(coords.accuracy ?? 0).toFixed(1)} m`} />
-          <MetaRow label="Altitude" value={coords.altitude == null ? 'not reported' : `${coords.altitude.toFixed(0)} m`} />
-          <MetaRow label="Reading age" value={ageS == null ? '—' : `${ageS.toFixed(0)}s ago`} />
-        </Card>
-      ) : null}
-
-      <Section
-        label="The three radios on this phone"
-        note="Counts and signal strengths only — never a network name. Nothing on this screen can tell you which networks these were."
-      >
-        <Card tone="outline" style={{ gap: space.md }}>
-          <RadioRow
-            label="GPS"
-            unit="fix"
-            reading={{
-              heard: coords ? 1 : null,
-              strongestDbm: null,
-              reason: coords ? null : (permissions?.blockedBy[0] ?? 'no fix yet'),
-            }}
-          />
-          <RadioRow label="Wi-Fi" reading={wifi} unit="access points" />
-          <RadioRow label="Bluetooth" reading={ble} unit="devices" />
-        </Card>
-      </Section>
-
-      {error ? <Card tone="outline"><Body tone="soft" style={styles.small}>{error}</Body></Card> : null}
-
       {permissions?.blockedBy.length ? (
-        <Section label="What is switched off">
-          <Card tone="outline" style={{ gap: space.xs }}>
-            {permissions.blockedBy.map((reason) => (
-              <Body key={reason} tone="soft" style={styles.small}>{reason}</Body>
-            ))}
-          </Card>
-        </Section>
+        <Card tone="outline" style={{ gap: step(space.xs) }}>
+          {permissions.blockedBy.map((reason) => (
+            <Body key={reason} tone="soft" style={styles.small}>{reason}</Body>
+          ))}
+        </Card>
       ) : null}
 
-      {permissions?.foreground ? null : (
-        <Action label="Enable location" note="Then this screen fills in." onPress={() => void enable()} />
-      )}
+      {error ? (
+        <Card tone="outline">
+          <Body tone="soft" style={styles.small}>{error}</Body>
+        </Card>
+      ) : null}
 
-      <Action
-        label={scanning ? 'Scanning…' : 'Scan Wi-Fi and Bluetooth again'}
-        note="Android limits Wi-Fi scans to four every two minutes, so this may repeat the last result."
-        onPress={() => { if (!scanning) void scanRadios(); }}
-      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showDetail }}
+        onPress={() => setShowDetail((open) => !open)}
+        style={({ pressed }) => [
+          styles.disclosure,
+          { borderColor: palette.line, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Body color={palette.ink} style={{ fontWeight: '600', flex: 1 }}>
+          {showDetail ? 'Hide the details' : 'Show the details'}
+        </Body>
+        <Body tone="soft">{showDetail ? '−' : '+'}</Body>
+      </Pressable>
 
-      {}
-      {venue ? (
-        <Section label="Footnote — the circuit frame">
-          <Card tone="outline">
-            <Body tone="soft" style={styles.small}>
-              Measured from Silverstone's origin, you are {venue.x.toFixed(0)} m east and{' '}
-              {venue.y.toFixed(0)} m north — {inside ? 'inside its bounds' : 'far outside its bounds'}.
-              {inside
-                ? ' The app would report this position.'
-                : ' The real app stops reporting outside a venue, which is why the crowd side of this build shows nothing from here. The conversion itself is working.'}
-            </Body>
-          </Card>
-        </Section>
+      {showDetail ? (
+        <View style={{ gap: step(space.lg) }}>
+          {coords ? (
+            <Section label="This reading">
+              <Card tone="outline" style={{ gap: step(space.md) }}>
+                <MetaRow label="Latitude" value={coords.latitude.toFixed(6)} emphasis />
+                <MetaRow label="Longitude" value={coords.longitude.toFixed(6)} emphasis />
+                <MetaRow label="Accuracy" value={`± ${(coords.accuracy ?? 0).toFixed(1)} m`} />
+                <MetaRow label="Altitude" value={coords.altitude == null ? 'not reported' : `${coords.altitude.toFixed(0)} m`} />
+                <MetaRow label="Reading age" value={ageS == null ? '—' : `${ageS.toFixed(0)}s ago`} />
+              </Card>
+            </Section>
+          ) : null}
+
+          <Section
+            label="The three radios on this phone"
+            note="Counts and signal strengths only — never a network name."
+          >
+            <Card tone="outline" style={{ gap: step(space.md) }}>
+              <RadioRow
+                label="GPS"
+                unit="fix"
+                reading={{
+                  heard: coords ? 1 : null,
+                  strongestDbm: null,
+                  reason: coords ? null : (permissions?.blockedBy[0] ?? 'no fix yet'),
+                }}
+              />
+              <RadioRow label="Wi-Fi" reading={wifi} unit="access points" />
+              <RadioRow label="Bluetooth" reading={ble} unit="devices" />
+            </Card>
+          </Section>
+
+          <SecondaryAction
+            label={scanning ? 'Scanning…' : 'Scan Wi-Fi and Bluetooth again'}
+            onPress={scanning ? undefined : () => void scanRadios()}
+            disabled={scanning}
+          />
+
+          {venue ? (
+            <Section label="The circuit frame">
+              <Card tone="outline">
+                <Body tone="soft" style={styles.small}>
+                  Measured from Silverstone's origin, you are {venue.x.toFixed(0)} m east and{' '}
+                  {venue.y.toFixed(0)} m north — {inside ? 'inside its bounds' : 'far outside its bounds'}.
+                  {inside
+                    ? ' The app would report this position.'
+                    : ' The real app stops reporting outside a venue, which is why the crowd side of this build shows nothing from here. The conversion itself is working.'}
+                </Body>
+              </Card>
+            </Section>
+          ) : null}
+        </View>
       ) : null}
     </Page>
   );
@@ -199,7 +232,7 @@ function RadioRow({ label, reading, unit }: { label: string; reading: RadioReadi
     : reading.heard == null
       ? 'not checked yet'
       : reading.heard === 0
-        ? `heard nothing`
+        ? 'heard nothing'
         : `${reading.heard} ${unit}${reading.strongestDbm == null ? '' : `, strongest ${reading.strongestDbm} dBm`}`;
   return (
     <View style={{ gap: space.xs }}>
@@ -216,25 +249,16 @@ function RadioRow({ label, reading, unit }: { label: string; reading: RadioReadi
   );
 }
 
-function Action({ label, note, onPress }: { label: string; note: string; onPress: () => void }) {
-  const palette = usePalette();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.action, { borderColor: palette.line, opacity: pressed ? 0.7 : 1 }]}
-    >
-      <Body color={palette.ink} style={{ fontWeight: '700' }}>{label}</Body>
-      {note ? <Body tone="soft" style={styles.small}>{note}</Body> : null}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   radioHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  small: { fontSize: 15, lineHeight: 21 },
-  action: {
-    borderWidth: 1, borderRadius: radius.md, padding: space.md, gap: 4,
-    minHeight: 64, justifyContent: 'center',
+  small: { fontSize: 15, lineHeight: 22 },
+  disclosure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    minHeight: 56,
   },
 });

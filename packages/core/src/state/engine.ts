@@ -23,6 +23,7 @@ export class StateEngine {
   private lastZone = new Map<string, string>();
   private history = new Map<string, number[]>();
   private lastSeen = new Map<string, number>();
+  private zoneIndex: Array<{ id: string; x: number; y: number }> | null = null;
 
   constructor(
     readonly pack: CircuitPack,
@@ -108,11 +109,18 @@ export class StateEngine {
   }
 
   private nearestZone(node: CrowdNode): string | null {
+    if (this.zoneIndex === null) {
+      this.zoneIndex = Object.entries(this.pack.zones ?? {}).map(([id, zone]) => ({ id, x: zone.position.x, y: zone.position.y }));
+    }
+    const zones = this.zoneIndex;
     let best: string | null = null;
     let distance = Infinity;
-    for (const [id, zone] of Object.entries(this.pack.zones ?? {})) {
-      const current = Math.hypot(node.position.x - zone.position.x, node.position.y - zone.position.y);
-      if (current < distance) { best = id; distance = current; }
+    const { x, y } = node.position;
+    for (const zone of zones) {
+      const dx = x - zone.x;
+      const dy = y - zone.y;
+      const current = dx * dx + dy * dy;
+      if (current < distance) { best = zone.id; distance = current; }
     }
     return best;
   }

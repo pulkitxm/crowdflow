@@ -5,7 +5,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimen
 import { DAY, DAY_LABELS, DAY_ORDER, nowSeconds } from '../feed/mock';
 import type { ViewKind } from '../feed/types';
 import { SpectatorApp } from '../SpectatorApp';
-import { palettes, radius, space, type ThemeName } from '../theme';
+import { fonts, palettes, radius, space, type ThemeName } from '../theme';
 import { ThemeProvider } from '../ui/theme';
 import { PHONE, PhoneFrame } from './PhoneFrame';
 
@@ -186,9 +186,9 @@ const styles = StyleSheet.create({
   desk: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
   deskInner: { flexDirection: 'row', gap: space.xxl, alignItems: 'center' },
   rail: { width: 300, gap: space.lg },
-  railKicker: { fontSize: 12, fontWeight: '700', letterSpacing: 1.4 },
-  railTitle: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5, lineHeight: 34 },
-  railNote: { fontSize: 14, lineHeight: 20 },
+  railKicker: { fontSize: 12, fontFamily: fonts.bodyBold, letterSpacing: 1.4 },
+  railTitle: { fontSize: 28, fontFamily: fonts.displayBold, letterSpacing: -0.5, lineHeight: 34 },
+  railNote: { fontSize: 14, lineHeight: 20, fontFamily: fonts.bodyRegular },
   railItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -197,9 +197,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
   },
-  railIndex: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  railItemTitle: { fontSize: 16, fontWeight: '600' },
-  railItemWhen: { fontSize: 13 },
+  railIndex: { fontSize: 12, fontFamily: fonts.bodyBold, letterSpacing: 1 },
+  railItemTitle: { fontSize: 16, fontFamily: fonts.bodySemi },
+  railItemWhen: { fontSize: 13, fontFamily: fonts.bodyRegular },
   themeRow: { flexDirection: 'row', gap: space.sm },
   themeChip: {
     paddingHorizontal: space.md,
@@ -207,9 +207,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  themeLabel: { fontSize: 13, fontWeight: '600' },
+  themeLabel: { fontSize: 13, fontFamily: fonts.bodySemi },
   bar: { backgroundColor: '#0E1213' },
   barInner: { padding: space.sm, gap: space.sm, alignItems: 'center' },
   barChip: { paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill },
-  barLabel: { fontSize: 13, fontWeight: '600' },
+  barLabel: { fontSize: 13, fontFamily: fonts.bodySemi },
 });

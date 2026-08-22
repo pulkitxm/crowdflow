@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +15,9 @@ import { PersonLogin } from './src/screens/PersonLogin';
 import { RacePicker } from './src/screens/RacePicker';
 import { SensingSettings } from './src/screens/SensingSettings';
 import { LocationCheck } from './src/screens/LocationCheck';
+import { useAppFonts } from './src/ui/fonts';
 import { useSensing } from './src/sensing/useSensing';
+import { useMesh } from './src/mesh/useMesh';
 
 const api = process.env.EXPO_PUBLIC_CROWDFLOW_API;
 const origin = process.env.EXPO_PUBLIC_CROWDFLOW_ORIGIN;
@@ -44,6 +45,7 @@ export default function App() {
   const [race, setRace] = useState<SelectedRace | null>(null);
   const [consent, setConsent] = useState<ConsentRecord | null>(null);
   const [ready, setReady] = useState(false);
+  const fontsReady = useAppFonts();
 
   useEffect(() => {
     (async () => {
@@ -51,8 +53,9 @@ export default function App() {
       let selected = stored;
       if (!selected) {
         const races = await raceSource.list().catch(() => []);
-        const preferred = races.find((item) => item.circuit_id === preferredCircuit && item.has_map)
-          ?? races.find((item) => item.has_map);
+        const preferred =
+          races.find((item) => item.circuit_id === preferredCircuit && item.has_map) ??
+          races.find((item) => item.has_map);
         selected = preferred ? toSelected(preferred) : null;
         if (selected) await storeRace(selected);
       }
@@ -72,25 +75,36 @@ export default function App() {
     enabled: personId != null && isCurrent(consent) && consent.sharing && race?.has_map === true,
     mode: sensingMode,
   });
+  const meshEnabled = personId != null && isCurrent(consent) && consent.sharing;
+  const mesh = useMesh(meshEnabled);
 
-  const choose = useCallback(async (next: SelectedRace) => {
-    if (personId != null) await registerPerson(personId, next.circuit_id);
-    setRace(next);
-    await storeRace(next);
-    setStage('landing');
-  }, [personId]);
+  const choose = useCallback(
+    async (next: SelectedRace) => {
+      if (personId != null) await registerPerson(personId, next.circuit_id);
+      setRace(next);
+      await storeRace(next);
+      setStage('landing');
+    },
+    [personId],
+  );
 
-  const login = useCallback(async (nextPersonId: number) => {
-    await registerPerson(nextPersonId, race?.circuit_id ?? preferredCircuit);
-    await storePersonId(nextPersonId);
-    setPersonId(nextPersonId);
-    setStage(isCurrent(consent) ? 'check' : 'consent');
-  }, [consent, race]);
+  const login = useCallback(
+    async (nextPersonId: number) => {
+      await registerPerson(nextPersonId, race?.circuit_id ?? preferredCircuit);
+      await storePersonId(nextPersonId);
+      setPersonId(nextPersonId);
+      setStage(isCurrent(consent) ? 'check' : 'consent');
+    },
+    [consent, race],
+  );
 
-  const changeSharing = useCallback(async (sharing: boolean) => {
-    if (!consent) return;
-    setConsent(await setSharing(consent, sharing));
-  }, [consent]);
+  const changeSharing = useCallback(
+    async (sharing: boolean) => {
+      if (!consent) return;
+      setConsent(await setSharing(consent, sharing));
+    },
+    [consent],
+  );
 
   const revoke = useCallback(async () => {
     await withdrawConsent();
@@ -98,7 +112,7 @@ export default function App() {
     setStage('consent');
   }, []);
 
-  if (!ready) return null;
+  if (!ready || !fontsReady) return null;
 
   return (
     <SafeAreaProvider>
@@ -134,19 +148,31 @@ export default function App() {
       ) : null}
       {stage === 'sensing' && consent ? (
         <SensingSettings
-          status={sensing.status ?? { active: false, queued: 0, available: [], using: null, last_fix: null, blocked_by: sensing.problem ? [sensing.problem] : [] }}
+          status={
+            sensing.status ?? {
+              active: false,
+              queued: 0,
+              available: [],
+              using: null,
+              last_fix: null,
+              blocked_by: sensing.problem ? [sensing.problem] : [],
+            }
+          }
           sharing={consent.sharing}
           pseudonymExpiresIn={sensing.pseudonymExpiresIn}
           survey={sensing.survey}
+          mesh={mesh}
           onSharingChange={(next) => void changeSharing(next)}
           onWithdraw={() => void revoke()}
           onBack={() => setStage('landing')}
         />
       ) : null}
       {stage === 'app' ? (
-        api && origin && destination
-          ? <LiveShell config={{ api, origin, destination }} />
-          : <DemoShell />
+        api && origin && destination ? (
+          <LiveShell config={{ api, origin, destination }} />
+        ) : (
+          <DemoShell />
+        )
       ) : null}
     </SafeAreaProvider>
   );

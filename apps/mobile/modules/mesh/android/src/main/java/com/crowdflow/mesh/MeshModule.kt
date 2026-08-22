@@ -70,6 +70,14 @@ class MeshModule : Module() {
             network.getNearbyNodes().map(::peerMap)
         }
 
+        AsyncFunction("connect") { nodeId: String ->
+            network.connectPeer(nodeId)
+        }
+
+        AsyncFunction("disconnect") { nodeId: String ->
+            network.disconnectPeer(nodeId)
+        }
+
         AsyncFunction("send") { nodeId: String, raw: Map<String, Any?> ->
             network.sendMessage(nodeId, messageFrom(raw))
         }

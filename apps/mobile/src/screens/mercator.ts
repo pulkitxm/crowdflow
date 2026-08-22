@@ -47,6 +47,8 @@ export function tilesFor(
   return tiles;
 }
 
+export const TILE_ATTRIBUTION = 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community';
+
 export function tileUrl(tile: TilePlacement): string {
-  return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+  return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
 }

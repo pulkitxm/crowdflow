@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RaceSummary, Session } from '@crowdflow/api/wire';
+import type { RaceSummary, Session } from '@crowdflow/contracts/wire';
 
 import { byMonth, countdown, nextSession, offsetMinutes, venueClock, venueDay, weekendRange } from './format';
 import { pickCurrent } from './registry';

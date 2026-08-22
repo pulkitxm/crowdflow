@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { CircuitPack } from '@crowdflow/contracts';
 import { VenueGraph } from '@crowdflow/core';
-import { applyGuidance, reportFor, type SimulatedWalker } from '../src/simulator.js';
+import { applyGuidance, reportFor, restamp, type SimulatedWalker } from '../src/simulator.js';
 
 const sourced = (value: number) => ({ value, provenance: 'measured' as const, samples: 64 });
 function toyPack(): CircuitPack {
   return {
-    id: 'toy', name: 'Toy', geometry_source: 'synthetic', track_length_m: 1000, altitude_m: 0,
+    id: 'toy',
+    name: 'Toy',
+    geometry_source: 'synthetic',
+    layout_id: 'toy-1',
+    capability: 'synthetic_simulation',
+    track_length_m: 1000,
+    altitude_m: 0,
+    track_clearance_m: sourced(10),
     frame: { origin_lat: 0, origin_lon: 0, track_bounds_m: [100, 100], venue_bounds_m: [0, 0, 100, 100] },
     zones: {
       a: { id: 'a', kind: 'gate', position: { x: 0, y: 0 } },
@@ -14,8 +21,8 @@ function toyPack(): CircuitPack {
       c: { id: 'c', kind: 'viewing', position: { x: 20, y: 0 } },
     },
     edges: {
-      ab: { id: 'ab', source: 'a', destination: 'b', length_m: 10, width_m: sourced(2) },
-      bc: { id: 'bc', source: 'b', destination: 'c', length_m: 10, width_m: sourced(2) },
+      ab: { id: 'ab', source: 'a', destination: 'b', length_m: 10, width_m: sourced(2), geometry: [{ x: 0, y: 0 }, { x: 10, y: 0 }] },
+      bc: { id: 'bc', source: 'b', destination: 'c', length_m: 10, width_m: sourced(2), geometry: [{ x: 10, y: 0 }, { x: 20, y: 0 }] },
     },
     crossings: {}, constraints: { never_route_through: [], emergency_exits: [], accessible_routes: [] },
   };
@@ -27,7 +34,10 @@ function walker(overrides: Partial<SimulatedWalker> = {}): SimulatedWalker {
     gateId: 'gate',
     commandId: null,
     zoneIds: ['gate', 'stand'],
-    path: [{ x: 0, y: 0 }, { x: 10, y: 0 }],
+    path: [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ],
     segment: 0,
     progress: 0,
     speed: 1.2,
@@ -68,7 +78,13 @@ describe('live crowd simulator movement', () => {
   it('reroutes a walker onto guidance once and only once', () => {
     const pack = toyPack();
     const graph = new VenueGraph(pack);
-    const subject = walker({ zoneIds: ['a', 'b'], path: [{ x: 0, y: 0 }, { x: 10, y: 0 }] });
+    const subject = walker({
+      zoneIds: ['a', 'b'],
+      path: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+      ],
+    });
     const orders = [{ person_id: 1, command_id: 'cmd-1', to_zone: 'c', avoid: [], prefer: ['c'] }];
     expect(applyGuidance(orders, [subject], pack, graph)).toBe(1);
     expect(subject.commandId).toBe('cmd-1');
@@ -81,7 +97,24 @@ describe('live crowd simulator movement', () => {
     const pack = toyPack();
     const graph = new VenueGraph(pack);
     const subject = walker({ personId: 42, zoneIds: ['a', 'b'] });
-    expect(applyGuidance([{ person_id: 1, command_id: 'cmd-1', to_zone: 'c', avoid: [], prefer: [] }], [subject], pack, graph)).toBe(0);
+    expect(
+      applyGuidance(
+        [{ person_id: 1, command_id: 'cmd-1', to_zone: 'c', avoid: [], prefer: [] }],
+        [subject],
+        pack,
+        graph,
+      ),
+    ).toBe(0);
     expect(subject.commandId).toBeNull();
+  });
+  it('restamps a chunk so late-delivered reports arrive fresh', () => {
+    const subject = walker();
+    const report = reportFor(subject, 'toy', 1000, 1, 1);
+    report.nodes[0]!.timestamp = 1000;
+    restamp([report], 4_000_000);
+    const epoch = Math.floor(4_000_000 / 900);
+    expect(report.epoch).toBe(epoch);
+    expect(report.nodes[0]!.epoch).toBe(epoch);
+    expect(report.nodes[0]!.timestamp).toBe(4_000_000);
   });
 });

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -8,16 +7,23 @@ import { CROSSING_WORDS, UNKNOWN_NOTE, WAY_AHEAD_ROUTE_SENTENCE } from '../feed/
 import { journeyText, untilText } from '../feed/time';
 import { worstOf } from '../feed/severity';
 import { Body, Display, Eyebrow, Headline, Label, StatusPill, statusColors } from './atoms';
+import { useMetrics, useStep } from './responsive';
 import { usePalette } from './theme';
 
 export function Hero({ route, state }: { route: Route; state: WayAhead }) {
+  const step = useStep();
+  const { tiny } = useMetrics();
   return (
-    <View style={{ gap: space.xs }}>
+    <View style={{ gap: step(space.xs) }}>
       <Eyebrow>Going to</Eyebrow>
-      <Headline>{route.to}</Headline>
-      <View style={styles.heroRow}>
-        <Display>{journeyText(route.total_walk_s)}</Display>
-        <View style={{ paddingBottom: space.sm }}>
+      <Headline numberOfLines={2}>{route.to}</Headline>
+      <View style={[styles.heroRow, tiny ? styles.heroStack : null]}>
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
+          <Display numberOfLines={1} shrinkToFit style={{ fontVariant: ['tabular-nums'] }}>
+            {journeyText(route.total_walk_s)}
+          </Display>
+        </View>
+        <View style={{ paddingBottom: tiny ? 0 : space.sm }}>
           <StatusPill state={state} big />
         </View>
       </View>
@@ -40,14 +46,16 @@ export function StepList({
   highlightId?: string;
 }) {
   const palette = usePalette();
+  const step = useStep();
   return (
     <View>
-      {steps.map((step, index) => {
+      {steps.map((item, index) => {
         const last = index === steps.length - 1;
-        const highlighted = step.id === highlightId;
-        const colors = statusColors(step.way_ahead, palette);
+        const highlighted = item.id === highlightId;
+        const colors = statusColors(item.way_ahead, palette);
+        const inset = step(space.sm + space.xs);
         return (
-          <View key={step.id} style={styles.stepRow}>
+          <View key={item.id} style={[styles.stepRow, { gap: step(space.md) }]}>
             <View style={styles.rail}>
               <View
                 style={[
@@ -58,46 +66,56 @@ export function StepList({
                   },
                 ]}
               />
-              {!last ? (
-                <View style={[styles.railLine, { backgroundColor: palette.line }]} />
-              ) : null}
+              {!last ? <View style={[styles.railLine, { backgroundColor: palette.line }]} /> : null}
             </View>
 
             <View
               style={[
                 styles.stepBody,
+                { paddingBottom: step(space.md), gap: step(space.sm) },
                 highlighted
                   ? {
                       backgroundColor: colors.fill,
                       borderRadius: radius.md,
-                      paddingHorizontal: space.sm + space.xs,
-                      marginLeft: -(space.sm + space.xs),
+                      paddingHorizontal: inset,
+                      marginLeft: -inset,
                     }
                   : null,
               ]}
             >
-              <View style={styles.stepHead}>
+              <View style={[styles.stepHead, { gap: step(space.sm) }]}>
                 <Label
                   tone={struck ? 'soft' : 'ink'}
+                  numberOfLines={2}
                   style={
-                    struck ? { textDecorationLine: 'line-through' } : { fontSize: 18, lineHeight: 24 }
+                    struck
+                      ? { textDecorationLine: 'line-through', flex: 1 }
+                      : { fontSize: 18, lineHeight: 24, fontWeight: '700', flex: 1 }
                   }
                 >
-                  {step.to}
+                  {item.to}
                 </Label>
-                <Label tone="soft" style={struck ? { textDecorationLine: 'line-through' } : undefined}>
-                  {journeyText(step.walk_s)}
+                <Label
+                  tone="soft"
+                  numberOfLines={1}
+                  style={
+                    struck
+                      ? { textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] }
+                      : { fontVariant: ['tabular-nums'] }
+                  }
+                >
+                  {journeyText(item.walk_s)}
                 </Label>
               </View>
 
               {!struck ? (
-                <View style={styles.stepMeta}>
-                  <StatusPill state={step.way_ahead} />
-                  {step.crossing ? <CrossingLine crossing={step.crossing} now={now} /> : null}
+                <View style={[styles.stepMeta, { gap: step(space.sm) }]}>
+                  <StatusPill state={item.way_ahead} />
+                  {item.crossing ? <CrossingLine crossing={item.crossing} now={now} /> : null}
                 </View>
               ) : null}
 
-              {!struck && step.way_ahead === 'unknown' ? (
+              {!struck && item.way_ahead === 'unknown' ? (
                 <Body tone="soft" style={{ fontSize: 15, lineHeight: 21 }}>
                   {UNKNOWN_NOTE}
                 </Body>
@@ -122,7 +140,7 @@ export function CrossingLine({ crossing, now }: { crossing: CrossingNotice; now:
 
   return (
     <View style={[styles.crossing, { borderColor: palette.line }]}>
-      <Label tone="soft" style={{ fontSize: 14 }}>
+      <Label tone="soft" numberOfLines={2} style={{ fontSize: 14, fontWeight: '500' }}>
         {crossing.name} · {text}
       </Label>
     </View>
@@ -131,17 +149,19 @@ export function CrossingLine({ crossing, now }: { crossing: CrossingNotice; now:
 
 const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md, flexWrap: 'wrap' },
-  stepRow: { flexDirection: 'row', gap: space.md },
+  heroStack: { flexDirection: 'column', alignItems: 'flex-start' },
+  stepRow: { flexDirection: 'row' },
   rail: { alignItems: 'center', width: 14, paddingTop: 6 },
   dot: { width: 14, height: 14, borderRadius: radius.pill, borderWidth: 2 },
   railLine: { width: 2, flex: 1, marginVertical: 4 },
-  stepBody: { flex: 1, paddingBottom: space.md, gap: space.sm, paddingTop: 2 },
-  stepHead: { flexDirection: 'row', justifyContent: 'space-between', gap: space.sm },
-  stepMeta: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
+  stepBody: { flex: 1, minWidth: 0, paddingTop: 2 },
+  stepHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  stepMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   crossing: {
     borderWidth: 1,
     borderRadius: radius.sm,
     paddingHorizontal: space.sm + space.xs,
     paddingVertical: space.xs,
+    flexShrink: 1,
   },
 });

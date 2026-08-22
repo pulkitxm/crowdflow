@@ -8,8 +8,15 @@ const bun = process.env.BUN_BIN ?? 'bun';
 function run(...args: string[]): string { return execFileSync(bun, ['packages/cli/src/main.ts', ...args], { cwd: root, encoding: 'utf8' }); }
 
 describe('TypeScript headless CLI', () => {
+  it('lists every committed circuit pack', () => {
+    const circuits = run('circuit', 'list').trim().split('\n');
+    expect(circuits).toHaveLength(78);
+    expect(circuits.some((line) => line.startsWith('silverstone'))).toBe(true);
+    expect(circuits.some((line) => line.startsWith('zolder'))).toBe(true);
+  });
+
   it('validates the seeded pack and reports authored standards', () => {
-    expect(run('circuit', 'validate', 'silverstone')).toContain('integrity OK');
+    expect(run('circuit', 'validate', 'silverstone')).toContain('contract and geometry OK');
     const standards = run('standards'); expect(standards).toContain('Operational density bands (authoritative)'); expect(standards).toContain('Measured, never assumed');
   });
 

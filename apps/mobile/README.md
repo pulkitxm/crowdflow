@@ -61,13 +61,13 @@ The whole thing, including how to test it without a phone or a venue, is documen
 bun run test
 
 # a crowd of simulated handsets driving the real solve, ladder and ingest
-bun packages/api/src/main.ts                                   # in the repo root
-curl -X POST localhost:8099/api/live -H 'content-type: application/json' \
+make app
+curl -X POST localhost:5199/api/live -H 'content-type: application/json' \
   -d '{"circuit_id":"silverstone","participation":0.18}'
 bun run crowdflow live rehearse silverstone --phones 25
 
 # this app, real code path, simulated radios
-EXPO_PUBLIC_CROWDFLOW_API=http://localhost:8099 \
+EXPO_PUBLIC_CROWDFLOW_API=http://localhost:5199 \
 EXPO_PUBLIC_CROWDFLOW_SENSING=rehearsal bun run web
 ```
 

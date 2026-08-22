@@ -3,10 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(__dirname);
-const kotlin = readFileSync(
-  path.join(root, 'android/src/main/java/com/crowdflow/mesh/MeshModule.kt'),
-  'utf8',
-);
+const kotlin = readFileSync(path.join(root, 'android/src/main/java/com/crowdflow/mesh/MeshModule.kt'), 'utf8');
 const service = readFileSync(
   path.join(root, 'android/src/main/java/com/crowdflow/mesh/MeshForegroundService.kt'),
   'utf8',
@@ -21,6 +18,8 @@ describe('native mesh bridge parity', () => {
       'stop',
       'getStatus',
       'getNearbyNodes',
+      'connect',
+      'disconnect',
       'send',
       'broadcast',
     ]) {

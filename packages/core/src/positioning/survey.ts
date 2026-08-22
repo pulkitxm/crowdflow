@@ -27,7 +27,7 @@
  */
 
 import type { AnchorPack, CircuitPack, Position, RadioAnchor, RadioObservation, Sourced } from '@crowdflow/contracts';
-import { ASSUMED_FIX_ACCURACY_CEILING_M, ASSUMED_MIN_ANCHORS_FOR_FIX } from '@crowdflow/contracts';
+import { ASSUMED_BLE_RSSI_AT_1M_DBM, ASSUMED_FIX_ACCURACY_CEILING_M, ASSUMED_MIN_ANCHORS_FOR_FIX, ASSUMED_WIFI_RSSI_AT_1M_DBM } from '@crowdflow/contracts';
 import { Random } from '../random.js';
 import { AnchorMap } from './anchors.js';
 import { quantileNearest, round } from '../statistics.js';
@@ -92,7 +92,7 @@ export function planAnchors(pack: CircuitPack, options: AnchorPlanOptions = {}):
       anchor_id: anchorId,
       kind,
       position: { x: Number(position.x.toFixed(1)), y: Number(position.y.toFixed(1)) },
-      rssi_at_1m_dbm: assumed(kind === 'ble_beacon' ? -59 : -40, 'plan default; replace with a metered reading at install'),
+      rssi_at_1m_dbm: assumed(kind === 'ble_beacon' ? ASSUMED_BLE_RSSI_AT_1M_DBM : ASSUMED_WIFI_RSSI_AT_1M_DBM, 'plan default; replace with a metered reading at install'),
       path_loss_exponent: assumed(exponent, `assumed ${environment} environment; measure on the walk test`),
       floor: null,
       note,
