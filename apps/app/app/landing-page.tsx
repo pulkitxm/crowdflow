@@ -279,7 +279,7 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="relative flex min-h-[100svh] flex-col justify-end overflow-hidden bg-asphalt">
+      <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-asphalt">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
             src={IMG.hero}
@@ -287,29 +287,28 @@ export function LandingPage() {
             aria-hidden
             className="hero-zoom h-full w-full object-cover object-[center_40%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-asphalt via-asphalt/80 to-asphalt/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/40 to-transparent" />
-          <div className="track-lanes absolute inset-0" />
+          <div className="absolute inset-0 bg-gradient-to-r from-asphalt via-asphalt/85 to-asphalt/35" />
+          <div className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/30 to-asphalt/50" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-6 pb-28 pt-32 lg:px-12 lg:pb-32">
-          <p className="hero-rise font-display text-[clamp(3.5rem,14vw,9rem)] leading-[0.85] tracking-tight text-white">
-            Crowd<span className="text-accent">Flow</span>
+        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-6 pt-28 pb-20 lg:px-12">
+          <p className="hero-rise font-display text-[clamp(3rem,11vw,7.5rem)] leading-[0.86] tracking-tight text-white">
+            Crowd<span className="text-[#e10600]">Flow</span>
           </p>
-          <h1 className="hero-rise hero-rise-delay-1 mt-6 max-w-3xl font-display text-[clamp(1.75rem,4.5vw,3.75rem)] leading-[0.95] tracking-tight text-white">
+          <h1 className="hero-rise hero-rise-delay-1 mt-5 max-w-3xl font-display text-[clamp(1.6rem,3.8vw,3.25rem)] leading-[0.98] tracking-tight text-white">
             Keep F1 crowds moving.
           </h1>
-          <p className="hero-rise hero-rise-delay-2 mt-5 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
+          <p className="hero-rise hero-rise-delay-2 mt-4 max-w-xl text-base leading-relaxed text-white/75 md:text-lg">
             Live grandstand forecasts and safety-reviewed interventions for Formula 1 circuit
             weekends — from Silverstone to Monaco.
           </p>
-          <div className="hero-rise hero-rise-delay-3 mt-10 flex flex-wrap gap-3">
-            <DashboardCta className="inline-flex h-14 items-center justify-center bg-accent px-10 text-base font-semibold tracking-wide text-white uppercase transition hover:bg-[#ff1a0a]">
+          <div className="hero-rise hero-rise-delay-3 mt-8 flex flex-wrap gap-3">
+            <DashboardCta className="inline-flex h-12 items-center justify-center bg-[#e10600] px-8 text-sm font-semibold tracking-wide text-white uppercase transition hover:bg-[#ff1a0a] md:h-14 md:px-10 md:text-base">
               Open operator console
             </DashboardCta>
             <a
               href="#how-it-works"
-              className="inline-flex h-14 items-center justify-center border border-white/35 bg-white/5 px-10 text-base font-semibold tracking-wide text-white uppercase backdrop-blur-sm transition hover:border-white hover:bg-white/10"
+              className="inline-flex h-12 items-center justify-center border border-white/40 bg-white/5 px-8 text-sm font-semibold tracking-wide text-white uppercase backdrop-blur-sm transition hover:border-white hover:bg-white/10 md:h-14 md:px-10 md:text-base"
             >
               Race weekend flow
             </a>
