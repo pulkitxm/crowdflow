@@ -119,7 +119,7 @@ function anchorsAccuracy(id: string, opts: Options): void {
 }
 
 async function liveRehearse(id: string, opts: Options): Promise<void> {
-  const api = string(opts, 'api') ?? 'http://127.0.0.1:8099';
+  const api = string(opts, 'api') ?? 'http://127.0.0.1:5199';
   const radios = (string(opts, 'radios') ?? 'wifi,ble,gnss').split(',') as ('wifi' | 'ble' | 'gnss')[];
   const phones = number(opts, 'phones', 25);
   const ticks = number(opts, 'ticks', 10);
@@ -152,7 +152,7 @@ async function liveSimulate(id: string, opts: Options): Promise<void> {
   const durationS = number(opts, 'duration', Math.max(30, people / rate));
   const selectedGates = string(opts, 'gates')?.split(',').map((gate) => gate.trim()).filter(Boolean);
   const result = await simulateLiveCrowd({
-    api: string(opts, 'api') ?? 'http://127.0.0.1:8099',
+    api: string(opts, 'api') ?? 'http://127.0.0.1:5199',
     circuitId: id,
     people,
     ratePerSecond: rate,

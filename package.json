@@ -11,13 +11,14 @@
   "scripts": {
     "codegen": "bun run --filter @crowdflow/contracts codegen",
     "comments:check": "bun scripts/check-comments.mjs --selftest && bun scripts/check-comments.mjs",
-    "lint": "biome lint . --diagnostic-level=error",
+    "dev": "turbo run dev --filter=app --",
+    "lint": "turbo run lint && biome lint scripts presentation --diagnostic-level=error",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "test": "bun run --bun --workspaces --if-present test",
-    "typecheck": "bun run --bun --workspaces --if-present typecheck",
-    "build": "bun run --bun --workspaces --if-present build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "build": "turbo run build",
     "check": "bun run comments:check && bun run lint && bun run typecheck && bun run test && bun run build",
     "crowdflow": "bun packages/cli/src/main.ts"
   },
@@ -25,6 +26,7 @@
     "@babel/parser": "8.0.4",
     "@biomejs/biome": "2.5.9",
     "@types/node": "26.2.0",
+    "turbo": "2.10.11",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   },

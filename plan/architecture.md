@@ -26,7 +26,7 @@ Everything else is detail. Get these two right and the parts stay swappable.
                              │
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
-         packages/cli   packages/api   packages/agent
+         packages/cli   apps/app/server   packages/agent
            (Bun)           (Bun)         (tool layer)
 ```
 
@@ -73,11 +73,10 @@ vmax/
 │   ├── contracts/        authored TS + JSON Schema [P0 — blocks everything]
 │   ├── core/             the engines (pure TypeScript)
 │   ├── cli/              Bun adapter
-│   ├── api/              Bun HTTP/WebSocket adapter
 │   └── agent/            crowd ops agent + tools
 │
 ├── apps/
-│   ├── dashboard/        operator web app
+│   ├── app/              Next.js UI, HTTP API, and WebSocket server
 │   └── mobile/           expo spectator app
 │       └── modules/mesh/ native Kotlin module
 │
@@ -97,9 +96,9 @@ vmax/
 | `packages/contracts` | Authored TypeScript contracts, runtime conclusions, generated JSON Schema | Business logic |
 | `packages/core` | Venue graph, simulator, state, prediction, intervention, routing, safety | I/O, transport, LLM calls |
 | `packages/cli` | Command surface, arg parsing, output formatting | Engine logic |
-| `packages/api` | WebSocket/REST handlers, the tick loop, broadcast | Engine logic |
+| `apps/app/server` | WebSocket/REST handlers, the tick loop, broadcast | Engine logic |
 | `packages/agent` | Tool definitions, reasoning loop, memory | Direct control of actions — safety vetoes first |
-| `apps/dashboard` | Rendering state it receives | Any computation of state |
+| `apps/app` | Rendering state it receives | Any computation of state |
 | `apps/mobile` | Spectator UI, local routing | Mesh transport (that's `modules/mesh`) |
 | `circuits/` | Data only, schema-validated | Code |
 | `scenarios/` | Config only, seeded | Code |
@@ -142,7 +141,7 @@ up in review as a diff.
 
 ## 4. The tick loop
 
-The closed loop from `plan.md` §49, implemented once in `packages/api` and reused by
+The closed loop from `plan.md` §49, implemented once in `apps/app/server` and reused by
 `packages/cli` for headless runs. It is small, and it is the product.
 
 ```

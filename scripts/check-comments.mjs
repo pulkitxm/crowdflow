@@ -244,6 +244,31 @@ function sourceAt(base, file) {
   }
 }
 
+function renamedPaths(base) {
+  const result = new Map();
+  for (const args of [
+    ['diff', '--find-renames=25%', '--name-status', '-z', base, '--'],
+    ['diff', '--cached', '--find-renames=25%', '--name-status', '-z', base, '--'],
+  ]) {
+    let output = '';
+    try {
+      output = execFileSync('git', args, { encoding: 'utf8' });
+    } catch {
+      continue;
+    }
+    const fields = output.split('\0').filter(Boolean);
+    for (let index = 0; index < fields.length; index += 1) {
+      const status = fields[index];
+      if (!status.startsWith('R')) continue;
+      const previous = fields[index + 1];
+      const current = fields[index + 2];
+      if (previous && current) result.set(current, previous);
+      index += 2;
+    }
+  }
+  return result;
+}
+
 function newCommentRanges(file, source, previous) {
   const counts = new Map();
   for (const range of scan(file, previous)) {
@@ -315,12 +340,13 @@ function runSelftest() {
 
 function main() {
   const base = baseRef();
+  const renames = renamedPaths(base);
   let findings = 0;
   for (const file of candidateFiles(base)) {
     const source = readFileSync(file, 'utf8');
     let ranges;
     try {
-      ranges = all ? scan(file, source) : newCommentRanges(file, source, sourceAt(base, file));
+      ranges = all ? scan(file, source) : newCommentRanges(file, source, sourceAt(base, renames.get(file) ?? file));
     } catch (error) {
       throw new Error(`${file}: ${error instanceof Error ? error.message : String(error)}`);
     }

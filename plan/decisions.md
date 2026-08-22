@@ -38,7 +38,7 @@ must move deliberately rather than being duplicated.
 **Context.** The system is a pipeline. It could have been built API-first with the dashboard
 as the only way to drive it.
 
-**Decision.** `packages/core` is a pure library with no I/O. `packages/cli` and `packages/api`
+**Decision.** `packages/core` is a pure library with no I/O. `packages/cli` and `apps/app/server`
 are equal, permanent adapters over it. The CLI is built first.
 
 **Rationale.** Four things need headless execution and none of them are comfortable through a UI:

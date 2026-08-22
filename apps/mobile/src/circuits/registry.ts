@@ -1,5 +1,5 @@
 
-import type { AnchorPack, CircuitSummary, VenueGeometry } from '@crowdflow/api/wire';
+import type { AnchorPack, CircuitSummary, VenueGeometry } from '@crowdflow/contracts/wire';
 import { planAnchors } from '@crowdflow/core/positioning';
 import { DEMO_GEOMETRY } from './demo';
 

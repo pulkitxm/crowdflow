@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
-import type { VenueGeometry } from '@crowdflow/api/wire';
+import type { VenueGeometry } from '@crowdflow/contracts/wire';
 import { radius } from '../theme';
 
 const TRACK = '#5A626B';

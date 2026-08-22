@@ -1,6 +1,6 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { RaceSummary, Session } from '@crowdflow/api/wire';
+import type { RaceSummary, Session } from '@crowdflow/contracts/wire';
 
 const KEY = 'crowdflow.race.v1';
 
