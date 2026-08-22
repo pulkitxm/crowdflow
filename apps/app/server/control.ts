@@ -39,12 +39,16 @@ export class CrowdControl {
       throw new Error(`command ${proposal.command.command_id} is already dispatched`);
     }
     const command: RerouteCommand = { ...proposal.command, issued_at: now, expires_at: now + COMMAND_TTL_S };
+    const simulated = session?.circuit.pack.id === circuit.pack.id;
+    if (circuit.pack.capability !== 'venue_reviewed' && !simulated) {
+      throw new Error(`${circuit.pack.id} is ${circuit.pack.capability}; operational guidance requires venue_reviewed`);
+    }
     const avoidForRoute = new Set((command.avoid ?? []).filter((zone) => zone !== command.source_zone && zone !== command.destination_zone));
     const route = circuit.graph.route(command.source_zone, command.destination_zone, undefined, avoidForRoute, new Set(command.prefer ?? []));
     if (!route.path.length) throw new Error(`no guidable route from ${command.source_zone} to ${command.destination_zone}: ${route.rejected_reason ?? 'unknown'}`);
 
     let applied = false;
-    if (session && session.circuit.pack.id === circuit.pack.id) {
+    if (simulated && session) {
       session.loop.activeCommand = command;
       session.sim.avoid = new Set(command.avoid ?? []);
       session.sim.prefer = new Set(command.prefer ?? []);
@@ -53,7 +57,7 @@ export class CrowdControl {
 
     const cohort = new Map<number, TargetedPerson>();
     const origin = circuit.pack.zones?.[command.source_zone]?.position;
-    if (origin) {
+    if (origin && circuit.pack.capability === 'venue_reviewed') {
       for (const person of this.people.near(circuit.pack.id, origin, radiusM)) {
         if (person.person_id % FRACTION_BUCKETS < command.target_fraction * FRACTION_BUCKETS) {
           cohort.set(person.person_id, { person_id: person.person_id, start: person.position, pinged_at: null });
