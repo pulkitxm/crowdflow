@@ -13,7 +13,14 @@ import {
 const sourced = (value: number) => ({ value, provenance: 'measured' as const, samples: 64 });
 function pack(): CircuitPack {
   return {
-    id: 'toy', name: 'Toy', geometry_source: 'synthetic', track_length_m: 1000, altitude_m: 0,
+    id: 'toy',
+    name: 'Toy',
+    geometry_source: 'synthetic',
+    layout_id: 'toy-1',
+    capability: 'synthetic_simulation',
+    track_length_m: 1000,
+    altitude_m: 0,
+    track_clearance_m: sourced(10),
     frame: { origin_lat: 0, origin_lon: 0, track_bounds_m: [100, 100], venue_bounds_m: [0, 0, 100, 100] },
     zones: {
       a: { id: 'a', kind: 'gate', position: { x: 0, y: 0 } },
@@ -22,10 +29,10 @@ function pack(): CircuitPack {
       x: { id: 'x', kind: 'concourse', position: { x: 10, y: 10 } },
     },
     edges: {
-      ab: { id: 'ab', source: 'a', destination: 'b', length_m: 10, width_m: sourced(2) },
-      bc: { id: 'bc', source: 'b', destination: 'c', length_m: 10, width_m: sourced(2) },
-      ax: { id: 'ax', source: 'a', destination: 'x', length_m: 20, width_m: sourced(2) },
-      xc: { id: 'xc', source: 'x', destination: 'c', length_m: 20, width_m: sourced(2) },
+      ab: { id: 'ab', source: 'a', destination: 'b', length_m: 10, width_m: sourced(2), geometry: [{ x: 0, y: 0 }, { x: 10, y: 0 }] },
+      bc: { id: 'bc', source: 'b', destination: 'c', length_m: 10, width_m: sourced(2), geometry: [{ x: 10, y: 0 }, { x: 20, y: 0 }] },
+      ax: { id: 'ax', source: 'a', destination: 'x', length_m: 20, width_m: sourced(2), geometry: [{ x: 0, y: 0 }, { x: 10, y: 10 }] },
+      xc: { id: 'xc', source: 'x', destination: 'c', length_m: 20, width_m: sourced(2), geometry: [{ x: 10, y: 10 }, { x: 20, y: 0 }] },
     },
     crossings: {}, constraints: { never_route_through: [], emergency_exits: ['c'], accessible_routes: [] },
   };
@@ -54,8 +61,16 @@ describe('pure TypeScript core', () => {
     venue.constraints = { ...venue.constraints, never_route_through: ['b'] };
     const graph = new VenueGraph(venue);
     const command: RerouteCommand = {
-      command_id: 'cmd', issued_at: 0, expires_at: 300, source_zone: 'a', destination_zone: 'c',
-      avoid: [], prefer: [], target_fraction: 0.3, reason: 'test', expected_cost_s: 0,
+      command_id: 'cmd',
+      issued_at: 0,
+      expires_at: 300,
+      source_zone: 'a',
+      destination_zone: 'c',
+      avoid: [],
+      prefer: [],
+      target_fraction: 0.3,
+      reason: 'test',
+      expected_cost_s: 0,
     };
     const verdict = new SafetyEngine(venue).review(command, undefined, graph);
     expect(verdict.dispatchable).toBe(true); // safe detour through x remains
@@ -68,13 +83,19 @@ describe('pure TypeScript core', () => {
   it('carries an agent through a multi-leg day, dwelling between legs', () => {
     const graph = new VenueGraph(pack());
     const sim = new Simulation(graph, { seed: 7, participation: 1, compliance: 1 });
-    sim.addItinerary(1, 'a', [{ zone: 'b', dwell_s: 40 }, { zone: 'c', dwell_s: 0 }]);
+    sim.addItinerary(1, 'a', [
+      { zone: 'b', dwell_s: 40 },
+      { zone: 'c', dwell_s: 0 },
+    ]);
     const agent = sim.agents[0]!;
 
     let sawDwell = false;
     for (let tick = 0; tick < 20; tick++) {
       sim.step();
-      if (sim.dwelling === 1) { sawDwell = true; break; }
+      if (sim.dwelling === 1) {
+        sawDwell = true;
+        break;
+      }
     }
     expect(sawDwell).toBe(true);
     expect(agent.at).toBe('b');
@@ -90,7 +111,10 @@ describe('pure TypeScript core', () => {
     const graph = new VenueGraph(pack());
     const build = () => {
       const sim = new Simulation(graph, { seed: 3, participation: 1, compliance: 1 });
-      sim.addItinerary(40, 'a', [{ zone: 'b', dwell_s: 60, until_s: 600 }, { zone: 'c', dwell_s: 0 }]);
+      sim.addItinerary(40, 'a', [
+        { zone: 'b', dwell_s: 60, until_s: 600 },
+        { zone: 'c', dwell_s: 0 },
+      ]);
       for (let tick = 0; tick < 30; tick++) sim.step();
       return sim;
     };
@@ -139,8 +163,16 @@ describe('pure TypeScript core', () => {
     const venue = pack();
     venue.constraints = { never_route_through: [], emergency_exits: [], accessible_routes: [] };
     const command: RerouteCommand = {
-      command_id: 'cmd', issued_at: 0, expires_at: 300, source_zone: 'a', destination_zone: 'c',
-      avoid: [], prefer: [], target_fraction: 0.3, reason: 'test', expected_cost_s: 0,
+      command_id: 'cmd',
+      issued_at: 0,
+      expires_at: 300,
+      source_zone: 'a',
+      destination_zone: 'c',
+      avoid: [],
+      prefer: [],
+      target_fraction: 0.3,
+      reason: 'test',
+      expected_cost_s: 0,
     };
     const verdict = new SafetyEngine(venue).review(command, undefined, new VenueGraph(venue));
     expect(verdict.dispatchable).toBe(true);
@@ -154,8 +186,16 @@ describe('pure TypeScript core', () => {
     const venue = pack();
     venue.constraints = { never_route_through: ['x'], emergency_exits: ['c'], accessible_routes: [] };
     const command: RerouteCommand = {
-      command_id: 'cmd', issued_at: 0, expires_at: 300, source_zone: 'a', destination_zone: 'b',
-      avoid: [], prefer: [], target_fraction: 0.3, reason: 'test', expected_cost_s: 0,
+      command_id: 'cmd',
+      issued_at: 0,
+      expires_at: 300,
+      source_zone: 'a',
+      destination_zone: 'b',
+      avoid: [],
+      prefer: [],
+      target_fraction: 0.3,
+      reason: 'test',
+      expected_cost_s: 0,
     };
     const verdict = new SafetyEngine(venue).review(command, undefined, new VenueGraph(venue));
     expect(verdict.unchecked_constraints).toEqual([]);
@@ -164,10 +204,19 @@ describe('pure TypeScript core', () => {
 
   it('keeps three phones below the actionable confidence floor', () => {
     const engine = new StateEngine(pack(), 1);
-    engine.ingest([0, 1, 2].map((id) => ({
-      node_id: String(id), epoch: 0, timestamp: 1, position: { x: 10, y: 0 },
-      speed_ms: FREE_FLOW_SPEED_MS, heading_deg: 0, accuracy_m: 8, zone_id: 'b',
-    })), 1);
+    engine.ingest(
+      [0, 1, 2].map((id) => ({
+        node_id: String(id),
+        epoch: 0,
+        timestamp: 1,
+        position: { x: 10, y: 0 },
+        speed_ms: FREE_FLOW_SPEED_MS,
+        heading_deg: 0,
+        accuracy_m: 8,
+        zone_id: 'b',
+      })),
+      1,
+    );
     const state = engine.snapshot(1).zones!.b!;
     expect(state.confidence.value).toBeLessThan(0.5);
   });
