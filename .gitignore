@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.next/
+apps/dashboard/next-env.d.ts
 coverage/
 .cache/
 .data/

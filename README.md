@@ -21,7 +21,7 @@ bun install --frozen-lockfile
 
 ```text
 apps/
-  dashboard/       Vite operator console
+  dashboard/       Next.js operator console
   mobile/          Expo spectator app and native Android mesh module
 packages/
   contracts/       Wire contracts and JSON Schema generation
