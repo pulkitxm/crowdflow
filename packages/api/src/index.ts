@@ -5,5 +5,7 @@ export * from './scenarios.js';
 export * from './spectator.js';
 export * from './agent.js';
 export * from './control.js';
+export * from './raceday.js';
+export * from './advisory.js';
 export * from './app.js';
 export * from './people.js';

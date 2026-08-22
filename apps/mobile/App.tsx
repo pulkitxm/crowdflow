@@ -16,6 +16,7 @@ import { PersonLogin } from './src/screens/PersonLogin';
 import { RacePicker } from './src/screens/RacePicker';
 import { SensingSettings } from './src/screens/SensingSettings';
 import { LocationCheck } from './src/screens/LocationCheck';
+import { useAppFonts } from './src/ui/fonts';
 import { useSensing } from './src/sensing/useSensing';
 
 const api = process.env.EXPO_PUBLIC_CROWDFLOW_API;
@@ -44,6 +45,7 @@ export default function App() {
   const [race, setRace] = useState<SelectedRace | null>(null);
   const [consent, setConsent] = useState<ConsentRecord | null>(null);
   const [ready, setReady] = useState(false);
+  const fontsReady = useAppFonts();
 
   useEffect(() => {
     (async () => {
@@ -98,7 +100,7 @@ export default function App() {
     setStage('consent');
   }, []);
 
-  if (!ready) return null;
+  if (!ready || !fontsReady) return null;
 
   return (
     <SafeAreaProvider>

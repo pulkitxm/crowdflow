@@ -69,11 +69,14 @@ export class LivePanel {
     const age = live.last_report_age_s;
     // Stale is not a number typed here: a report older than the state engine's
     // window is a report that no longer contributes to any density on screen.
-    const stale = age == null || age > 30;
+    const stale = age == null || age > live.window_s;
     this.status.append(
       el("span", {
         class: `tool tool--static ${stale ? "tool--stale" : ""}`,
-        text: age == null ? "NO REPORTS YET" : `LAST REPORT ${fixed(age, 1)}s AGO`,
+        title: `a report older than the ${live.window_s}s counting window no longer contributes to any density on screen`,
+        text: age == null
+          ? "NO REPORTS YET"
+          : `${stale ? "STALE" : "FRESH"} · LAST REPORT ${fixed(age, 1)}s AGO of ${live.window_s}s`,
       }),
     );
 

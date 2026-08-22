@@ -22,6 +22,12 @@ interface Metric {
   tone?: string;
 }
 
+const GROUPS: Array<{ label: string; members: string[] }> = [
+  { label: "CROWD", members: ["PEAK DENSITY", "CRITICAL", "BUILDING", "PEAK CRIT ZONES", "PEAK QUEUED"] },
+  { label: "JOURNEY", members: ["ARRIVED", "ACTIVE", "MEAN WALK", "P95 WALK"] },
+  { label: "SYSTEM", members: ["DISPATCHED", "SAFETY REJECTED", "NODES", "EST PRESENT", "COVERAGE", "TICK COST"] },
+];
+
 export class MetricsStrip {
   constructor(private readonly host: HTMLElement) {}
 
@@ -134,8 +140,21 @@ export class MetricsStrip {
     ];
 
     clear(this.host);
-    for (const metric of metrics) {
-      this.host.append(
+    const placed = new Set<string>();
+    for (const group of GROUPS) {
+      const members = metrics.filter((metric) => group.members.includes(metric.label));
+      if (!members.length) continue;
+      for (const metric of members) placed.add(metric.label);
+      this.host.append(this.groupNode(group.label, members));
+    }
+    const rest = metrics.filter((metric) => !placed.has(metric.label));
+    if (rest.length) this.host.append(this.groupNode("OTHER", rest));
+  }
+
+  private groupNode(label: string, members: Metric[]): HTMLElement {
+    const group = el("div", { class: "metricgroup" }, el("span", { class: "metricgroup__label", text: label }));
+    for (const metric of members) {
+      group.append(
         el(
           "div",
           { class: `metric ${metric.tone ? `metric--${metric.tone}` : ""}`, title: metric.title },
@@ -149,5 +168,6 @@ export class MetricsStrip {
         ),
       );
     }
+    return group;
   }
 }

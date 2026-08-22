@@ -63,6 +63,23 @@ describe('crowd control dispatch', () => {
     expect((await send(port, `/api/agent/proposals/${commandId}/approve`, {})).status).toBe(400);
   });
 
+  it('targets every nearby person, not the lowest thousand ids', async () => {
+    const { port, commandId } = await askedForReroute();
+    const origin = loadCircuit(root, 'silverstone').pack.zones?.[SOURCE]?.position;
+    if (!origin) throw new Error(`${SOURCE} has no position`);
+    const now = Date.now() / 1000;
+    server!.people.transaction(() => {
+      for (let personId = 1000; personId < 4000; personId++) {
+        server!.people.login(personId, 'silverstone', now);
+        server!.people.updateLocation(personId, 'silverstone', origin, 1.1, 4, 'gnss', now, null);
+      }
+    });
+    const dispatched = (await send(port, `/api/agent/proposals/${commandId}/approve`, {})).body as any;
+    expect(dispatched.cohort.targeted).toBeGreaterThan(1000);
+    const commands = await get(port, '/api/agent/commands') as any;
+    expect(commands.commands[0].cohort.targeted).toBe(dispatched.cohort.targeted);
+  });
+
   it('404s an unknown proposal and refuses a rejected one', async () => {
     const { port } = await askedForReroute();
     expect((await send(port, '/api/agent/proposals/agent-nope/approve', {})).status).toBe(404);

@@ -190,6 +190,12 @@ export class InterventionPanel {
                 class: "verdict__violations",
                 text: `constraints: ${(verdict.violated_constraints ?? []).join(", ")}`,
               }),
+            (verdict.unchecked_constraints ?? []).length > 0 &&
+              el("span", {
+                class: "verdict__unchecked",
+                text: `NOT TESTED ${(verdict.unchecked_constraints ?? []).length}: ${(verdict.unchecked_constraints ?? []).join(", ")}`,
+                title: "the pack does not declare the data these constraints need, so this approval did not clear them",
+              }),
           ),
       ),
     );

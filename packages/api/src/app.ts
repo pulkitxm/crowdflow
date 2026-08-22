@@ -6,6 +6,9 @@ import { CAPACITY_DENSITY, DENSITY_BUILDING_MAX, DENSITY_NOMINAL_MAX, FREE_FLOW_
 import { capacityFlow } from '@crowdflow/core';
 import { AgentService } from './agent.js';
 import { CrowdControl } from './control.js';
+import { simulatedPeopleQuery } from './simcrowd.js';
+import { AdvisoryDesk } from './advisory.js';
+import { RaceDayRun } from './raceday.js';
 import { anchorPack, availableCircuits, geometry, loadCircuit, summary, type LoadedCircuit } from './packs.js';
 import { LiveIngest } from './live.js';
 import { currentRace, race, races } from './events.js';
@@ -13,8 +16,16 @@ import { ScenarioSession } from './session.js';
 import { ASSUMED_DEMO_POPULATION, buildScenario, scenarioOptions } from './scenarios.js';
 import { SpectatorFeed } from './spectator.js';
 import { PeopleStore, type PeopleQuery } from './people.js';
-import type { AgentAskRequest, LiveRequest, PersonLoginRequest, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
+import type { AnomalyKind } from '@crowdflow/core';
+import type { TickEnvelope, AgentAskRequest, LiveRequest, RaceDayRequest, PersonLoginRequest, SessionRequest, SocketFrame, StandardsReport } from './wire.js';
 import type { NodeReport } from '@crowdflow/contracts';
+
+export function dayClock(secondOfDay: number): string {
+  const day = 24 * 60 * 60;
+  const wrapped = ((Math.round(secondOfDay) % day) + day) % day;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return pad(Math.floor(wrapped / 3600)) + ':' + pad(Math.floor(wrapped / 60) % 60) + ':' + pad(wrapped % 60);
+}
 
 export function standardsReport(): StandardsReport {
   return { source: 'Fruin, "Pedestrian Planning and Design" (1971), walkway LOS', bands: [
@@ -40,6 +51,9 @@ export class CrowdFlowServer {
   agent = new AgentService();
   readonly people: PeopleStore;
   readonly control: CrowdControl;
+  raceday: RaceDayRun | null = null;
+  readonly advisories = new AdvisoryDesk();
+  readonly noticeTtlS = 900;
   private unsubscribeLive: (() => void) | null = null;
   readonly server = createServer((request, response) => void this.handle(request, response));
   readonly sockets = new WebSocketServer({ noServer: true });
@@ -81,7 +95,7 @@ export class CrowdFlowServer {
     const circuit = this.load(request.circuit_id ?? 'silverstone');
     const count = request.population ?? ASSUMED_DEMO_POPULATION; const seed = request.seed ?? 42;
     const { scenario, option } = buildScenario(circuit, request.scenario ?? 'egress', count, seed, request.origins, request.destination);
-    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); this.session.subscribe((tick) => this.agent.observe(circuit.pack, tick.state)); return this.session;
+    this.session?.stop(); this.session = new ScenarioSession(circuit, scenario, option, count, request.participation ?? 0.18, request.intervene ?? true, request.speed ?? 1); this.spectator = new SpectatorFeed(this.session); this.session.subscribe((tick) => this.spectator?.observe(tick)); this.session.subscribe((tick) => this.agent.observe(circuit.pack, tick.state)); this.session.subscribe((tick) => this.sweepAdvisories(circuit, tick)); return this.session;
   }
   /**
    * Arm live ingest.
@@ -103,6 +117,36 @@ export class CrowdFlowServer {
     });
     return this.live;
   }
+
+  startRaceDay(request: RaceDayRequest = {}): RaceDayRun {
+    const circuitId = request.circuit_id ?? 'silverstone';
+    const circuit = this.load(circuitId);
+    const entry = races(this.root).find((item) => item.circuit_id === circuitId);
+    if (!entry) throw new Error(`no committed calendar entry for ${circuitId}`);
+    const profile = { circuit_id: circuitId, name: entry.name, sessions: entry.sessions ?? [], date: entry.date, round: entry.round, season: entry.season, locality: entry.locality, country: entry.country };
+    this.session?.stop();
+    this.raceday = new RaceDayRun(circuit, profile, entry.utc_offset ?? null, request);
+    this.session = this.raceday.session;
+    this.spectator = new SpectatorFeed(this.session);
+    this.session.subscribe((tick) => this.spectator?.observe(tick));
+    this.session.subscribe((tick) => this.agent.observe(circuit.pack, tick.state));
+    this.session.subscribe((tick) => this.sweepAdvisories(circuit, tick));
+    return this.raceday;
+  }
+  simClock(): number {
+    return this.raceday ? this.raceday.session.sim.timeS : (this.session?.sim.timeS ?? Date.now() / 1000);
+  }
+
+  private sweepAdvisories(circuit: LoadedCircuit, tick: TickEnvelope): void {
+    this.advisories.sweep(
+      tick.time_s,
+      tick.state,
+      tick.forecasts ?? [],
+      this.agent.insightsFor(circuit.pack),
+      (id) => circuit.pack.zones?.[id]?.name ?? id,
+    );
+  }
+
   private broadcast(frame: SocketFrame): void {
     const payload = JSON.stringify(frame);
     for (const socket of this.sockets.clients) if (socket.readyState === 1) socket.send(payload);
@@ -118,7 +162,7 @@ export class CrowdFlowServer {
       const geometryMatch = path.match(/^\/api\/circuits\/([^/]+)\/geometry$/); if (request.method === 'GET' && geometryMatch) return json(response, 200, geometry(this.load(geometryMatch[1]!)));
       const scenarioMatch = path.match(/^\/api\/circuits\/([^/]+)\/scenarios$/); if (request.method === 'GET' && scenarioMatch) return json(response, 200, scenarioOptions(this.load(scenarioMatch[1]!)));
       if (request.method === 'GET' && path === '/api/session') return this.session ? json(response, 200, this.session.info()) : json(response, 404, { detail: 'no session started' });
-      if (request.method === 'GET' && path === '/api/spectator/view') { if (!this.spectator) return json(response, 404, { detail: 'no session started' }); const origin = url.searchParams.get('origin') ?? ''; const destination = url.searchParams.get('destination') ?? ''; if (!origin || !destination) return json(response, 422, { detail: 'origin and destination are required' }); return json(response, 200, this.spectator.view({ origin, destination, online: url.searchParams.get('online') !== 'false', mesh_peers: Number(url.searchParams.get('mesh_peers') ?? 0), now_unix_s: Number(url.searchParams.get('now') ?? Date.now() / 1000) })); }
+      if (request.method === 'GET' && path === '/api/spectator/view') { if (!this.spectator) return json(response, 404, { detail: 'no session started' }); const origin = url.searchParams.get('origin') ?? ''; const destination = url.searchParams.get('destination') ?? ''; if (!origin || !destination) return json(response, 422, { detail: 'origin and destination are required' }); const view = this.spectator.view({ origin, destination, online: url.searchParams.get('online') !== 'false', mesh_peers: Number(url.searchParams.get('mesh_peers') ?? 0), now_unix_s: Number(url.searchParams.get('now') ?? Date.now() / 1000) }); return json(response, 200, { ...view, simulated_clock_s: this.simClock(), simulated_clock_local: dayClock(this.simClock()), notices: this.advisories.notices(this.simClock()) }); }
       if (request.method === 'GET' && path === '/api/events') return json(response, 200, races(this.root));
       if (request.method === 'GET' && path === '/api/events/current') { const next = currentRace(this.root, new Date()); return next ? json(response, 200, next) : json(response, 404, { detail: 'no calendar is committed' }); }
       const raceMatch = path.match(/^\/api\/events\/([^/]+)$/); if (request.method === 'GET' && raceMatch) { const found = race(this.root, raceMatch[1]!); return found ? json(response, 200, found) : json(response, 404, { detail: `no race ${raceMatch[1]}` }); }
@@ -133,17 +177,20 @@ export class CrowdFlowServer {
       if (request.method === 'POST' && path === '/api/people/login/batch') {
         const command = await body(request) as { people?: PersonLoginRequest[] };
         if (!command.people?.length || command.people.length > 1000) throw new Error('people must contain from 1 to 1000 items');
-        const joined = command.people.map((item) => {
-          this.load(item.circuit_id);
-          return this.people.login(item.person_id, item.circuit_id, Date.now() / 1000);
-        });
+        for (const item of command.people) this.load(item.circuit_id);
+        const joined = this.people.transaction(() =>
+          command.people!.map((item) => this.people.login(item.person_id, item.circuit_id, Date.now() / 1000)),
+        );
         if (this.session) this.broadcast({ type: 'people_joined', session: this.session.info(), people: joined, live: this.live?.snapshot(Date.now() / 1000, false) ?? null });
         return json(response, 200, { count: joined.length, people: joined });
       }
       const queryMatch = path.match(/^\/api\/circuits\/([^/]+)\/people\/query$/);
       if (request.method === 'POST' && queryMatch) {
         this.load(queryMatch[1]!);
-        return json(response, 200, this.people.query(queryMatch[1]!, await body(request) as PeopleQuery));
+        const query = await body(request) as PeopleQuery;
+        const stored = this.people.query(queryMatch[1]!, query);
+        if (stored.matched_count > 0 || !this.session) return json(response, 200, stored);
+        return json(response, 200, simulatedPeopleQuery(this.session.sim, queryMatch[1]!, query));
       }
       const peopleMatch = path.match(/^\/api\/circuits\/([^/]+)\/people$/);
       if (request.method === 'DELETE' && peopleMatch) {
@@ -176,8 +223,34 @@ export class CrowdFlowServer {
         const command = await body(request) as { reports?: NodeReport[]; emit?: boolean };
         return json(response, 200, this.live.reportMany(command.reports ?? [], Date.now() / 1000, command.emit !== false));
       }
+      if (request.method === 'POST' && path === '/api/raceday') {
+        const command = await body(request) as RaceDayRequest;
+        return json(response, 200, this.startRaceDay(command).status());
+      }
+      if (request.method === 'GET' && path === '/api/raceday') {
+        return this.raceday ? json(response, 200, this.raceday.status()) : json(response, 404, { detail: 'no race day is running — start one with POST /api/raceday' });
+      }
+      if (request.method === 'POST' && path === '/api/raceday/anomaly') {
+        if (!this.raceday) return json(response, 404, { detail: 'no race day is running' });
+        const command = await body(request) as { kind?: AnomalyKind; duration_s?: number };
+        if (!command.kind) throw new Error('kind is required');
+        const anomaly = this.raceday.inject(command.kind, command.duration_s);
+        return json(response, 200, { anomaly, status: this.raceday.status() });
+      }
       if (request.method === 'GET' && path === '/api/agent') return json(response, 200, this.agent.status(this.session, this.live));
       if (request.method === 'POST' && path === '/api/agent/ask') return json(response, 200, await this.agent.ask(await body(request) as AgentAskRequest, this.session, this.live, Date.now() / 1000));
+      if (request.method === 'GET' && path === '/api/agent/advisories') {
+        return json(response, 200, { advisories: this.advisories.advisories(), notices: this.advisories.notices(this.simClock()) });
+      }
+      const advisoryMatch = path.match(/^\/api\/agent\/advisories\/([^/]+)\/approve$/);
+      if (request.method === 'POST' && advisoryMatch) {
+        const notice = this.advisories.approve(advisoryMatch[1]!, this.simClock(), this.noticeTtlS);
+        if (this.session) {
+          const event = this.session.note('command', 'info', `operator published a crowd notice: ${notice.message}`, notice.zone_id);
+          this.broadcast({ type: 'command', session: this.session.info(), event });
+        }
+        return json(response, 200, { notice, advisories: this.advisories.advisories() });
+      }
       if (request.method === 'GET' && path === '/api/agent/commands') return json(response, 200, { commands: this.control.status(Date.now() / 1000) });
       const approveMatch = path.match(/^\/api\/agent\/proposals\/([^/]+)\/approve$/);
       if (request.method === 'POST' && approveMatch) {

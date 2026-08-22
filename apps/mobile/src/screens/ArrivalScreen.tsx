@@ -62,8 +62,12 @@ function GateRow({ gate, onPress }: { gate: GateChoice; onPress?: () => void }) 
       ]}
     >
       <View style={styles.gateHead}>
-        <Headline>{gate.name}</Headline>
-        <Title>{journeyText(gate.walk_s)}</Title>
+        <Headline numberOfLines={2} style={{ flex: 1, minWidth: 0 }}>
+          {gate.name}
+        </Headline>
+        <Title numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>
+          {journeyText(gate.walk_s)}
+        </Title>
       </View>
       <View style={styles.gateMeta}>
         <StatusPill state={gate.way_ahead} />
@@ -85,6 +89,12 @@ const styles = StyleSheet.create({
     minHeight: 96,
     justifyContent: 'center',
   },
-  gateHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },
+  gateHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: space.sm,
+    flexWrap: 'wrap',
+  },
   gateMeta: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
 });

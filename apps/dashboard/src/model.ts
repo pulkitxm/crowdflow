@@ -18,7 +18,7 @@
  * `standards.band_for_density`; this file only decides which word goes beside
  * which number.
  */
-import type { LOSBand, ZoneKind, ZoneState } from "@crowdflow/contracts";
+import type { LOSBand, VenueState, ZoneKind, ZoneState } from "@crowdflow/contracts";
 import type { TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { NO_VALUE, age, fixed, integer } from "./format";
 
@@ -120,8 +120,14 @@ function unknownRow(
   };
 }
 
+export interface RowSource {
+  state: VenueState;
+  silent_zones?: string[];
+  time_s?: number;
+}
+
 export function buildRows(
-  envelope: TickEnvelope,
+  envelope: RowSource,
   geometry: VenueGeometry | null,
   memory: ZoneMemory,
 ): ZoneRow[] {
@@ -160,12 +166,12 @@ export function buildRows(
 
   for (const id of envelope.silent_zones ?? []) {
     rows.push(
-      unknownRow(id, naming(id), kindOf(id), "silent", memory.silentFor(id, envelope.time_s)),
+      unknownRow(id, naming(id), kindOf(id), "silent", memory.silentFor(id, envelope.time_s ?? 0)),
     );
   }
   for (const id of envelope.state.unobserved_zones ?? []) {
     rows.push(
-      unknownRow(id, naming(id), kindOf(id), "unknown", memory.silentFor(id, envelope.time_s)),
+      unknownRow(id, naming(id), kindOf(id), "unknown", memory.silentFor(id, envelope.time_s ?? 0)),
     );
   }
   return rows;

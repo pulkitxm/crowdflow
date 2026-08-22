@@ -1,3 +1,8 @@
+import {
+  ASSUMED_VIEWPORT_DENSITY_ACTIVE,
+  ASSUMED_VIEWPORT_DENSITY_BUSY,
+  ASSUMED_VIEWPORT_DENSITY_PEAK,
+} from "@crowdflow/contracts";
 import type { GridCell, PeopleQueryResult } from "@crowdflow/api/wire";
 
 export type HeatBand = "low" | "active" | "busy" | "peak";
@@ -11,11 +16,13 @@ export interface HeatSpot {
   band: HeatBand;
 }
 
+const UNIT = "ped/m²";
+
 export const HEAT_BANDS: Array<{ band: HeatBand; label: string; range: string; colour: string }> = [
-  { band: "low", label: "LOW", range: "< 0.005 ped/m²", colour: "#2b83f6" },
-  { band: "active", label: "ACTIVE", range: "0.005–0.02 ped/m²", colour: "#18c886" },
-  { band: "busy", label: "BUSY", range: "0.02–0.05 ped/m²", colour: "#ffb11b" },
-  { band: "peak", label: "PEAK", range: "≥ 0.05 ped/m²", colour: "#ff4057" },
+  { band: "low", label: "LOW", range: `< ${ASSUMED_VIEWPORT_DENSITY_ACTIVE} ${UNIT}`, colour: "#3186e9" },
+  { band: "active", label: "ACTIVE", range: `${ASSUMED_VIEWPORT_DENSITY_ACTIVE}–${ASSUMED_VIEWPORT_DENSITY_BUSY} ${UNIT}`, colour: "#00ca85" },
+  { band: "busy", label: "BUSY", range: `${ASSUMED_VIEWPORT_DENSITY_BUSY}–${ASSUMED_VIEWPORT_DENSITY_PEAK} ${UNIT}`, colour: "#f3b539" },
+  { band: "peak", label: "PEAK", range: `≥ ${ASSUMED_VIEWPORT_DENSITY_PEAK} ${UNIT}`, colour: "#f84b4b" },
 ];
 
 export function densityForCell(cell: GridCell): number {
@@ -24,9 +31,9 @@ export function densityForCell(cell: GridCell): number {
 }
 
 export function heatBandForDensity(density: number): HeatBand {
-  if (density >= 0.05) return "peak";
-  if (density >= 0.02) return "busy";
-  if (density >= 0.005) return "active";
+  if (density >= ASSUMED_VIEWPORT_DENSITY_PEAK) return "peak";
+  if (density >= ASSUMED_VIEWPORT_DENSITY_BUSY) return "busy";
+  if (density >= ASSUMED_VIEWPORT_DENSITY_ACTIVE) return "active";
   return "low";
 }
 

@@ -19,3 +19,5 @@ evidence/
 circuits/*/pack/anchors.json
 .env
 .env.local
+
+.hallmark/

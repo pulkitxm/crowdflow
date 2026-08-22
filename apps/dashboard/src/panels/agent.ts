@@ -1,4 +1,4 @@
-import type { AgentAskResponse, AgentCommandStatus, AgentStatus } from "@crowdflow/api/wire";
+import type { AgentAdvisory, AgentAskResponse, AgentCommandStatus, AgentStatus, SpectatorNotice } from "@crowdflow/api/wire";
 import { answerBlocks, type AnswerSpan } from "../agentAnswer";
 import { clear, el } from "../dom";
 
@@ -14,6 +14,7 @@ export class AgentPanel {
   private busy = false;
   private readonly exchanges: HTMLElement;
   private readonly controlStrip: HTMLElement;
+  private readonly advisoryStrip: HTMLElement;
   private readonly input: HTMLInputElement;
   private readonly button: HTMLButtonElement;
 
@@ -38,7 +39,46 @@ export class AgentPanel {
     });
     this.exchanges = el("div", { class: "agent__exchanges" }, el("div", { class: "empty", text: "The agent reads the same engines this console renders; it recommends, and only an operator approval dispatches." }));
     this.controlStrip = el("div", { class: "agent__control" });
-    clear(host).append(form, this.controlStrip, this.exchanges);
+    this.advisoryStrip = el("div", { class: "agent__advice" });
+    clear(host).append(form, this.controlStrip, this.advisoryStrip, this.exchanges);
+  }
+
+  setAdvisories(advisories: AgentAdvisory[], notices: SpectatorNotice[], approve: (id: string) => Promise<unknown>): void {
+    clear(this.advisoryStrip);
+    const open = advisories.filter((advisory) => !advisory.approved);
+    this.advisoryStrip.classList.toggle("agent__advice--active", open.length > 0 || notices.length > 0);
+    for (const advisory of open) {
+      const row = el(
+        "div",
+        { class: `advice advice--${advisory.severity}`, title: `${advisory.detail} · from ${advisory.model_id}` },
+        el("span", { class: "advice__word", text: `${advisory.severity.toUpperCase()} ` }),
+        el("span", { class: "advice__headline", text: advisory.headline }),
+        el("div", { class: "advice__message", text: `To spectators: “${advisory.crowd_message}”` }),
+      );
+      const button = el("button", { class: "tool advice__approve", type: "button", text: "APPROVE FOR APP", title: "publish this wording to every spectator phone" });
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        button.textContent = "PUBLISHING…";
+        approve(advisory.id).then(
+          () => { button.remove(); row.append(el("span", { class: "advice__live", text: " — LIVE ON SPECTATOR APP" })); },
+          (error) => { button.disabled = false; button.textContent = "APPROVE FOR APP"; row.append(el("span", { class: "agent-exchange__error", text: ` ${error instanceof Error ? error.message : String(error)}` })); },
+        );
+      });
+      row.append(button);
+      this.advisoryStrip.append(row);
+    }
+    for (const notice of notices) {
+      this.advisoryStrip.append(
+        el("div", { class: "advice advice--published" },
+          el("span", { class: "advice__word", text: "ON APP " }),
+          el("span", { class: "advice__headline", text: notice.message }),
+        ),
+      );
+    }
+    if (!open.length && !notices.length) {
+      this.advisoryStrip.append(el("div", { class: "note", text: "No advisory raised yet — the agent watches every tick and posts one when a forecast, an over-capacity zone or a statistical insight appears." }));
+      this.advisoryStrip.classList.add("agent__advice--active");
+    }
   }
 
   setCommands(commands: AgentCommandStatus[]): void {

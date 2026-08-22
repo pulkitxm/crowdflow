@@ -1,8 +1,17 @@
 import { VenueGraph } from '../routing/graph.js';
-import { Simulation, type SimConfig } from './model.js';
+import { Simulation, type Leg, type SimConfig } from './model.js';
 
-export interface Cohort { count: number; origin: string; destination: string; start_s: number; spread_s: number }
+export interface Cohort {
+  count: number;
+  origin: string;
+  destination: string;
+  start_s: number;
+  spread_s: number;
+  itinerary?: Leg[];
+}
 export class Scenario {
+  populate: ((simulation: Simulation) => void) | null = null;
+
   constructor(
     readonly name: string,
     readonly description: string,
@@ -12,7 +21,11 @@ export class Scenario {
   ) {}
   build(graph: VenueGraph, overrides: Partial<SimConfig> = {}): Simulation {
     const simulation = new Simulation(graph, { seed: this.seed, ...overrides });
-    for (const cohort of this.cohorts) simulation.addAgents(cohort.count, cohort.origin, cohort.destination, cohort.start_s, cohort.spread_s);
+    if (this.populate) { this.populate(simulation); return simulation; }
+    for (const cohort of this.cohorts) {
+      if (cohort.itinerary?.length) simulation.addItinerary(cohort.count, cohort.origin, cohort.itinerary, cohort.start_s, cohort.spread_s);
+      else simulation.addAgents(cohort.count, cohort.origin, cohort.destination, cohort.start_s, cohort.spread_s);
+    }
     return simulation;
   }
 }

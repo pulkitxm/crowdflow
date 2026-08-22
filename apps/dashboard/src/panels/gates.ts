@@ -120,7 +120,7 @@ export class GatesPanel {
         type: "button",
         title: `Focus ${row.name} on the map`,
       },
-      el("span", { class: "gateline__kind", text: kind }),
+      el("span", { class: "gateline__kind", text: row.overCapacity ? `${kind} · OVER CAP` : kind }),
       el("span", { class: "gateline__name", text: row.name }),
       stateCell(row.word, row.visibility === "observed" ? `${row.value} ped/m²` : row.value, status),
       el("span", {

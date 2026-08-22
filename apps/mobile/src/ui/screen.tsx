@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +6,7 @@ import { space } from '../theme';
 import type { SpectatorView } from '../feed/types';
 import { freshnessText } from '../feed/time';
 import { Body, Eyebrow, Label } from './atoms';
+import { useMetrics, useStep } from './responsive';
 import { usePalette } from './theme';
 
 export function Screen({
@@ -19,15 +19,56 @@ export function Screen({
   footer?: React.ReactNode;
 }) {
   const palette = usePalette();
+  const { gutter, maxContentWidth, wide, tiny } = useMetrics();
+  const step = useStep();
+  const frame = wide
+    ? { width: '100%' as const, maxWidth: maxContentWidth, alignSelf: 'center' as const }
+    : { width: '100%' as const };
+
+  const freshness = view.link.online
+    ? freshnessText(view.link.updated_at, view.now)
+    : `No signal · ${freshnessText(view.link.updated_at, view.now).toLowerCase()}`;
+
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: palette.paper }]} edges={['top', 'bottom']}>
-      <View style={[styles.header, { borderBottomColor: palette.line }]}>
-        <Eyebrow>You're at</Eyebrow>
-        <Body style={{ fontWeight: '600' }}>{view.route.from}</Body>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: palette.paper }]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
+      <View
+        style={[
+          styles.header,
+          frame,
+          {
+            borderBottomColor: palette.line,
+            paddingHorizontal: gutter,
+            paddingTop: step(space.sm),
+            paddingBottom: step(space.sm),
+          },
+          tiny ? styles.headerStack : null,
+        ]}
+      >
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Eyebrow>You're at</Eyebrow>
+          <Body style={{ fontWeight: '600' }} numberOfLines={1}>
+            {view.route.from}
+          </Body>
+        </View>
+        <Label
+          tone="soft"
+          style={{ fontWeight: '500', fontSize: 13, textAlign: tiny ? 'left' : 'right' }}
+          numberOfLines={1}
+        >
+          {freshness}
+        </Label>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={{
+          padding: gutter,
+          gap: step(space.lg),
+          paddingBottom: step(space.xl),
+          ...frame,
+        }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
@@ -35,16 +76,22 @@ export function Screen({
       </ScrollView>
 
       {footer ? (
-        <View style={[styles.footer, { borderTopColor: palette.line }]}>{footer}</View>
+        <View
+          style={[
+            styles.footer,
+            frame,
+            {
+              borderTopColor: palette.line,
+              paddingHorizontal: gutter,
+              paddingTop: step(space.md),
+              paddingBottom: step(space.sm),
+              gap: step(space.sm),
+            },
+          ]}
+        >
+          {footer}
+        </View>
       ) : null}
-
-      <View style={styles.freshness}>
-        <Label tone="soft" style={{ fontSize: 13, fontWeight: '500' }}>
-          {view.link.online
-            ? freshnessText(view.link.updated_at, view.now)
-            : `No signal · ${freshnessText(view.link.updated_at, view.now).toLowerCase()}`}
-        </Label>
-      </View>
     </SafeAreaView>
   );
 }
@@ -52,13 +99,11 @@ export function Screen({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.sm,
-    paddingBottom: space.sm + space.xs,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: space.md,
     borderBottomWidth: 1,
-    gap: 2,
   },
-  body: { padding: space.lg, gap: space.lg, paddingBottom: space.xl },
-  footer: { paddingHorizontal: space.lg, paddingTop: space.md, borderTopWidth: 1, gap: space.sm },
-  freshness: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm },
+  headerStack: { flexDirection: 'column', alignItems: 'flex-start', gap: space.xs },
+  footer: { borderTopWidth: 1 },
 });

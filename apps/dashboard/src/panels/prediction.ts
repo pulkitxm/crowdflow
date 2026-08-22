@@ -15,11 +15,17 @@
  * horizon it looked over. A blank prediction panel and a quiet venue look
  * identical, and only one of them is good news.
  */
-import type { TickEnvelope } from "@crowdflow/api/wire";
+import type { CoverageReport, Forecast } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, countdown, fixed, percent } from "../format";
 import { BAND_WORD } from "../model";
 import type { ZoneRow } from "../model";
+
+export interface PredictionSource {
+  forecasts?: Forecast[];
+  actionable?: string[];
+  coverage: CoverageReport;
+}
 
 export class PredictionPanel {
   constructor(
@@ -27,7 +33,7 @@ export class PredictionPanel {
     private readonly meta: HTMLElement,
   ) {}
 
-  update(envelope: TickEnvelope, rows: Map<string, ZoneRow>, name: (id: string) => string): void {
+  update(envelope: PredictionSource, rows: Map<string, ZoneRow>, name: (id: string) => string, source = ""): void {
     const forecasts = envelope.forecasts ?? [];
     // Whether a forecast clears the bar is decided by the contract and shipped
     // in the envelope. The console must not own a copy of that comparison.
@@ -46,6 +52,15 @@ export class PredictionPanel {
         text: `HORIZON ${forecasts[0] ? Math.round(forecasts[0].horizon_s) : "—"}s`,
       }),
     );
+    if (source) {
+      this.meta.append(
+        el("span", {
+          class: `tool tool--static pred__source pred__source--${source.toLowerCase()}`,
+          text: `${source} STATE`,
+          title: "which picture this forecast was computed from — live handsets or the scenario simulation",
+        }),
+      );
+    }
 
     clear(this.host);
     if (!headline) {

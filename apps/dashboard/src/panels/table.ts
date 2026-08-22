@@ -1,7 +1,7 @@
-import type { LiveSnapshot, PeopleQueryResult, VenueGeometry } from "@crowdflow/api/wire";
+import type { PeopleQueryResult, VenueGeometry } from "@crowdflow/api/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, fixed, integer, signed } from "../format";
-import { buildSectorRows, sortSectorRows, type SectorRow, type SectorSort, type SectorSortKey } from "../sectors";
+import { buildSectorRows, sortSectorRows, type SectorRow, type SectorSort, type SectorSortKey, type SectorSource } from "../sectors";
 
 interface Column {
   key: SectorSortKey | null;
@@ -37,7 +37,15 @@ const COLUMNS: Column[] = [
     label: "STATE / PED·M²",
     title: "highest live density in the sector and its operational band",
     numeric: true,
-    cell: (row) => stateCell(row.word, fixed(row.density, 2), tone(row)),
+    cell: (row) =>
+      row.overCapacity
+        ? el(
+            "span",
+            { class: "overcap", title: "past the capacity density for this sector — flow breaks down beyond here" },
+            stateCell(row.word, fixed(row.density, 2), tone(row)),
+            el("span", { class: "overcap__word", text: " OVER CAP" }),
+          )
+        : stateCell(row.word, fixed(row.density, 2), tone(row)),
   },
   {
     key: "flow",
@@ -130,12 +138,12 @@ export class SectorTable {
     }
   }
 
-  update(live: LiveSnapshot, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
+  update(live: SectorSource, geometry: VenueGeometry, grid: PeopleQueryResult | null): SectorRow[] {
     const rows = sortSectorRows(buildSectorRows(live, geometry, grid), this.sort);
     clear(this.body);
     for (const row of rows) this.body.append(this.renderRow(row));
     const reporting = rows.filter((row) => row.observedZoneCount > 0).length;
-    this.status.textContent = `LIVE ${integer(grid?.matched_count ?? live.reporting_devices)} · ${integer(reporting)}/${integer(rows.length)} SECTORS`;
+    this.status.textContent = `LIVE ${integer(grid?.matched_count ?? live.reporting_devices ?? 0)} · ${integer(reporting)}/${integer(rows.length)} SECTORS`;
     clear(this.footer).append(
       el(
         "tr",
@@ -143,8 +151,8 @@ export class SectorTable {
         el(
           "td",
           { colspan: String(COLUMNS.length) },
-          el("span", { class: "state state--nominal" }, el("span", { class: "state__word", text: "LIVE CROWD" }), el("span", { class: "state__value", text: integer(grid?.matched_count ?? live.reporting_devices) })),
-          el("span", { class: "zones__countnote", text: ` people across ${integer(rows.length)} sectors · ${integer(live.coverage.observed)}/${integer(live.coverage.zones_total)} source zones reporting` }),
+          el("span", { class: "state state--nominal" }, el("span", { class: "state__word", text: "LIVE CROWD" }), el("span", { class: "state__value", text: integer(grid?.matched_count ?? live.reporting_devices ?? 0) })),
+          el("span", { class: "zones__countnote", text: ` people across ${integer(rows.length)} sectors · ${integer(live.coverage?.observed ?? rows.filter((row) => row.observedZoneCount > 0).length)}/${integer(live.coverage?.zones_total ?? rows.length)} source zones reporting` }),
         ),
       ),
     );

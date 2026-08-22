@@ -29,7 +29,7 @@ const geometry = {
 
 function live(): LiveSnapshot {
   return {
-    circuit_id: "toy", server_time: 10, last_report_age_s: 0, participation: 1, participation_provenance: "assumed",
+    circuit_id: "toy", server_time: 10, last_report_age_s: 0, participation: 1, participation_provenance: "assumed", window_s: 30,
     state: { circuit_id: "toy", timestamp: 10, zones: { west: state("west", 0.2, 5), west_walk: state("west_walk", 2.1, 3), east: state("east", 0.1, 4) }, unobserved_zones: ["east_walk"] },
     reporting_devices: 12, accepted_total: 12, rejected_total: 0,
     coverage: { zones_total: 4, observed: 3, unknown: 1, silent: 0, low_confidence: 0, fraction_observed: 0.75 },

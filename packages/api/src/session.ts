@@ -1,5 +1,5 @@
 import type { LOSBand } from '@crowdflow/contracts';
-import { ControlLoop, RunMetrics, Scenario, type Simulation, type TickResult } from '@crowdflow/core';
+import { ControlLoop, RunMetrics, Scenario, type SimConfig, type Simulation, type TickResult } from '@crowdflow/core';
 import type { LoadedCircuit } from './packs.js';
 import type { ConsoleEvent, ScenarioOption, SessionInfo, SessionStatus, TickEnvelope } from './wire.js';
 
@@ -14,12 +14,12 @@ export class ScenarioSession {
   private sequence = 0; private timer: NodeJS.Timeout | null = null;
   private memory = new Map<string, LOSBand>(); private listeners = new Set<(envelope: TickEnvelope) => void>();
 
-  constructor(readonly circuit: LoadedCircuit, readonly scenario: Scenario, readonly option: ScenarioOption, readonly population: number, readonly participation: number, readonly intervene = true, speed = 1) {
-    this.speed = speed; this.sim = scenario.build(circuit.graph, { participation }); this.loop = new ControlLoop(this.sim, circuit.graph, participation, intervene);
+  constructor(readonly circuit: LoadedCircuit, readonly scenario: Scenario, readonly option: ScenarioOption, readonly population: number, readonly participation: number, readonly intervene = true, speed = 1, overrides: Partial<SimConfig> = {}) {
+    this.speed = speed; this.sim = scenario.build(circuit.graph, { participation, ...overrides }); this.loop = new ControlLoop(this.sim, circuit.graph, participation, intervene);
     this.log('session', 'info', `session armed — ${population} spectators, seed ${scenario.seed}`);
   }
   info(): SessionInfo {
-    return { session_id: this.sessionId, circuit_id: this.circuit.pack.id, scenario: this.option.id, description: this.scenario.description, status: this.status, seed: this.scenario.seed, population: this.population, participation: this.participation, compliance: this.sim.config.compliance, tick_s: this.sim.config.tick_s, speed: this.speed, intervene: this.intervene, origins: this.option.origins ?? [], destination: this.option.destination ?? null, tick: this.tickIndex, time_s: this.sim.timeS, duration_s: this.scenario.durationS, computing_ms: 0 };
+    return { session_id: this.sessionId, circuit_id: this.circuit.pack.id, scenario: this.option.id, description: this.scenario.description, status: this.status, seed: this.scenario.seed, population: this.population, participation: this.participation, compliance: this.sim.config.compliance, tick_s: this.sim.config.tick_s, speed: this.speed, intervene: this.intervene, origins: this.option.origins ?? [], destination: this.option.destination ?? null, tick: this.tickIndex, time_s: this.sim.timeS, duration_s: this.scenario.durationS };
   }
   subscribe(listener: (envelope: TickEnvelope) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   note(kind: ConsoleEvent['kind'], severity: ConsoleEvent['severity'], message: string, zoneId?: string): ConsoleEvent { return this.log(kind, severity, message, zoneId); }

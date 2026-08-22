@@ -33,9 +33,9 @@
  * there being nowhere for a trail to live.
  */
 
-import type { CrowdNode, IngestAck, NodeReport, PositionSource, VenueState } from '@crowdflow/contracts';
+import type { CrowdNode, Forecast, IngestAck, NodeReport, PositionSource, VenueState } from '@crowdflow/contracts';
 import { ASSUMED_ID_ROTATION_S, SERVED_DISCLOSURE_VERSIONS, validateCrowdNode } from '@crowdflow/contracts';
-import { StateEngine } from '@crowdflow/core';
+import { BaselinePredictor, DEFAULT_WINDOW_S, StateEngine } from '@crowdflow/core';
 import { insidePack } from '@crowdflow/core/positioning';
 import type { LoadedCircuit } from './packs.js';
 import type { PeopleStore } from './people.js';
@@ -56,6 +56,8 @@ const MAX_CLOCK_SKEW_S = 90;
  *  not be able to arrive as a single enormous request. */
 const MAX_BATCH = 240;
 
+const FORECAST_SAMPLE_S = 5;
+
 export interface LiveIngestOptions {
   /**
    * The operator's participation estimate — the share of people present who are
@@ -68,6 +70,9 @@ export interface LiveIngestOptions {
 
 export class LiveIngest {
   private engine: StateEngine;
+  private predictor: BaselinePredictor;
+  private forecasts: Forecast[] = [];
+  private lastForecastAt = -Infinity;
   private marks = new Map<number, { node: CrowdNode; received: number; source: PositionSource }>();
   private sourceCounts = new Map<PositionSource, number>();
   private listeners = new Set<(snapshot: LiveSnapshot) => void>();
@@ -78,6 +83,7 @@ export class LiveIngest {
 
   constructor(readonly circuit: LoadedCircuit, readonly options: LiveIngestOptions, private readonly people: PeopleStore) {
     this.engine = new StateEngine(circuit.pack, options.participation, options.window_s);
+    this.predictor = new BaselinePredictor();
   }
 
   subscribe(listener: (snapshot: LiveSnapshot) => void): () => void {
@@ -99,7 +105,7 @@ export class LiveIngest {
 
   reportMany(reports: NodeReport[], now: number, emit = true): IngestAck {
     if (!reports.length || reports.length > 1000) throw new Error('reports must contain from 1 to 1000 items');
-    const acknowledgements = reports.map((report) => this.process(report, now));
+    const acknowledgements = this.people.transaction(() => reports.map((report) => this.process(report, now)));
     if (emit) this.emit(now);
     return {
       accepted: acknowledgements.reduce((sum, ack) => sum + ack.accepted, 0),
@@ -200,8 +206,9 @@ export class LiveIngest {
    *  that only exists in simulation — there is no ground truth here to compare
    *  the estimate against, and the snapshot does not pretend otherwise. */
   snapshot(now: number, includeNodes = true): LiveSnapshot {
-    for (const [id, held] of this.marks) if (now - held.received > (this.options.window_s ?? 30)) this.marks.delete(id);
+    for (const [id, held] of this.marks) if (now - held.received > (this.options.window_s ?? DEFAULT_WINDOW_S)) this.marks.delete(id);
     const state: VenueState = this.engine.snapshot(now, null);
+    const forecasts = this.forecastFor(state, now);
     const zones = Object.keys(this.circuit.pack.zones ?? {});
     const observed = Object.keys(state.zones ?? {});
     const unknown = state.unobserved_zones ?? [];
@@ -213,7 +220,10 @@ export class LiveIngest {
       last_report_age_s: this.lastReportAt == null ? null : Number((now - this.lastReportAt).toFixed(1)),
       participation: this.options.participation,
       participation_provenance: 'assumed',
+      window_s: this.options.window_s ?? DEFAULT_WINDOW_S,
       state,
+      forecasts,
+      actionable: forecasts.filter((forecast) => forecast.actionable).map((forecast) => forecast.zone_id),
       nodes: includeNodes ? [...this.marks.entries()].map(([personId, { node, source }]): NodeMark => ({
         person_id: personId, x: node.position.x, y: node.position.y, speed_ms: node.speed_ms, accuracy_m: node.accuracy_m,
         timestamp: node.timestamp, source,
@@ -230,11 +240,22 @@ export class LiveIngest {
     };
   }
 
+  private forecastFor(state: VenueState, now: number): Forecast[] {
+    if (now - this.lastForecastAt >= FORECAST_SAMPLE_S) {
+      this.lastForecastAt = now;
+      this.forecasts = this.predictor.forecast(state);
+    }
+    return this.forecasts;
+  }
+
   /** Drop every sample and every counter. The operator-facing half of consent
    *  withdrawal: a person can stop their phone reporting, and this is how a
    *  venue stops holding what was already reported. */
   clear(): void {
     this.engine = new StateEngine(this.circuit.pack, this.options.participation, this.options.window_s);
+    this.predictor = new BaselinePredictor();
+    this.forecasts = [];
+    this.lastForecastAt = -Infinity;
     this.marks.clear();
     this.sourceCounts.clear();
     this.problemCounts.clear();
