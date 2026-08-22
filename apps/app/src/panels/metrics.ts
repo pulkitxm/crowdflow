@@ -23,9 +23,9 @@ interface Metric {
 }
 
 const GROUPS: Array<{ label: string; members: string[] }> = [
-  { label: "CROWD", members: ["PEAK DENSITY", "CRITICAL", "BUILDING", "PEAK CRIT ZONES", "PEAK QUEUED"] },
-  { label: "JOURNEY", members: ["ARRIVED", "ACTIVE", "MEAN WALK", "P95 WALK"] },
-  { label: "SYSTEM", members: ["DISPATCHED", "SAFETY REJECTED", "NODES", "EST PRESENT", "COVERAGE", "TICK COST"] },
+  { label: "Crowd", members: ["Peak density", "Critical", "Building", "Peak crit zones", "Peak queued"] },
+  { label: "Journey", members: ["Arrived", "Active", "Mean walk", "P95 walk"] },
+  { label: "System", members: ["Dispatched", "Safety rejected", "Nodes", "Est. present", "Coverage", "Tick cost"] },
 ];
 
 export class MetricsStrip {
@@ -42,94 +42,94 @@ export class MetricsStrip {
 
     const metrics: Metric[] = [
       {
-        label: "PEAK DENSITY",
+        label: "Peak density",
         value: fixed(m.peak_density, 2),
         unit: "ped/m²",
         title: "highest density seen in any zone this run",
       },
       {
-        label: "CRITICAL",
+        label: "Critical",
         value: integer(m.critical_zone_seconds),
         unit: "zone·s",
         title: "total zone-seconds at or beyond capacity — the area under the problem",
         tone: m.critical_zone_seconds > 0 ? "crit" : undefined,
       },
       {
-        label: "BUILDING",
+        label: "Building",
         value: integer(m.building_zone_seconds),
         unit: "zone·s",
         title: "zone-seconds in the intervention window",
       },
       {
-        label: "PEAK CRIT ZONES",
+        label: "Peak crit zones",
         value: integer(m.peak_critical_zones),
         unit: "zones",
         title: "most zones critical simultaneously",
       },
       {
-        label: "PEAK QUEUED",
+        label: "Peak queued",
         value: integer(m.total_queue_peak),
         unit: "people",
         title: "people who did not fit at jam density — backed up behind",
       },
       {
-        label: "ARRIVED",
+        label: "Arrived",
         value: integer(p.arrived),
         unit: `of ${integer(p.total)}`,
         title: "simulation ground truth",
       },
       {
-        label: "ACTIVE",
+        label: "Active",
         value: integer(p.active),
         unit: "walking",
         title: "departed and not yet arrived",
       },
       {
-        label: "MEAN WALK",
+        label: "Mean walk",
         value: integer(m.mean_walk_s),
         unit: "s",
         title: "mean journey time of everyone who has arrived",
       },
       {
-        label: "P95 WALK",
+        label: "P95 walk",
         value: integer(m.p95_walk_s),
         unit: "s",
         title: "the tail — the experience an intervention is most likely to worsen",
       },
       {
-        label: "DISPATCHED",
+        label: "Dispatched",
         value: integer(m.interventions),
         unit: "cmds",
         title: "commands that passed safety and reached the mesh",
       },
       {
-        label: "SAFETY REJECTED",
+        label: "Safety rejected",
         value: integer(m.rejected_by_safety),
         unit: "cmds",
         title: "commands the safety engine refused — the agent recommends, it never acts",
         tone: m.rejected_by_safety > 0 ? "warn" : undefined,
       },
       {
-        label: "NODES",
+        label: "Nodes",
         value: integer(p.observed_nodes),
         unit: "devices",
         title: "reporting devices — NOT people",
       },
       {
-        label: "EST PRESENT",
+        label: "Est. present",
         value: integer(p.estimated_present),
         unit: "people",
         title: "devices scaled by the measured participation rate",
       },
       {
-        label: "COVERAGE",
+        label: "Coverage",
         value: percent(c.fraction_observed, 1),
         unit: `${integer(c.observed)}/${integer(c.zones_total)}`,
         title: "share of the whole venue observed this tick — not of the part that answered",
         tone: "info",
       },
       {
-        label: "TICK COST",
+        label: "Tick cost",
         value: milliseconds(envelope.compute_ms),
         unit: `#${integer(envelope.tick)}`,
         title:
@@ -148,7 +148,7 @@ export class MetricsStrip {
       this.host.append(this.groupNode(group.label, members));
     }
     const rest = metrics.filter((metric) => !placed.has(metric.label));
-    if (rest.length) this.host.append(this.groupNode("OTHER", rest));
+    if (rest.length) this.host.append(this.groupNode("Other", rest));
   }
 
   private groupNode(label: string, members: Metric[]): HTMLElement {

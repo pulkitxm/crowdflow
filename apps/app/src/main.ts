@@ -13,7 +13,6 @@ import { ConsoleLink, approveAdvisory, approveProposal, askAgent, control, fetch
 import { allowsSatelliteBasemap, circuitCapabilityDetails } from "./circuitCapability";
 import type { LinkState } from "./client";
 import { must } from "./dom";
-import { integer } from "./format";
 import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
@@ -172,34 +171,34 @@ portraitButton.addEventListener("click", () => {
   const isPortrait = map.togglePortrait();
   updateZoomValue();
   portraitButton.classList.toggle("tool--on", isPortrait);
-  portraitButton.textContent = isPortrait ? "LANDSCAPE" : "PORTRAIT";
+  portraitButton.textContent = isPortrait ? "Landscape" : "Portrait";
 });
 const initialPortrait = map.orientationDeg === 90 || map.orientationDeg === 270;
 portraitButton.classList.toggle("tool--on", initialPortrait);
-portraitButton.textContent = initialPortrait ? "LANDSCAPE" : "PORTRAIT";
+portraitButton.textContent = initialPortrait ? "Landscape" : "Portrait";
 viewGroup.append(portraitButton);
 
 const rotateButton = document.createElement("button");
 rotateButton.type = "button";
 rotateButton.className = "tool";
-rotateButton.textContent = "ROTATE";
+rotateButton.textContent = "Rotate";
 rotateButton.title = "Rotate circuit 90°";
 rotateButton.addEventListener("click", () => {
   const deg = map.rotate90();
   updateZoomValue();
   portraitButton.classList.toggle("tool--on", deg === 90 || deg === 270);
-  portraitButton.textContent = (deg === 90 || deg === 270) ? "LANDSCAPE" : "PORTRAIT";
+  portraitButton.textContent = (deg === 90 || deg === 270) ? "Landscape" : "Portrait";
 });
 viewGroup.append(rotateButton);
 
 const basemapView = document.createElement("label");
 basemapView.className = "crowd-view";
-basemapView.append("MAP");
+basemapView.append("Map");
 const basemapSelect = document.createElement("select");
 basemapSelect.className = "crowd-view__select crowd-view__select--map";
 basemapSelect.setAttribute("aria-label", "Map background");
 let satelliteOption: HTMLOptionElement | null = null;
-for (const [value, label] of [["schematic", "SCHEMATIC"], ["satellite", "SATELLITE"]] as const) {
+for (const [value, label] of [["schematic", "Schematic"], ["satellite", "Satellite"]] as const) {
   const option = document.createElement("option");
   option.value = value;
   option.textContent = label;
@@ -223,7 +222,7 @@ const updateThemeButton = () => {
   const isLight = map.themeMode === "light";
   themeButton.classList.toggle("tool--on", isLight);
   themeButton.setAttribute("aria-pressed", String(isLight));
-  themeButton.textContent = isLight ? "LIGHT" : "DARK";
+  themeButton.textContent = isLight ? "Light" : "Dark";
 };
 themeButton.addEventListener("click", () => {
   const theme = map.setTheme(map.themeMode === "light" ? "dark" : "light");
@@ -235,22 +234,22 @@ updateThemeButton();
 const simulatorLink = document.createElement("a");
 simulatorLink.className = "tool";
 simulatorLink.href = "/simulator";
-simulatorLink.textContent = "SIMULATOR";
+simulatorLink.textContent = "Simulator";
 must("command-actions").append(simulatorLink, themeButton);
 
 const kindButton = document.createElement("button");
 kindButton.type = "button";
 kindButton.className = "tool";
-kindButton.textContent = "ZONE KINDS";
+kindButton.textContent = "Zone kinds";
 kindButton.title = "Toggle between live state and how zones are categorised";
 kindButton.addEventListener("click", () => {
   const showingKinds = map.toggleKindView();
   kindButton.classList.toggle("tool--on", showingKinds);
-  kindButton.textContent = showingKinds ? "LIVE STATE" : "ZONE KINDS";
+  kindButton.textContent = showingKinds ? "Live state" : "Zone kinds";
   persistMapControls();
 });
 kindButton.classList.toggle("tool--on", map.kindView);
-kindButton.textContent = map.kindView ? "LIVE STATE" : "ZONE KINDS";
+kindButton.textContent = map.kindView ? "Live state" : "Zone kinds";
 layerGroup.append(kindButton);
 
 const gridButton = document.createElement("button");
@@ -259,7 +258,7 @@ gridButton.className = "tool";
 gridButton.title = "Show or hide the adaptive people grid";
 const updateGridButton = () => {
   gridButton.classList.toggle("tool--on", map.gridVisible);
-  gridButton.textContent = map.gridVisible ? "GRID ON" : "GRID OFF";
+  gridButton.textContent = map.gridVisible ? "Grid on" : "Grid off";
 };
 gridButton.addEventListener("click", () => {
   map.setGridVisible(!map.gridVisible);
@@ -271,11 +270,11 @@ layerGroup.append(gridButton);
 
 const crowdView = document.createElement("label");
 crowdView.className = "crowd-view";
-crowdView.append("CROWD VIEW");
+crowdView.append("Crowd");
 const crowdSelect = document.createElement("select");
 crowdSelect.className = "crowd-view__select";
 crowdSelect.setAttribute("aria-label", "Crowd view");
-for (const [value, label] of [["none", "NO VIEW"], ["cohorts", "COHORT VIEW"], ["heatmap", "HEAT MAP VIEW"]] as const) {
+for (const [value, label] of [["none", "Off"], ["cohorts", "Cohorts"], ["heatmap", "Heat map"]] as const) {
   const option = document.createElement("option");
   option.value = value;
   option.textContent = label;
@@ -295,7 +294,7 @@ sectorButton.className = "tool";
 sectorButton.title = "Show or hide named circuit sectors and their live crowd";
 const updateSectorButton = () => {
   sectorButton.classList.toggle("tool--on", map.sectorsVisible);
-  sectorButton.textContent = map.sectorsVisible ? "SECTORS ON" : "SECTORS OFF";
+  sectorButton.textContent = map.sectorsVisible ? "Sectors on" : "Sectors off";
 };
 sectorButton.addEventListener("click", () => {
   map.setSectorVisible(!map.sectorsVisible);
@@ -308,7 +307,7 @@ layerGroup.append(sectorButton);
 const fitButton = document.createElement("button");
 fitButton.type = "button";
 fitButton.className = "tool";
-fitButton.textContent = "FIT";
+fitButton.textContent = "Fit";
 fitButton.addEventListener("click", () => { map.fit(); updateZoomValue(); });
 viewGroup.append(fitButton);
 
@@ -318,7 +317,7 @@ focusButton.className = "tool";
 focusButton.title = "Toggle full map. Press Escape to exit.";
 focusButton.setAttribute("aria-keyshortcuts", "Escape");
 focusButton.classList.toggle("tool--on", mapState.full);
-focusButton.textContent = mapState.full ? "EXIT FULL" : "FULL MAP";
+focusButton.textContent = mapState.full ? "Exit full" : "Full map";
 focusButton.addEventListener("click", () => {
   setMapFocused(!consoleElement.classList.contains("console--map-focus"));
   persistMapControls();
@@ -336,7 +335,7 @@ updateZoomValue();
 function setMapFocused(focused: boolean): void {
   consoleElement.classList.toggle("console--map-focus", focused);
   focusButton.classList.toggle("tool--on", focused);
-  focusButton.textContent = focused ? "EXIT FULL" : "FULL MAP";
+  focusButton.textContent = focused ? "Exit full" : "Full map";
 }
 
 function zoneName(id: string): string {
@@ -449,9 +448,9 @@ async function loadGeometry(circuitId: string): Promise<void> {
     }
     const circuitLine = must("map-circuit");
     circuitLine.textContent =
-      `${geometry.pack.name.toUpperCase()} · LAYOUT ${geometry.pack.layout_id.toUpperCase()} · ${capability.label} · ` +
-      `${Object.keys(geometry.pack.zones ?? {}).length} ZONES · ` +
-      `${edges.length} EDGES · ${integer(assumedWidths)} ASSUMED WIDTHS`;
+      `${geometry.pack.name} · ${geometry.pack.layout_id} · ${capability.label} · ` +
+      `${Object.keys(geometry.pack.zones ?? {}).length} zones · ` +
+      `${edges.length} edges`;
     const widthNotice = assumedWidths
       ? `${assumedWidths} of ${edges.length} corridor widths are assumed rather than measured. Density is people per metre of width, so every band on those edges is provisional.`
       : "every corridor width in this pack is measured";
@@ -470,7 +469,7 @@ async function loadGeometry(circuitId: string): Promise<void> {
     else gates.update([], geometry);
   } catch (error) {
     console.error("geometry unavailable", error);
-    must("map-circuit").textContent = "GEOMETRY UNAVAILABLE";
+    must("map-circuit").textContent = "Geometry unavailable";
   }
 }
 

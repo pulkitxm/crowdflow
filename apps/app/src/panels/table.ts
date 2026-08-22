@@ -20,21 +20,21 @@ function tone(row: SectorRow): string {
 const COLUMNS: Column[] = [
   {
     key: "name",
-    label: "SECTOR",
+    label: "Sector",
     title: "named circuit sector",
     numeric: false,
     cell: (row) => el("span", { class: "cell__name", text: row.name }),
   },
   {
     key: null,
-    label: "ZONES LIVE",
+    label: "Zones live",
     title: "source zones currently reporting inside this sector",
     numeric: true,
     cell: (row) => `${integer(row.observedZoneCount)}/${integer(row.zoneCount)}`,
   },
   {
     key: "density",
-    label: "STATE / PED·M²",
+    label: "State / ped·m²",
     title: "highest live density in the sector and its operational band",
     numeric: true,
     cell: (row) =>
@@ -43,13 +43,13 @@ const COLUMNS: Column[] = [
             "span",
             { class: "overcap", title: "past the capacity density for this sector — flow breaks down beyond here" },
             stateCell(row.word, fixed(row.density, 2), tone(row)),
-            el("span", { class: "overcap__word", text: " OVER CAP" }),
+            el("span", { class: "overcap__word", text: " over cap" }),
           )
         : stateCell(row.word, fixed(row.density, 2), tone(row)),
   },
   {
     key: "flow",
-    label: "FLOW",
+    label: "Flow",
     title: "device-weighted pedestrian flow across reporting zones",
     numeric: true,
     cell: (row) => fixed(row.flow, 1),
@@ -63,42 +63,42 @@ const COLUMNS: Column[] = [
   },
   {
     key: "nodes",
-    label: "DEVICES",
+    label: "Devices",
     title: "reporting devices in the sector",
     numeric: true,
     cell: (row) => row.visibility === "observed" ? integer(row.nodes) : NO_VALUE,
   },
   {
     key: "people",
-    label: "LIVE CROWD",
+    label: "Live crowd",
     title: "exact current people from the live spatial feed",
     numeric: true,
     cell: (row) => integer(row.people),
   },
   {
     key: null,
-    label: "SPEED",
+    label: "Speed",
     title: "device-weighted mean walking speed in metres per second",
     numeric: true,
     cell: (row) => fixed(row.speed, 2),
   },
   {
     key: "net",
-    label: "NET/MIN",
+    label: "Net/min",
     title: "sector inflow minus outflow per minute",
     numeric: true,
     cell: (row) => signed(row.net, 1),
   },
   {
     key: "queue",
-    label: "QUEUED",
+    label: "Queued",
     title: "estimated people backed up across sector zones",
     numeric: true,
     cell: (row) => integer(row.queue),
   },
   {
     key: "confidence",
-    label: "CONF",
+    label: "Conf",
     title: "device-weighted confidence across reporting zones",
     numeric: true,
     cell: (row) => row.confidence === null
@@ -124,7 +124,7 @@ export class SectorTable {
     this.head = el("thead");
     this.body = el("tbody");
     this.footer = el("tbody", { class: "zones__footer" });
-    this.status = el("span", { class: "sector-status", text: "WAITING FOR LIVE CROWD" });
+    this.status = el("span", { class: "sector-status", text: "Waiting for live crowd" });
     table.append(this.head, this.body, this.footer);
     clear(host).append(table);
     clear(tools).append(this.status);
@@ -143,7 +143,7 @@ export class SectorTable {
     clear(this.body);
     for (const row of rows) this.body.append(this.renderRow(row));
     const reporting = rows.filter((row) => row.observedZoneCount > 0).length;
-    this.status.textContent = `LIVE ${integer(grid?.matched_count ?? live.reporting_devices ?? 0)} · ${integer(reporting)}/${integer(rows.length)} SECTORS`;
+    this.status.textContent = `${integer(grid?.matched_count ?? live.reporting_devices ?? 0)} people · ${integer(reporting)}/${integer(rows.length)} sectors`;
     clear(this.footer).append(
       el(
         "tr",
@@ -151,7 +151,7 @@ export class SectorTable {
         el(
           "td",
           { colspan: String(COLUMNS.length) },
-          el("span", { class: "state state--nominal" }, el("span", { class: "state__word", text: "LIVE CROWD" }), el("span", { class: "state__value", text: integer(grid?.matched_count ?? live.reporting_devices ?? 0) })),
+          el("span", { class: "state state--nominal" }, el("span", { class: "state__word", text: "Live crowd" }), el("span", { class: "state__value", text: integer(grid?.matched_count ?? live.reporting_devices ?? 0) })),
           el("span", { class: "zones__countnote", text: ` people across ${integer(rows.length)} sectors · ${integer(live.coverage?.observed ?? rows.filter((row) => row.observedZoneCount > 0).length)}/${integer(live.coverage?.zones_total ?? rows.length)} source zones reporting` }),
         ),
       ),

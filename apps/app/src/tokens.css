@@ -1,23 +1,23 @@
 :root {
   color-scheme: dark;
 
-  --color-ground: oklch(15% 0.012 250);
-  --color-panel: oklch(19.5% 0.013 250);
-  --color-panel-2: oklch(23.5% 0.015 250);
-  --color-panel-3: oklch(28% 0.017 252);
-  --color-panel-4: oklch(33% 0.045 232);
-  --color-rule: oklch(32% 0.018 250);
-  --color-rule-soft: oklch(25% 0.013 250);
+  --color-ground: oklch(13.5% 0.012 280);
+  --color-panel: oklch(18.2% 0.01 280);
+  --color-panel-2: oklch(21.5% 0.01 280);
+  --color-panel-3: oklch(26% 0.012 280);
+  --color-panel-4: oklch(28% 0.04 25);
+  --color-rule: oklch(30% 0.012 280);
+  --color-rule-soft: oklch(23% 0.01 280);
 
-  --color-ink: oklch(94% 0.006 250);
-  --color-ink-2: oklch(73% 0.012 250);
-  --color-ink-3: oklch(63% 0.014 250);
+  --color-ink: oklch(95% 0.004 90);
+  --color-ink-2: oklch(72% 0.01 80);
+  --color-ink-3: oklch(58% 0.012 80);
 
-  --color-accent: oklch(80% 0.13 210);
-  --color-accent-ink: oklch(18% 0.02 245);
-  --color-accent-soft: oklch(30% 0.055 225);
-  --color-accent-line: oklch(45% 0.08 220);
-  --color-focus: oklch(84% 0.14 205);
+  --color-accent: oklch(56% 0.22 25);
+  --color-accent-ink: oklch(98% 0.004 90);
+  --color-accent-soft: oklch(24% 0.06 25);
+  --color-accent-line: oklch(42% 0.16 25);
+  --color-focus: oklch(68% 0.18 25);
 
   --color-nominal: oklch(79% 0.17 155);
   --color-building: oklch(81% 0.15 80);
@@ -65,12 +65,13 @@
   --text-2xl: 1.75rem;
   --text-display: clamp(2.25rem, 3.2vw, 3rem);
 
-  --track-label: 0.12em;
-  --track-micro: 0.16em;
-  --track-brand: 0.2em;
+  --track-label: 0.01em;
+  --track-micro: 0.02em;
+  --track-brand: 0.01em;
 
-  --radius-sm: 3px;
-  --radius-md: 5px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
   --radius-pill: 999px;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -84,23 +85,23 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --color-ground: oklch(93% 0.006 245);
-  --color-panel: oklch(99.5% 0.002 250);
-  --color-panel-2: oklch(96.5% 0.004 245);
-  --color-panel-3: oklch(93.5% 0.008 240);
-  --color-panel-4: oklch(90% 0.03 230);
-  --color-rule: oklch(84% 0.012 245);
-  --color-rule-soft: oklch(91% 0.008 245);
+  --color-ground: oklch(94% 0.006 80);
+  --color-panel: oklch(99% 0.002 90);
+  --color-panel-2: oklch(96.2% 0.004 80);
+  --color-panel-3: oklch(93% 0.006 80);
+  --color-panel-4: oklch(94% 0.03 25);
+  --color-rule: oklch(86% 0.01 80);
+  --color-rule-soft: oklch(90% 0.006 80);
 
-  --color-ink: oklch(24% 0.02 250);
-  --color-ink-2: oklch(45% 0.02 250);
-  --color-ink-3: oklch(52% 0.018 250);
+  --color-ink: oklch(18% 0.02 280);
+  --color-ink-2: oklch(40% 0.018 280);
+  --color-ink-3: oklch(50% 0.014 80);
 
-  --color-accent: oklch(52% 0.13 235);
-  --color-accent-ink: oklch(99% 0.002 250);
-  --color-accent-soft: oklch(93% 0.04 230);
-  --color-accent-line: oklch(72% 0.08 230);
-  --color-focus: oklch(50% 0.15 240);
+  --color-accent: oklch(50% 0.21 25);
+  --color-accent-ink: oklch(99% 0.002 90);
+  --color-accent-soft: oklch(95% 0.03 25);
+  --color-accent-line: oklch(72% 0.12 25);
+  --color-focus: oklch(48% 0.2 25);
 
   --color-nominal: oklch(50% 0.15 155);
   --color-building: oklch(56% 0.14 65);

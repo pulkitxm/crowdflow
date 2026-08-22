@@ -16,7 +16,7 @@ export function OperatorConsole() {
 
       <section id="map-panel" className="panel panel--map">
         <div className="panel__head">
-          <h2>VENUE: <span id="map-circuit">...</span></h2>
+          <h2><span id="map-circuit">Venue</span></h2>
           <div id="map-controls" className="panel__tools" />
         </div>
         <div className="map__stage">
@@ -30,15 +30,15 @@ export function OperatorConsole() {
       </section>
 
       <section id="ops-panel" className="panel panel--ops">
-        <div className="panel__head"><h2>OPS AGENT</h2><div id="agent-status" className="panel__tools" /></div>
+        <div className="panel__head"><h2>Ops agent</h2><div id="agent-status" className="panel__tools" /></div>
         <div className="ops">
           <div className="ops__analysis">
             <section className="ops__block">
-              <div className="ops__blockhead"><h3>FORECAST</h3><div id="prediction-model" className="panel__tools" /></div>
+              <div className="ops__blockhead"><h3>Forecast</h3><div id="prediction-model" className="panel__tools" /></div>
               <div id="prediction-body" className="ops__body"><div className="empty">Waiting for the first live forecast...</div></div>
             </section>
             <section className="ops__block">
-              <div className="ops__blockhead"><h3>INTERVENTION</h3><div id="intervention-status" className="panel__tools" /></div>
+              <div className="ops__blockhead"><h3>Intervention</h3><div id="intervention-status" className="panel__tools" /></div>
               <div id="intervention-body" className="ops__body"><div className="empty">Waiting for the first safety sweep...</div></div>
             </section>
           </div>
@@ -47,18 +47,18 @@ export function OperatorConsole() {
       </section>
 
       <section id="zones-panel" className="panel panel--zones">
-        <div className="panel__head"><h2>SECTORS</h2><div id="zones-tools" className="panel__tools" /></div>
+        <div className="panel__head"><h2>Sectors</h2><div id="zones-tools" className="panel__tools" /></div>
         <div id="zones-body" className="panel__body panel__body--table" />
       </section>
 
       <div className="console__aside">
         <section id="gates-panel" className="panel panel--gates">
-          <div className="panel__head"><h2>GATES &amp; EXITS</h2><div id="gates-count" className="panel__tools" /></div>
+          <div className="panel__head"><h2>Gates &amp; exits</h2><div id="gates-count" className="panel__tools" /></div>
           <div id="gates-body" className="panel__body panel__body--gates"><div className="empty">Waiting for venue geometry...</div></div>
         </section>
 
         <section id="live-panel" className="panel panel--live">
-          <div className="panel__head"><h2>LIVE PHONES</h2><div id="live-status" className="panel__tools" /></div>
+          <div className="panel__head"><h2>Live phones</h2><div id="live-status" className="panel__tools" /></div>
           <div id="live-body" className="panel__body"><div className="empty">No handset has reported yet.</div></div>
         </section>
       </div>
