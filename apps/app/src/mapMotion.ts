@@ -8,14 +8,12 @@ export function revealProgress(value: number, start: number, end: number): numbe
   return Math.min(Math.max((value - start) / (end - start), 0), 1);
 }
 
-/** Exponential approach toward a target — continuous, not a restarted timeline. */
 export function smoothToward(current: number, target: number, dtMs: number, halfLifeMs: number): number {
   if (halfLifeMs <= 0) return target;
   const t = 1 - 0.5 ** (Math.max(dtMs, 0) / halfLifeMs);
   return current + (target - current) * t;
 }
 
-/** Decay a 2D velocity with the same half-life model used for zoom settling. */
 export function decayVelocity(
   velocity: { x: number; y: number },
   dtMs: number,

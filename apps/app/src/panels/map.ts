@@ -91,9 +91,7 @@ const CAR_CARD_COLOUR = "rgba(16, 20, 26, 0.92)";
 const CAR_TEXT_COLOUR = "#f4fbff";
 const PARK_LABEL_FADE_START = 1.8;
 const PARK_LABEL_FADE_END = 3;
-/** Focus / programmatic camera moves still use a short eased timeline. */
 const ZOOM_ANIMATION_MS = 320;
-/** Wheel zoom settles with continuous exponential smoothing (not a restarted ease). */
 const ZOOM_HALFLIFE_MS = 48;
 const PAN_INERTIA_HALFLIFE_MS = 140;
 const PAN_STOP_SPEED = 0.04;
@@ -711,7 +709,6 @@ export class MapPanel {
       const dy = event.clientY - this.dragging.y;
       const now = performance.now();
       const dt = Math.max(now - this.panLastTs, 1);
-      // Blend recent deltas so release velocity tracks the gesture, not the last sample.
       const sampleX = dx / dt;
       const sampleY = dy / dt;
       this.panVelocity = {
@@ -756,7 +753,6 @@ export class MapPanel {
         this.canvas.releasePointerCapture(event.pointerId);
       }
     } catch {
-      // Capture may already be gone after lostpointercapture.
     }
     if (!moved) {
       this.selected = pending;
