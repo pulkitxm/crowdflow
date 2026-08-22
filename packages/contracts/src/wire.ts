@@ -291,7 +291,7 @@ export interface MetricsSnapshot {
   samples: number;
 }
 
-export type EventKind = "session" | "band" | "coverage" | "forecast" | "intervention" | "command" | "safety";
+export type EventKind = "session" | "band" | "coverage" | "forecast" | "intervention" | "command" | "safety" | "hazard" | "evacuation" | "lifecycle";
 
 export type EventSeverity = "info" | "warning" | "critical";
 
@@ -364,7 +364,7 @@ export interface TickEnvelope {
   events?: ConsoleEvent[];
 }
 
-export type SessionStatus = "idle" | "running" | "paused" | "finished";
+export type SessionStatus = "idle" | "starting" | "running" | "paused" | "stopping" | "completed" | "failed";
 
 /**
  * What is running, and under exactly which parameters.
@@ -402,6 +402,10 @@ export interface SessionInfo {
   tick?: number;
   time_s?: number;
   duration_s?: number;
+  join_rate_per_s?: number;
+  movement_scale?: number;
+  starting_person_id?: number;
+  gates?: string[];
 }
 
 /**
@@ -438,9 +442,86 @@ export interface SessionRequest {
   intervene?: boolean;
   origins?: string[] | null;
   destination?: string | null;
+  join_rate_per_s?: number | null;
+  tick_ms?: number | null;
+  duration_s?: number | null;
+  movement_scale?: number | null;
+  starting_person_id?: number | null;
+  gates?: string[] | null;
+  reset_before_start?: boolean;
+  compliance?: number | null;
+  autostart?: boolean;
 }
 
-export type ControlAction = "play" | "pause" | "step" | "speed";
+export type HazardType = "fire" | "gate_blockage" | "walkway_blockage" | "exit_unavailable";
+export type HazardSeverity = "low" | "medium" | "high" | "critical";
+export type HazardMode = "closed" | "restricted";
+export type HazardStatus = "active" | "cleared";
+
+export interface HazardLocation {
+  zone_id?: string | null;
+  gate_id?: string | null;
+  edge_id?: string | null;
+  position?: Position | null;
+}
+
+export interface HazardRequest {
+  type: HazardType;
+  severity: HazardSeverity;
+  mode: HazardMode;
+  capacity_percent?: number | null;
+  radius_m?: number | null;
+  location: HazardLocation;
+}
+
+export interface HazardRecord extends HazardRequest {
+  id: string;
+  status: HazardStatus;
+  created_at_s: number;
+  cleared_at_s: number | null;
+  affected_people: number;
+  rerouted_people: number;
+  awaiting_safe_route: number;
+  replacement_exits: string[];
+  affected_zone_ids: string[];
+  affected_edge_ids: string[];
+}
+
+export interface GateAvailability {
+  id: string;
+  name: string;
+  kind: ZoneKind;
+  available: boolean;
+  capacity_percent: number;
+  hazard_ids: string[];
+  replacement_exit_ids: string[];
+}
+
+export interface EvacuationMetrics {
+  enabled: boolean;
+  total_population: number;
+  evacuated: number;
+  remaining: number;
+  awaiting_safe_route: number;
+  throughput_per_minute: number;
+  congestion: LOSBand;
+  estimated_clearance_s: number | null;
+}
+
+export interface ScenarioSnapshot {
+  revision: number;
+  lifecycle: SessionStatus;
+  circuit_id: string | null;
+  session: SessionInfo | null;
+  active_hazards: HazardRecord[];
+  hazard_history: HazardRecord[];
+  gates: GateAvailability[];
+  evacuation: EvacuationMetrics;
+  event_history: ConsoleEvent[];
+  operational_warning: string | null;
+}
+
+export type ControlAction = "play" | "resume" | "pause" | "step" | "speed" | "stop" | "reset";
 
 export interface ControlRequest {
   action: ControlAction;
@@ -450,7 +531,7 @@ export interface ControlRequest {
   speed?: number | null;
 }
 
-export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" | "people_joined" | "command";
+export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" | "people_joined" | "command" | "scenario";
 
 /**
  * Every WebSocket message, one shape.
@@ -462,7 +543,9 @@ export type FrameType = "hello" | "tick" | "status" | "live" | "person_joined" |
  */
 export interface SocketFrame {
   type: FrameType;
-  session: SessionInfo;
+  session: SessionInfo | null;
+  revision?: number;
+  scenario_snapshot?: ScenarioSnapshot | null;
   /**
    * sent once, on hello
    */

@@ -1,4 +1,4 @@
-import type { VenueGeometry } from "@crowdflow/contracts/wire";
+import type { ScenarioSnapshot, VenueGeometry } from "@crowdflow/contracts/wire";
 import { clear, el, stateCell } from "../dom";
 import { NO_VALUE, fixed, integer, signed } from "../format";
 import type { ZoneRow } from "../model";
@@ -30,7 +30,10 @@ export class GatesPanel {
     private readonly onSelect: (zoneId: string) => void,
   ) {}
 
-  update(rows: readonly ZoneRow[], geometry: VenueGeometry | null): void {
+  private scenario: ScenarioSnapshot | null = null;
+
+  update(rows: readonly ZoneRow[], geometry: VenueGeometry | null, scenario: ScenarioSnapshot | null = null): void {
+    this.scenario = scenario;
     const byId = new Map(rows.map((row) => [row.id, row]));
     const zones = geometry?.pack.zones ?? {};
     const portals: ZoneRow[] = Object.values(zones)
@@ -77,6 +80,10 @@ export class GatesPanel {
     const gates = portals.filter((row) => row.kind === "gate").length;
     const exits = portals.filter((row) => row.kind === "exit").length;
     const hot = portals.filter((row) => row.band === "critical" || row.band === "building").length;
+    const disrupted = portals.filter((row) => {
+      const availability = scenario?.gates.find((entry) => entry.id === row.id);
+      return availability && (!availability.available || availability.capacity_percent < 100);
+    }).length;
 
     clear(this.counter);
     this.counter.append(
@@ -94,6 +101,7 @@ export class GatesPanel {
         }),
       );
     }
+    if (disrupted > 0) this.counter.append(el("span", { class: "tool tool--static gate-disruption", text: `${disrupted} DISRUPTED` }));
 
     clear(this.host);
     if (!geometry) {
@@ -111,7 +119,8 @@ export class GatesPanel {
   }
 
   private render(row: ZoneRow): HTMLElement {
-    const status = tone(row);
+    const availability = this.scenario?.gates.find((entry) => entry.id === row.id);
+    const status = availability && !availability.available ? "critical" : availability && availability.capacity_percent < 100 ? "building" : tone(row);
     const kind = row.kind === "exit" ? "EXIT" : "GATE";
     const line = el(
       "button",
@@ -122,7 +131,7 @@ export class GatesPanel {
       },
       el("span", { class: "gateline__kind", text: row.overCapacity ? `${kind} · OVER CAP` : kind }),
       el("span", { class: "gateline__name", text: row.name }),
-      stateCell(row.word, row.visibility === "observed" ? `${row.value} ped/m²` : row.value, status),
+      stateCell(availability && !availability.available ? "BLOCKED" : availability && availability.capacity_percent < 100 ? "RESTRICTED" : row.word, availability ? `${availability.capacity_percent}% capacity` : row.visibility === "observed" ? `${row.value} ped/m²` : row.value, status),
       el("span", {
         class: "gateline__metric",
         text: row.net === null ? NO_VALUE : `${signed(row.net, 1)}/min`,

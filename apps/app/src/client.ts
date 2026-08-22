@@ -126,7 +126,7 @@ export class ConsoleLink {
       if (frame.type === "tick") {
         this.lastTickAt = now;
       }
-      this.handlers.onLink(["tick", "live", "person_joined", "people_joined"].includes(frame.type) ? "live" : "waiting", frame.session.status);
+      this.handlers.onLink(["tick", "live", "person_joined", "people_joined", "scenario"].includes(frame.type) ? "live" : "waiting", frame.session?.status ?? frame.scenario_snapshot?.lifecycle ?? "idle");
       this.handlers.onFrame(frame);
     };
     socket.onerror = () => {

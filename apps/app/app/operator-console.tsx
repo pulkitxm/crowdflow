@@ -22,6 +22,7 @@ export function OperatorConsole() {
         <div className="map__stage">
           <canvas id="map-canvas" />
           <div id="map-attribution" className="map__attribution">Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community</div>
+          <div id="scenario-alerts" className="scenario-alerts" />
           <div id="map-readout" className="map__readout">
             <div className="readout__hint">connecting to live venue feed...</div>
           </div>

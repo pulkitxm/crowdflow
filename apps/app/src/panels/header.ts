@@ -25,6 +25,10 @@ const STATUS_WORD: Record<string, string> = {
   running: "Running",
   paused: "Paused",
   finished: "Finished",
+  starting: "Starting",
+  stopping: "Stopping",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 const LINK_WORD: Record<LinkState, string> = {
@@ -53,7 +57,7 @@ export class HeaderPanel {
     setInterval(() => this.render(), 200);
   }
 
-  setSession(session: SessionInfo): void {
+  setSession(session: SessionInfo | null): void {
     this.session = session;
     this.render();
   }

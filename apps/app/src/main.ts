@@ -8,12 +8,14 @@
  * Until the geometry arrives the panels render with zone ids instead of names —
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
-import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/contracts/wire";
+import type { LiveSnapshot, PeopleQueryResult, Position, ScenarioSnapshot, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/contracts/wire";
 import { ConsoleLink, approveAdvisory, approveProposal, askAgent, control, fetchAdvisories, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid, fetchRaceDay } from "./client";
 import { allowsSatelliteBasemap, circuitCapabilityDetails } from "./circuitCapability";
 import type { LinkState } from "./client";
-import { must } from "./dom";
+import { clear, el, must } from "./dom";
+import { integer } from "./format";
 import { readMapQuery, writeMapQuery, type Basemap, type CrowdLayer } from "./mapState";
+import { acceptScenarioSnapshot } from "./scenarioState";
 import { ZoneMemory, buildRows } from "./model";
 import type { ZoneRow } from "./model";
 import { AgentPanel } from "./panels/agent";
@@ -35,6 +37,7 @@ let standards: StandardsReport | null = null;
 let latest: TickEnvelope | null = null;
 let latestLive: LiveSnapshot | null = null;
 let latestSession: SessionInfo | null = null;
+let latestScenario: ScenarioSnapshot | null = null;
 let selected: string | null = null;
 let gridRequest = 0;
 let sectorGridRequest = 0;
@@ -401,7 +404,7 @@ function redraw(envelope: TickEnvelope): void {
   map.update(envelope, rows);
   table.setSelected(selected);
   intervention.update(envelope, zoneName);
-  gates.update(rows, geometry);
+  gates.update(rows, geometry, latestScenario);
   const sectors = sectorSource();
   if (geometry && sectors) { map.setSectors(table.update(sectors, geometry, sectorGrid)); scheduleCohortRefresh(); }
   if (latestSession) metrics.update(envelope, latestSession);
@@ -466,7 +469,7 @@ async function loadGeometry(circuitId: string): Promise<void> {
       console.warn("pack integrity problems", geometry.integrity_problems ?? []);
     }
     if (latest) redraw(latest);
-    else gates.update([], geometry);
+    else gates.update([], geometry, latestScenario);
   } catch (error) {
     console.error("geometry unavailable", error);
     must("map-circuit").textContent = "Geometry unavailable";
@@ -516,6 +519,16 @@ async function loadGrid(coordinates: Position[], zoom: number): Promise<void> {
 function handleFrame(frame: SocketFrame): void {
   latestSession = frame.session;
   header.setSession(frame.session);
+  if (frame.scenario_snapshot) {
+    const previous = latestScenario;
+    latestScenario = acceptScenarioSnapshot(latestScenario, frame.scenario_snapshot);
+    if (latestScenario !== previous || latestScenario.revision === frame.scenario_snapshot.revision) {
+      map.setScenario(latestScenario);
+      gates.update(latest ? buildRows(latest, geometry, memory) : [], geometry, latestScenario);
+      paintScenarioAlerts();
+      if (latestScenario.circuit_id && latestScenario.circuit_id !== geometry?.pack.id) void loadGeometry(latestScenario.circuit_id);
+    }
+  }
   if (frame.live) {
     latestLive = frame.live;
     live.update(frame.live);
@@ -527,7 +540,8 @@ function handleFrame(frame: SocketFrame): void {
 
   if (frame.type === "hello") {
     if (frame.standards) standards = frame.standards;
-    void loadGeometry(frame.session.circuit_id);
+    const circuitId = frame.session?.circuit_id ?? frame.scenario_snapshot?.circuit_id;
+    if (circuitId) void loadGeometry(circuitId);
     if (frame.last_tick) {
       memory.observe(frame.last_tick);
       latest = frame.last_tick;
@@ -546,6 +560,17 @@ function handleFrame(frame: SocketFrame): void {
     latest = frame.tick;
     redraw(frame.tick);
   }
+}
+
+function paintScenarioAlerts(): void {
+  const host = clear(must("scenario-alerts"));
+  const scenario = latestScenario;
+  if (!scenario) return;
+  if (scenario.evacuation.enabled) host.append(el("div", { class: "scenario-alert scenario-alert--evacuation" }, el("strong", { text: "EVACUATION ACTIVE" }), el("span", { text: `${integer(scenario.evacuation.remaining)} remaining · ${integer(scenario.evacuation.throughput_per_minute)}/min throughput · ${scenario.evacuation.estimated_clearance_s == null ? "clearance pending" : `${Math.ceil(scenario.evacuation.estimated_clearance_s / 60)} min clearance`}` })));
+  for (const hazard of scenario.active_hazards.slice(0, 5)) {
+    host.append(el("div", { class: "scenario-alert scenario-alert--hazard" }, el("strong", { text: `${hazard.id} ${hazard.type.replaceAll("_", " ").toUpperCase()}` }), el("span", { text: `${hazard.mode === "closed" ? "CLOSED" : `${hazard.capacity_percent}% CAPACITY`} · ${integer(hazard.affected_people)} affected · ${integer(hazard.rerouted_people)} rerouted` })));
+  }
+  if (scenario.operational_warning) host.append(el("div", { class: "scenario-alert scenario-alert--warning" }, el("strong", { text: "SAFE ROUTE WARNING" }), el("span", { text: scenario.operational_warning })));
 }
 
 /**
