@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { CircuitSummary, HazardMode, HazardSeverity, HazardType, ScenarioOption, ScenarioSnapshot, SocketFrame, VenueGeometry } from "@crowdflow/contracts/wire";
-import { acceptScenarioSnapshot } from "../../src/scenarioState";
-import { DEFAULT_SIMULATOR_CONFIG, controlAvailability, hazardRequest, sessionRequest, type HazardDraft, type SimulatorConfigDraft } from "../../src/simulatorControl";
+import { acceptScenarioSnapshot } from "../../../src/scenarioState";
+import { DEFAULT_SIMULATOR_CONFIG, controlAvailability, hazardRequest, sessionRequest, type HazardDraft, type SimulatorConfigDraft } from "../../../src/simulatorControl";
 import { SimulatorHazardMap } from "./simulator-hazard-map";
 
 type ActionState = { kind: "idle" | "pending" | "success" | "error"; message: string };
@@ -118,7 +118,7 @@ export function SimulatorConsole() {
   return <main className="simulator-center">
     <header className="simulator-hero">
       <div><span className="brand__mark">VMAX LIVE LAB</span><h1>Scenario control center</h1><p>Configure, run, and modify the authoritative venue simulation from one browser.</p></div>
-      <div className="simulator-hero__status"><StatusChip label="Connection" value={connection} tone={connection === "live" ? "nominal" : connection === "down" ? "critical" : "building"} /><StatusChip label="Lifecycle" value={LIFECYCLE_LABEL[lifecycle] ?? lifecycle} tone={lifecycle === "running" ? "nominal" : lifecycle === "failed" ? "critical" : "building"} /><StatusChip label="Revision" value={String(snapshot?.revision ?? 0)} /><a className="tool" href="/">Dashboard</a><button className="tool" type="button" onClick={toggleTheme}>{theme === "dark" ? "Light" : "Dark"} mode</button></div>
+      <div className="simulator-hero__status"><StatusChip label="Connection" value={connection} tone={connection === "live" ? "nominal" : connection === "down" ? "critical" : "building"} /><StatusChip label="Lifecycle" value={LIFECYCLE_LABEL[lifecycle] ?? lifecycle} tone={lifecycle === "running" ? "nominal" : lifecycle === "failed" ? "critical" : "building"} /><StatusChip label="Revision" value={String(snapshot?.revision ?? 0)} /><a className="tool" href="/dashboard">Dashboard</a><button className="tool" type="button" onClick={toggleTheme}>{theme === "dark" ? "Light" : "Dark"} mode</button></div>
     </header>
     <div className={`action-banner action-banner--${action.kind}`} role={action.kind === "error" ? "alert" : "status"} aria-live="polite"><strong>{action.kind}</strong>{action.message}</div>
     {snapshot?.operational_warning && <div className="operational-warning" role="alert">{snapshot.operational_warning}</div>}

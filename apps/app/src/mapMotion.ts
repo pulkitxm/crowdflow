@@ -8,6 +8,22 @@ export function revealProgress(value: number, start: number, end: number): numbe
   return Math.min(Math.max((value - start) / (end - start), 0), 1);
 }
 
+export function smoothToward(current: number, target: number, dtMs: number, halfLifeMs: number): number {
+  if (halfLifeMs <= 0) return target;
+  const t = 1 - 0.5 ** (Math.max(dtMs, 0) / halfLifeMs);
+  return current + (target - current) * t;
+}
+
+export function decayVelocity(
+  velocity: { x: number; y: number },
+  dtMs: number,
+  halfLifeMs: number,
+): { x: number; y: number } {
+  if (halfLifeMs <= 0) return { x: 0, y: 0 };
+  const factor = 0.5 ** (Math.max(dtMs, 0) / halfLifeMs);
+  return { x: velocity.x * factor, y: velocity.y * factor };
+}
+
 export interface LayerView {
   scale: number;
   offsetX: number;

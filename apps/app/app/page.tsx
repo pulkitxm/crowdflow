@@ -1,5 +1,5 @@
-import { OperatorConsole } from "./operator-console";
+import { LandingPage } from "./landing-page";
 
 export default function Page() {
-  return <OperatorConsole />;
+  return <LandingPage />;
 }

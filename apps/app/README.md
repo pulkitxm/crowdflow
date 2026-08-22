@@ -13,8 +13,8 @@ From the repository root:
 make app
 ```
 
-then open <http://127.0.0.1:5199>. The live scenario control center is available at
-<http://127.0.0.1:5199/simulator>, the HTTP endpoints are under `/api`, and
+then open <http://127.0.0.1:5199/dashboard>. The live scenario control center is
+available at <http://127.0.0.1:5199/simulator>, the HTTP endpoints are under `/api`, and
 live dashboard updates use `/ws` on the same server.
 
 Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED APP_PORT`.
