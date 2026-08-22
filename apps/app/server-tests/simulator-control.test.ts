@@ -88,8 +88,9 @@ describe('hazard control protocol', () => {
     const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     await frameOf(socket, (frame) => frame.type === 'hello', frames);
     expect(frames[0].scenario_snapshot).toMatchObject({ lifecycle: 'idle', revision: 0 });
+    const scenarioFrame = frameOf(socket, (frame) => frame.type === 'scenario' && frame.scenario_snapshot?.session, frames);
     await send(port, 'POST', '/api/session', { population: 20, autostart: false });
-    const scenario = await frameOf(socket, (frame) => frame.type === 'scenario' && frame.scenario_snapshot?.session, frames);
+    const scenario = await scenarioFrame;
     expect(scenario.revision).toBeGreaterThan(0);
     socket.close();
     const reconnectFrames: any[] = [];
