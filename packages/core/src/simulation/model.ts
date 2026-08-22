@@ -26,10 +26,10 @@ export interface Agent {
 const LEG_ADVANCE_GUARD = 64;
 
 export interface SimConfig {
-  seed: number; tick_s: number; compliance: number; participation: number; speed_sigma: number; movement_scale: number; start_person_id: number;
+  seed: number; tick_s: number; compliance: number; participation: number; speed_sigma: number; movement_scale: number; start_person_id: number; population_scale: number;
 }
 export const DEFAULT_SIM_CONFIG: SimConfig = {
-  seed: 42, tick_s: 2, compliance: 0.7, participation: 0.18, speed_sigma: 0.18, movement_scale: 1, start_person_id: 0,
+  seed: 42, tick_s: 2, compliance: 0.7, participation: 0.18, speed_sigma: 0.18, movement_scale: 1, start_person_id: 0, population_scale: 1,
 };
 
 export class Simulation {
@@ -111,7 +111,7 @@ export class Simulation {
 
   edgeOccupancy(): Record<string, number> {
     const counts: Record<string, number> = {};
-    for (const agent of this.agents) if (agent.edge_id && !agent.arrived) counts[agent.edge_id] = (counts[agent.edge_id] ?? 0) + 1;
+    for (const agent of this.agents) if (agent.edge_id && !agent.arrived) counts[agent.edge_id] = (counts[agent.edge_id] ?? 0) + this.config.population_scale;
     return counts;
   }
 

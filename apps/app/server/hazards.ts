@@ -87,7 +87,7 @@ export class HazardController {
   }
 
   warning(): string | null {
-    const awaiting = this.session.sim.awaitingRoute;
+    const awaiting = Math.round(this.session.sim.awaitingRoute * this.session.populationScale);
     return awaiting > 0 ? `${awaiting.toLocaleString()} people are awaiting a safe route` : null;
   }
 
@@ -133,13 +133,13 @@ export class HazardController {
       }
     }
     if (focus) {
-      focus.affected_people = affectedIds.size;
+      focus.affected_people = Math.round(affectedIds.size * this.session.populationScale);
       focus.replacement_exits = [...replacements].sort();
     }
     this.session.sim.stepRoutes();
     if (focus) {
-      focus.awaiting_safe_route = this.session.sim.awaitingRoute;
-      focus.rerouted_people = Math.max(rerouted, focus.affected_people - focus.awaiting_safe_route);
+      focus.awaiting_safe_route = Math.round(this.session.sim.awaitingRoute * this.session.populationScale);
+      focus.rerouted_people = Math.max(Math.round(rerouted * this.session.populationScale), focus.affected_people - focus.awaiting_safe_route);
       if (!focus.replacement_exits.length) {
         focus.replacement_exits = [...new Set(affectedAgents.map((agent) => agent.destination).filter((id) => graph.isZoneAvailable(id)))].sort();
       }

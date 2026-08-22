@@ -448,6 +448,7 @@ export interface SessionRequest {
   gates?: string[] | null;
   reset_before_start?: boolean;
   compliance?: number | null;
+  autostart?: boolean;
 }
 
 export type HazardType = "fire" | "gate_blockage" | "walkway_blockage" | "exit_unavailable";
@@ -518,7 +519,7 @@ export interface ScenarioSnapshot {
   operational_warning: string | null;
 }
 
-export type ControlAction = "play" | "pause" | "step" | "speed";
+export type ControlAction = "play" | "resume" | "pause" | "step" | "speed" | "stop" | "reset";
 
 export interface ControlRequest {
   action: ControlAction;
