@@ -9,7 +9,7 @@ function run(...args: string[]): string { return execFileSync(bun, ['packages/cl
 
 describe('TypeScript headless CLI', () => {
   it('validates the seeded pack and reports authored standards', () => {
-    expect(run('circuit', 'validate', 'silverstone')).toContain('integrity OK');
+    expect(run('circuit', 'validate', 'silverstone')).toContain('contract and geometry OK');
     const standards = run('standards'); expect(standards).toContain('Operational density bands (authoritative)'); expect(standards).toContain('Measured, never assumed');
   });
 
