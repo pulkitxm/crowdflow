@@ -429,6 +429,40 @@ select {
 
 .map__attribution--visible { display: block; }
 
+.scenario-alerts {
+  position: absolute;
+  z-index: 4;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  width: min(430px, calc(100% - 220px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  pointer-events: none;
+}
+
+.scenario-alert {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-overlay-ink);
+  background: var(--color-overlay);
+  border: 1px solid var(--color-rule);
+  border-left: 4px solid var(--color-building);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 5px 18px var(--color-shadow);
+}
+
+.scenario-alert strong { color: var(--color-building); font-family: var(--font-display); font-size: var(--text-3xs); letter-spacing: var(--track-label); white-space: nowrap; }
+.scenario-alert span { color: var(--color-ink-2); font-size: var(--text-2xs); }
+.scenario-alert--hazard,
+.scenario-alert--warning { border-left-color: var(--color-critical); }
+.scenario-alert--hazard strong,
+.scenario-alert--warning strong { color: var(--color-critical); }
+.scenario-alert--evacuation { border-left-color: var(--color-accent); }
+.scenario-alert--evacuation strong { color: var(--color-accent); }
+
 .zoom-tools {
   display: inline-flex;
   align-items: center;
@@ -572,6 +606,7 @@ select {
 .legend__item--grid .legend__glyph, .legend__item--grid .legend__word,
 .legend__item--people .legend__glyph, .legend__item--people .legend__word { color: var(--color-accent); }
 .legend__item--sectors .legend__glyph, .legend__item--sectors .legend__word { color: var(--color-sector); }
+.legend__item--hazard .legend__glyph, .legend__item--hazard .legend__word { color: var(--color-critical); }
 .legend__item--heatmap { align-items: center; }
 
 .legend__heat-gradient {
@@ -978,6 +1013,8 @@ table.mini tr.row--act td { color: var(--color-ink); }
   font-size: var(--text-3xs);
   letter-spacing: var(--track-label);
 }
+
+.gate-disruption { color: var(--color-critical); border-color: var(--color-critical); }
 
 .gateline__name {
   overflow: hidden;
@@ -1673,6 +1710,8 @@ select:focus-visible {
   .status-table__row td { display: block; }
   .event { grid-template-columns: 72px 80px minmax(0, 1fr); }
   .event small { grid-column: 2 / -1; }
+  .scenario-alerts { width: calc(100% - 12px); }
+  .scenario-alert { align-items: flex-start; flex-direction: column; gap: 0; }
 }
 
 .live__label {
