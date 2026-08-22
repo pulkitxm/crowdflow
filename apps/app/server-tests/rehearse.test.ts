@@ -42,7 +42,7 @@ afterEach(async () => {
 describe('live sensing, end to end', () => {
   it('carries a simulated crowd from radio scans to the console picture', async () => {
     if (!existsSync(anchorsPath)) {
-      writeFileSync(anchorsPath, `${JSON.stringify(planAnchors(readPack(root, 'silverstone'), { spacing_m: 80 }), null, 2)}\n`);
+      writeFileSync(anchorsPath, `${JSON.stringify(planAnchors(readPack(root, 'silverstone'), { spacing_m: 30 }), null, 2)}\n`);
       wroteAnchors = true;
     }
 

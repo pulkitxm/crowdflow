@@ -39,7 +39,7 @@ describe('mesh policy and venue utilities', () => {
     const frame = new Frame(52, -1); const point = frame.toXY(52.001, -0.999); expect(frame.toLatLon(...point)[0]).toBeCloseTo(52.001, 9);
     expect(classifyWay({ barrier: 'fence', highway: 'footway' })).toBe('barrier'); expect(widthFor({ highway: 'path' }).provenance).toBe('assumed'); expect(widthFor({ width: '3.5 m' }).provenance).toBe('osm'); expect(segmentsIntersect({ x: 0, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 }, { x: 2, y: 0 })).toBe(true);
     expect(parseOsm([{ type: 'node', id: 1, lat: 1, lon: 2, tags: { barrier: 'gate' } }]).nodes[0]?.kind).toBe('gate');
-    const pack: CircuitPack = { id: 'x', name: '<Venue>', geometry_source: 'test', track_length_m: 1, altitude_m: 0, frame: { origin_lat: 0, origin_lon: 0, track_bounds_m: [1, 1], venue_bounds_m: [0, 0, 1, 1] }, zones: { a: { id: 'a', kind: 'gate', position: { x: 0, y: 0 } }, b: { id: 'b', kind: 'exit', position: { x: 1, y: 0 } } }, edges: { ab: { id: 'ab', source: 'a', destination: 'b', length_m: 1, width_m: { value: 1, provenance: 'measured' } } } };
-    const svg = renderSvg(pack); expect(svg).toContain('&lt;Venue&gt;'); expect(svg.match(/<line /g)).toHaveLength(1);
+    const pack: CircuitPack = { id: 'x', name: '<Venue>', geometry_source: 'test', layout_id: 'x-1', capability: 'synthetic_simulation', track_length_m: 1, altitude_m: 0, track_clearance_m: { value: 1, provenance: 'assumed' }, frame: { origin_lat: 0, origin_lon: 0, track_bounds_m: [1, 1], venue_bounds_m: [0, 0, 1, 1] }, zones: { a: { id: 'a', kind: 'gate', position: { x: 0, y: 0 } }, b: { id: 'b', kind: 'exit', position: { x: 1, y: 0 } } }, edges: { ab: { id: 'ab', source: 'a', destination: 'b', length_m: 1, width_m: { value: 1, provenance: 'measured' }, geometry: [{ x: 0, y: 0 }, { x: 1, y: 0 }] } } };
+    const svg = renderSvg(pack); expect(svg).toContain('&lt;Venue&gt;'); expect(svg.match(/<polyline /g)).toHaveLength(1);
   });
 });

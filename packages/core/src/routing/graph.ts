@@ -1,10 +1,5 @@
 import type { CircuitPack, ZoneState } from '@crowdflow/contracts';
-import {
-  ASSUMED_ROUTE_CACHE_ENTRIES,
-  FREE_FLOW_SPEED_MS,
-  isOpenDuring,
-  isTrustworthy,
-} from '@crowdflow/contracts';
+import { ASSUMED_ROUTE_CACHE_ENTRIES, FREE_FLOW_SPEED_MS, isOpenDuring, isTrustworthy } from '@crowdflow/contracts';
 import { MIN_SPEED_MS } from '../state/flow.js';
 
 export const CONGESTION_WEIGHT = 2.5;
@@ -15,6 +10,7 @@ export const PREFER_DISCOUNT = 0.6;
 
 export interface RouteResult {
   path: string[];
+  edge_ids: string[];
   cost_s: number;
   distance_m: number;
   eta_s: number;
@@ -31,6 +27,7 @@ export class VenueGraph {
   private adjacency = new Map<string, Array<[string, string]>>();
   private closed = new Set<string>();
   private forbidden = new Set<string>();
+  private forbiddenEdges = new Set<string>();
   private cache = new Map<CacheKey, RouteResult>();
 
   constructor(pack: CircuitPack, sessionState: string | null = null) {
@@ -47,17 +44,30 @@ export class VenueGraph {
       if (!isOpenDuring(crossing.availability ?? {}, sessionState)) this.closed.add(crossing.edge_id);
     }
     this.forbidden = new Set(this.pack.constraints?.never_route_through ?? []);
+    this.forbiddenEdges = new Set(this.pack.constraints?.never_route_edges ?? []);
     this.adjacency = new Map(Object.keys(this.pack.zones ?? {}).map((id) => [id, []]));
     for (const [id, edge] of Object.entries(this.pack.edges ?? {})) {
-      if (this.closed.has(id) || this.forbidden.has(edge.source) || this.forbidden.has(edge.destination)) continue;
+      if (
+        this.closed.has(id) ||
+        this.forbiddenEdges.has(id) ||
+        this.forbidden.has(edge.source) ||
+        this.forbidden.has(edge.destination)
+      )
+        continue;
       this.adjacency.get(edge.source)?.push([edge.destination, id]);
       if (edge.bidirectional ?? true) this.adjacency.get(edge.destination)?.push([edge.source, id]);
     }
   }
 
-  get routeCacheSize(): number { return this.cache.size; }
-  get closedEdges(): Set<string> { return new Set(this.closed); }
-  get forbiddenZones(): Set<string> { return new Set(this.forbidden); }
+  get routeCacheSize(): number {
+    return this.cache.size;
+  }
+  get closedEdges(): Set<string> {
+    return new Set(this.closed);
+  }
+  get forbiddenZones(): Set<string> {
+    return new Set(this.forbidden);
+  }
 
   neighbours(zoneId: string): Array<[string, string]> {
     return this.adjacency.get(zoneId) ?? [];
@@ -96,7 +106,7 @@ export class VenueGraph {
       this.cacheHits += 1;
       this.cache.delete(key);
       this.cache.set(key, cached);
-      return { ...cached, path: [...cached.path] };
+      return { ...cached, path: [...cached.path], edge_ids: [...cached.edge_ids] };
     }
     this.cacheMisses += 1;
     const result = this.search(origin, destination, undefined, avoid, prefer, undefined);
@@ -105,7 +115,7 @@ export class VenueGraph {
       const oldest = this.cache.keys().next().value as string | undefined;
       if (oldest != null) this.cache.delete(oldest);
     }
-    return { ...result, path: [...result.path] };
+    return { ...result, path: [...result.path], edge_ids: [...result.edge_ids] };
   }
 
   private search(
@@ -117,9 +127,25 @@ export class VenueGraph {
     deadlines?: Record<string, number>,
   ): RouteResult {
     const zones = this.pack.zones ?? {};
-    if (!(origin in zones)) return { path: [], cost_s: Infinity, distance_m: 0, eta_s: 0, rejected_reason: `unknown origin ${origin}` };
-    if (!(destination in zones)) return { path: [], cost_s: Infinity, distance_m: 0, eta_s: 0, rejected_reason: `unknown destination ${destination}` };
-    if (origin === destination) return { path: [origin], cost_s: 0, distance_m: 0, eta_s: 0 };
+    if (!(origin in zones))
+      return {
+        path: [],
+        edge_ids: [],
+        cost_s: Infinity,
+        distance_m: 0,
+        eta_s: 0,
+        rejected_reason: `unknown origin ${origin}`,
+      };
+    if (!(destination in zones))
+      return {
+        path: [],
+        edge_ids: [],
+        cost_s: Infinity,
+        distance_m: 0,
+        eta_s: 0,
+        rejected_reason: `unknown destination ${destination}`,
+      };
+    if (origin === destination) return { path: [origin], edge_ids: [], cost_s: 0, distance_m: 0, eta_s: 0 };
 
     const best = new Map([[origin, 0]]);
     const elapsed = new Map([[origin, 0]]);
@@ -152,12 +178,27 @@ export class VenueGraph {
       }
     }
 
-    if (!best.has(destination)) return { path: [], cost_s: Infinity, distance_m: 0, eta_s: 0, rejected_reason: 'no path under current conditions' };
+    if (!best.has(destination))
+      return {
+        path: [],
+        edge_ids: [],
+        cost_s: Infinity,
+        distance_m: 0,
+        eta_s: 0,
+        rejected_reason: 'no path under current conditions',
+      };
     const path = [destination];
-    while (path.at(-1) !== origin) path.push(came.get(path.at(-1)!)![0]);
+    const edgeIds: string[] = [];
+    while (path.at(-1) !== origin) {
+      const [previous, edgeId] = came.get(path.at(-1)!)!;
+      path.push(previous);
+      edgeIds.push(edgeId);
+    }
     path.reverse();
+    edgeIds.reverse();
     return {
       path,
+      edge_ids: edgeIds,
       cost_s: best.get(destination)!,
       distance_m: distance.get(destination)!,
       eta_s: elapsed.get(destination)!,
@@ -169,7 +210,10 @@ export class VenueGraph {
     const stack = [origin];
     while (stack.length) {
       for (const [next] of this.neighbours(stack.pop()!)) {
-        if (!found.has(next)) { found.add(next); stack.push(next); }
+        if (!found.has(next)) {
+          found.add(next);
+          stack.push(next);
+        }
       }
     }
     return found;

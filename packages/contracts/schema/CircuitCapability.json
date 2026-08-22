@@ -1,0 +1,14 @@
+{
+  "$ref": "#/$defs/CircuitCapability",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CircuitCapability": {
+      "enum": [
+        "synthetic_simulation",
+        "venue_imported",
+        "venue_reviewed"
+      ],
+      "type": "string"
+    }
+  }
+}

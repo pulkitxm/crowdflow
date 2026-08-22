@@ -8,12 +8,13 @@ import {
   JAM_DENSITY_PERSONS_M2, LOS_A_MAX, LOS_B_MAX, LOS_C_MAX, LOS_D_MAX, LOS_E_MAX,
   MEASURED_NOT_ASSUMED, bandForDensity, losGradeForFlow,
 } from '@crowdflow/contracts';
-import { abTest, buildPack, comparePolicies, egress, parseOsm, refine, renderSvg, runScenario, summariseOsm, VenueGraph } from '@crowdflow/core';
+import { abTest, buildPack, comparePolicies, egress, parseOsm, refine, renderSvg, runScenario, summariseOsm, validateCircuitGeometry, VenueGraph } from '@crowdflow/core';
 import { planAnchors, positioningAccuracy, type AnchorPlanOptions } from '@crowdflow/core/positioning';
 import type { AnchorPack } from '@crowdflow/contracts';
 import { rehearseLivePhones } from './rehearse.js';
 import { simulateLiveCrowd } from './simulator.js';
 import { importCalendar, type CalendarFile } from './calendar.js';
+import { committedCircuitIds, selfTestCommittedCircuits } from './circuit-self-test.js';
 import { createHfPredictor, downloadHubText, ensureRepo, FEATURE_NAMES, labelStates, renderModelCard, uploadHubFiles, writeDataset } from '@crowdflow/hf';
 import { bboxForTrack, fetchOsm, loadTrackGeometry, readPack, readTraceFragments, readTrack, writePack, writeTraceFragments } from './ingest.js';
 
@@ -33,6 +34,7 @@ try {
   else if (words[0] === 'circuit' && words[1] === 'show') showCircuit(words[2] ?? 'silverstone');
   else if (words[0] === 'circuit' && words[1] === 'import') await importCircuit(words[2] ?? 'silverstone', options);
   else if (words[0] === 'circuit' && words[1] === 'validate') validateCircuit(words[2] ?? 'silverstone');
+  else if (words[0] === 'circuit' && words[1] === 'self-test') selfTestCircuits(options);
   else if (words[0] === 'circuit' && words[1] === 'render') renderCircuit(words[2] ?? 'silverstone', string(options, 'out'));
   else if (words[0] === 'sim' && words[1] === 'run') simRun(words[2] ?? 'silverstone', options);
   else if (words[0] === 'sim' && words[1] === 'traces') simTraces(words[2] ?? 'silverstone', options);
@@ -61,9 +63,10 @@ function printStandards(): void {
 }
 function listCircuits(): void { for (const id of available()) { const pack = readPack(root(), id); console.log(`${id.padEnd(18)} ${pack.name.padEnd(35)} ${pack.track_length_m.toFixed(0)} m`); } }
 function showCircuit(id: string): void { const pack = readPack(root(), id); console.log(`${pack.name}\n  geometry ${pack.geometry_source}\n  track ${pack.track_length_m} m; altitude ${pack.altitude_m} m\n  zones ${Object.keys(pack.zones ?? {}).length}; edges ${Object.keys(pack.edges ?? {}).length}; crossings ${Object.keys(pack.crossings ?? {}).length}\n  origin ${pack.frame.origin_lat}, ${pack.frame.origin_lon}`); }
-function available(): string[] { const index = readFileSync(join(root(), 'circuits', 'index.yaml'), 'utf8'); return [...index.matchAll(/^\s+- id:\s*([^\s#]+)/gm)].map((match) => match[1]!).filter((id) => existsSync(join(root(), 'circuits', id, 'pack', 'circuit.json'))); }
+function available(): string[] { return committedCircuitIds(root()); }
 async function importCircuit(id: string, opts: Options): Promise<void> { const index = parseYaml(readFileSync(join(root(), 'circuits', 'index.yaml'), 'utf8')) as { circuits: Array<Record<string, any>> }; const entry = index.circuits.find((value) => value.id === id); if (!entry) throw new Error(`unknown circuit ${id}`); const geometry = await loadTrackGeometry(root(), String(entry.geometry_source)); const bbox = bboxForTrack(geometry.coordinates); const osm = await fetchOsm(root(), id, bbox, opts.refresh === true); const parsed = parseOsm(osm.payload.elements ?? []); const result = buildPack({ circuit_id: id, name: String(entry.name), geometry_source: String(entry.geometry_source), track_length_m: Number(entry.track_length_m), altitude_m: Number(entry.altitude_m), track_latlon: geometry.coordinates, ways: parsed.ways, nodes: parsed.nodes, venue_buffer_m: number(opts, 'buffer-m', 900) }); writePack(root(), result.pack, result.track); console.log(`imported ${entry.name}: ${JSON.stringify(summariseOsm(parsed.ways, parsed.nodes))}`); console.log(`  ${result.stats.edges_out} edges, ${result.stats.zones_out} zones, ${result.stats.barrier_removed} barrier crossings removed, ${result.stats.assumed_widths} assumed widths (${osm.cached ? 'cached' : 'fetched'} OSM)`); }
-function validateCircuit(id: string): void { const { pack, graph } = world(id); const problems: string[] = []; for (const edge of Object.values(pack.edges ?? {})) { if (!pack.zones?.[edge.source]) problems.push(`edge ${edge.id}: unknown source`); if (!pack.zones?.[edge.destination]) problems.push(`edge ${edge.id}: unknown destination`); } for (const crossing of Object.values(pack.crossings ?? {})) if (!pack.edges?.[crossing.edge_id]) problems.push(`crossing ${crossing.id}: unknown edge`); for (const exit of pack.constraints?.emergency_exits ?? []) if (!graph.reachable(exit).size) problems.push(`emergency exit ${exit}: unreachable`); console.log(`${pack.name}: ${Object.keys(pack.zones ?? {}).length} zones, ${Object.keys(pack.edges ?? {}).length} edges`); if (problems.length) throw new Error(problems.join('\n')); console.log('integrity OK'); }
+function validateCircuit(id: string): void { const pack = readPack(root(), id); const validation = validateCircuitGeometry(pack, readTrack(root(), id)); console.log(`${pack.name}: ${Object.keys(pack.zones ?? {}).length} zones, ${Object.keys(pack.edges ?? {}).length} edges`); for (const warning of validation.warnings) console.log(`warning: ${warning}`); if (validation.problems.length) throw new Error(validation.problems.join('\n')); console.log('contract and geometry OK'); }
+function selfTestCircuits(opts: Options): void { const report = selfTestCommittedCircuits(root(), number(opts, 'seed', 42)); console.log(JSON.stringify(report, null, opts.pretty === true ? 2 : 0)); if (!report.ok) process.exitCode = 1; }
 function renderCircuit(id: string, out?: string): void { const pack = readPack(root(), id); const svg = renderSvg(pack, readTrack(root(), id)); const target = out ?? join(root(), 'circuits', id, `${id}.svg`); writeFileSync(target, svg); console.log(`wrote ${target}`); }
 function simRun(id: string, opts: Options): void { const count = number(opts, 'count', 6000); const ticks = number(opts, 'ticks', 400); const participation = number(opts, 'participation', 0.18); const value = scenario(id, count, number(opts, 'seed', 42)); const [metrics] = runScenario(value.scenario, value.graph, opts.intervene === true, participation, ticks); console.log(`${value.pack.name} — ${value.scenario.name}`); for (const [label, metric] of metrics.rows()) console.log(`  ${String(metric).padStart(10)}  ${label}`); }
 function simTraces(id: string, opts: Options): void { const out = string(opts, 'out'); if (!out) throw new Error('--out is required'); const count = number(opts, 'count', 6000); const ticks = number(opts, 'ticks', 400); const every = number(opts, 'every', 60); const value = scenario(id, count, number(opts, 'seed', 42)); const sim = value.scenario.build(value.graph, { participation: number(opts, 'participation', 0.18) }); const fragments = []; for (let tick = 0; tick < ticks; tick += 1) { sim.step(); sim.emit(); if ((tick + 1) % every === 0) fragments.push(...sim.emitTraceFragments()); } fragments.push(...sim.emitTraceFragments()); writeTraceFragments(out, fragments); console.log(`${fragments.length} private fragments -> ${out}`); }
@@ -213,7 +216,7 @@ function calendarShow(opts: Options): void {
 }
 
 function hfFeatures(): void { console.log(`CrowdFlow tabular feature contract (${FEATURE_NAMES.length})\n  ${FEATURE_NAMES.join('\n  ')}`); }
-function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
+function help(): void { console.log(`CrowdFlow TypeScript CLI\n\n  crowdflow standards\n  crowdflow band <density-persons-m2>\n  crowdflow circuit list|show|import|validate|render [id]\n  crowdflow circuit self-test [--seed N --pretty]\n  crowdflow sim run|traces|ab [id] [--count N --ticks N --seed N]\n  crowdflow mesh compare [--nodes N --ticks N --seed N]\n  crowdflow refine run [id] --traces file.jsonl --participation 0.18 [--apply]
   crowdflow anchors show|plan|accuracy [id] [--spacing M --write --samples N --sigma dB --kinds wifi_ap,ble_beacon]
   crowdflow live rehearse [id] [--api URL --phones N --ticks N --interval S --radios wifi,ble,gnss]
   crowdflow live simulate [id] [--api URL --reset --people N --rate N --tick-ms N --duration S --movement-scale N --start-id N --gates id,id]
