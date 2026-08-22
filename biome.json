@@ -35,6 +35,11 @@
       "trailingCommas": "all"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     {
       "includes": ["apps/presentation/styles.css"],
@@ -45,6 +50,16 @@
           },
           "style": {
             "noDescendingSpecificity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/app/app/globals.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
           }
         }
       }

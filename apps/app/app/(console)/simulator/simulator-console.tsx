@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 export function SimulatorConsole() {
   useEffect(() => {
-    void import("../../src/simulator");
+    void import("../../../src/simulator");
   }, []);
 
   return (
