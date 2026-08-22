@@ -128,7 +128,7 @@ is nowhere for a trail to live.
 
 ```
 bun run --filter @crowdflow/core test           # 37 positioning cases
-bun run --filter crowdflow-spectator test       # queue policy, beacon parsing
+bun run --filter mobile test       # queue policy, beacon parsing
 ```
 
 **2. The accuracy of a layout, headless.** Whether radio positioning can work at
@@ -151,17 +151,17 @@ same server, same console:
 
 ```
 # terminal 1
-bun packages/api/src/main.ts
-curl -X POST localhost:8099/api/live \
+make app
+curl -X POST localhost:5199/api/live \
   -H 'content-type: application/json' \
   -d '{"circuit_id":"silverstone","participation":0.18}'
 
 # terminal 2
-bun run --filter crowdflow-dashboard dev        # LIVE PHONES panel
+open http://localhost:5199
 
 # terminal 3
 cd apps/mobile
-EXPO_PUBLIC_CROWDFLOW_API=http://localhost:8099 \
+EXPO_PUBLIC_CROWDFLOW_API=http://localhost:5199 \
 EXPO_PUBLIC_CROWDFLOW_SENSING=rehearsal \
 bun run web
 ```

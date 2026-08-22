@@ -1,4 +1,4 @@
-# Operator console
+# Unified app
 
 A control-room screen for race staff, read from three metres away mid-session.
 Its brief is the opposite of the spectator app's: **complete, dense, well
@@ -10,22 +10,17 @@ withholding information from an operator is the failure mode.
 From the repository root:
 
 ```
-make console      # API + dashboard together, one Ctrl-C kills both
+make app
 ```
 
 then open <http://127.0.0.1:5199>. The race-day simulator is available at
-<http://127.0.0.1:5199/simulator>. Or run the halves separately, which is the
-first thing to do when something misbehaves:
+<http://127.0.0.1:5199/simulator>, the HTTP endpoints are under `/api`, and
+live dashboard updates use `/ws` on the same server.
+
+Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED APP_PORT`.
 
 ```
-make api          # http://127.0.0.1:8099/api/health
-make dashboard    # proxies /api and connects /ws directly to the API
-```
-
-Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED API_PORT UI_PORT`.
-
-```
-make console POPULATION=6000 SEED=7 SPEED=1
+make app POPULATION=6000 SEED=7 SPEED=1
 ```
 
 `make test` runs every workspace's `tsc --noEmit` and Vitest suite.
