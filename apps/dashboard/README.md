@@ -13,12 +13,13 @@ From the repository root:
 make console      # API + dashboard together, one Ctrl-C kills both
 ```
 
-then open <http://127.0.0.1:5199>. Or run the halves separately, which is the
+then open <http://127.0.0.1:5199>. The race-day simulator is available at
+<http://127.0.0.1:5199/simulator>. Or run the halves separately, which is the
 first thing to do when something misbehaves:
 
 ```
 make api          # http://127.0.0.1:8099/api/health
-make dashboard    # proxies /api and /ws to the API
+make dashboard    # proxies /api and connects /ws directly to the API
 ```
 
 Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED API_PORT UI_PORT`.

@@ -18,6 +18,13 @@ export type LinkState = "connecting" | "live" | "waiting" | "down";
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 5000;
 
+export function socketUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_CROWDFLOW_WS;
+  if (configured) return configured;
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${location.host}/ws`;
+}
+
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
@@ -106,8 +113,7 @@ export class ConsoleLink {
   constructor(private readonly handlers: LinkHandlers) {}
 
   connect(): void {
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${protocol}://${location.host}/ws`;
+    const url = socketUrl();
     this.handlers.onLink("connecting", url);
 
     const socket = new WebSocket(url);

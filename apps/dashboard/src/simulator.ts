@@ -1,5 +1,5 @@
-import "./style.css";
 import type { RaceDayStatus } from "@crowdflow/api/wire";
+import { socketUrl } from "./client";
 import { clear, el, must } from "./dom";
 import { integer } from "./format";
 
@@ -266,7 +266,7 @@ const consoleLink = el("a", { class: "tool", href: "/", title: "open the operato
 must("sim-actions").append(consoleLink, themeButton);
 
 function openClockSocket(): void {
-  const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  const socket = new WebSocket(socketUrl());
   socket.onmessage = (event) => {
     const frame = JSON.parse(event.data as string) as { session?: { time_s?: number } };
     if (typeof frame.session?.time_s === "number") {

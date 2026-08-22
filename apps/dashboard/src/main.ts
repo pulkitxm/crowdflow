@@ -8,7 +8,6 @@
  * Until the geometry arrives the panels render with zone ids instead of names —
  * degraded, honest, and still usable — rather than waiting on a blank screen.
  */
-import "./style.css";
 import type { LiveSnapshot, PeopleQueryResult, Position, SessionInfo, SocketFrame, StandardsReport, TickEnvelope, VenueGeometry } from "@crowdflow/api/wire";
 import { ConsoleLink, approveAdvisory, approveProposal, askAgent, control, fetchAdvisories, fetchAgentCommands, fetchAgentStatus, fetchGeometry, fetchPeopleGrid, fetchRaceDay } from "./client";
 import type { LinkState } from "./client";
@@ -230,7 +229,11 @@ themeButton.addEventListener("click", () => {
   persistMapControls();
 });
 updateThemeButton();
-must("command-actions").append(themeButton);
+const simulatorLink = document.createElement("a");
+simulatorLink.className = "tool";
+simulatorLink.href = "/simulator";
+simulatorLink.textContent = "SIMULATOR";
+must("command-actions").append(simulatorLink, themeButton);
 
 const kindButton = document.createElement("button");
 kindButton.type = "button";
