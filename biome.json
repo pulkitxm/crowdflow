@@ -12,8 +12,8 @@
       "!**/dist",
       "!circuits",
       "!packages/contracts/schema",
-      "!presentation/assets",
-      "!presentation/vendor",
+      "!apps/presentation/assets",
+      "!apps/presentation/vendor",
       "!apps/mobile/modules/mesh/android"
     ]
   },
@@ -37,7 +37,7 @@
   },
   "overrides": [
     {
-      "includes": ["presentation/styles.css"],
+      "includes": ["apps/presentation/styles.css"],
       "linter": {
         "rules": {
           "complexity": {
