@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = path.resolve(scriptDir, "../..");
+const repositoryRoot = path.resolve(scriptDir, "../../..");
 const outputDir = path.resolve(scriptDir, "../assets/circuits");
 const sourceRoot = "https://raw.githubusercontent.com/bacinger/f1-circuits/master";
 

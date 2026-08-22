@@ -3,17 +3,17 @@ import { dirname, resolve } from "node:path";
 
 const routes = [
   {
-    path: "presentation/index.html",
+    path: "apps/presentation/index.html",
     title: "VMAX | Round Presentations",
     required: ['href="online-round/"', 'href="final-round/"'],
   },
   {
-    path: "presentation/online-round/index.html",
+    path: "apps/presentation/online-round/index.html",
     title: "VMAX | Online Round",
     required: ['href="../styles.css', "Online Round / crowd intelligence"],
   },
   {
-    path: "presentation/final-round/index.html",
+    path: "apps/presentation/final-round/index.html",
     title: "VMAX | Final Round",
     required: ['href="../styles.css', "Hugging Face Hub"],
     slides: 4,
@@ -21,6 +21,11 @@ const routes = [
 ];
 
 const localReference = /(?:href|src|data)="([^"#][^"]*)"/g;
+const cnamePath = "apps/presentation/CNAME";
+
+if (readFileSync(cnamePath, "utf8").trim() !== "vmax-ppts.pulkit.page") {
+  throw new Error(`Unexpected GitHub Pages domain in ${cnamePath}`);
+}
 
 for (const route of routes) {
   if (!existsSync(route.path)) throw new Error(`Missing presentation route: ${route.path}`);

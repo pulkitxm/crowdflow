@@ -10,7 +10,7 @@ The route index at `/` links to both decks. Run the presentation site locally wi
 ![Final round preview](./assets/final-round-preview.jpg)
 
 ```sh
-bunx serve presentation
+bunx serve apps/presentation
 ```
 
 Open the printed URL, use the arrow keys to navigate, `S` for speaker view, `O` for the overview,
@@ -26,7 +26,7 @@ The deck vendors Reveal.js and does not require a runtime CDN. Regenerate the ci
 Silverstone venue graph with:
 
 ```sh
-node presentation/scripts/build-circuit-wall.mjs
+node apps/presentation/scripts/build-circuit-wall.mjs
 ```
 
 Circuit outlines come from

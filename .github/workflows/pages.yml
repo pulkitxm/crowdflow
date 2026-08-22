@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "presentation/**"
+      - "apps/presentation/**"
       - "scripts/check-presentation-routes.mjs"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
       - name: Upload presentations
         uses: actions/upload-pages-artifact@v5
         with:
-          path: presentation
+          path: apps/presentation
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
