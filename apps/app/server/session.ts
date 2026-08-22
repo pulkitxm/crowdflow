@@ -66,6 +66,7 @@ export class ScenarioSession {
     return this.info();
   }
   stop(): void { if (this.timer) clearTimeout(this.timer); this.timer = null; if (this.status !== 'failed') this.status = 'completed'; this.notifyStatus(); }
+  fastForwardTo(timeS: number): void { this.tickIndex = Math.max(this.tickIndex, Math.trunc(timeS / this.sim.config.tick_s)); }
   tickOnce(): TickEnvelope {
     const started = performance.now(); const result = this.loop.tick(); this.tickIndex += 1;
     this.metrics.observe(result.state, this.sim.config.tick_s); if (result.dispatched) this.metrics.interventions += 1; if (result.verdict && !result.verdict.dispatchable) this.metrics.rejected_by_safety += 1;

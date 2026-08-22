@@ -744,6 +744,7 @@ export interface RaceDayRequest {
   tick_s?: number;
   seed?: number;
   intervene?: boolean;
+  start_at_s?: number;
 }
 
 export interface RaceDayPhaseWire {

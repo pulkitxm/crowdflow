@@ -23,10 +23,13 @@ function hhmmss(secondOfDay: number): string {
   return `${pad(Math.floor(wrapped / 3600))}:${pad(Math.floor(wrapped / 60) % 60)}:${pad(wrapped % 60)}`;
 }
 
+export const ASSUMED_OPENING_LEAD_S = 900;
+
 export class RaceDayRun {
   readonly plan: RaceDayPlan;
   readonly session: ScenarioSession;
   readonly anomalies: Anomaly[] = [];
+  readonly openAtS: number;
 
   constructor(readonly circuit: LoadedCircuit, event: EventProfile, utcOffset: string | null, request: RaceDayRequest) {
     const population = request.population ?? 20000;
@@ -50,6 +53,19 @@ export class RaceDayRun {
       request.speed ?? 60,
       request.tick_s == null ? {} : { tick_s: request.tick_s },
     );
+    this.openAtS = this.skipEmptyOpening(request.start_at_s);
+  }
+
+  private skipEmptyOpening(requested: number | undefined): number {
+    const sim = this.session.sim;
+    const firstDeparture = sim.agents.reduce((earliest, agent) => Math.min(earliest, agent.depart_at_s), Infinity);
+    if (!Number.isFinite(firstDeparture)) return 0;
+    const target = requested == null ? firstDeparture - ASSUMED_OPENING_LEAD_S : requested;
+    const safe = Math.max(0, Math.min(target, firstDeparture));
+    if (safe <= 0) return 0;
+    sim.timeS = safe;
+    this.session.fastForwardTo(safe);
+    return safe;
   }
 
   inject(kind: AnomalyKind, durationS?: number): Anomaly {
