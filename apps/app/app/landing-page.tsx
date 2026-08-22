@@ -110,6 +110,60 @@ const PRICING = [
   },
 ] as const;
 
+function AppleIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16.37 12.29c.03-2.1 1.72-3.12 1.8-3.17-1-1.45-2.52-1.65-3.06-1.67-1.3-.13-2.54.77-3.2.77-.66 0-1.68-.75-2.76-.73-1.42.02-2.73.83-3.46 2.1-1.48 2.56-.38 6.35 1.06 8.43.7 1.02 1.54 2.16 2.64 2.12 1.06-.04 1.46-.68 2.74-.68 1.28 0 1.64.68 2.76.66 1.14-.02 1.86-1.04 2.55-2.06.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.84-2.22-3.41zM14.7 5.9c.58-.71.98-1.69.87-2.67-.84.03-1.86.56-2.46 1.27-.54.63-1.01 1.63-.88 2.59.93.07 1.89-.47 2.47-1.19z" />
+    </svg>
+  );
+}
+
+function AndroidIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.6 9.48l1.84-3.18a.5.5 0 0 0-.86-.5l-1.86 3.22A8.3 8.3 0 0 0 12 8.2c-1.66 0-3.2.48-4.5 1.3L5.64 5.8a.5.5 0 1 0-.86.5l1.84 3.18C4.4 11.05 3.2 13.35 3.2 16h17.6c0-2.65-1.2-4.95-3.2-6.52zM8.7 13.5a.85.85 0 1 1 0-1.7.85.85 0 0 1 0 1.7zm6.6 0a.85.85 0 1 1 0-1.7.85.85 0 0 1 0 1.7zM4.4 17.2c0 .44.36.8.8.8h.8v2.7a1.1 1.1 0 0 0 2.2 0v-2.7h7.6v2.7a1.1 1.1 0 0 0 2.2 0v-2.7h.8c.44 0 .8-.36.8-.8v-.4H4.4v.4z" />
+    </svg>
+  );
+}
+
+function DownloadApp({
+  className,
+  iconClassName,
+  labelClassName,
+  large = false,
+}: {
+  className?: string;
+  iconClassName?: string;
+  labelClassName?: string;
+  large?: boolean;
+}) {
+  const box = large ? "h-12 w-12" : "h-8 w-8";
+  const icon = iconClassName ?? (large ? "h-5 w-5" : "h-4 w-4");
+  return (
+    <div className={className ?? "inline-flex items-center gap-3"}>
+      <span className={labelClassName ?? "text-sm font-semibold tracking-wide uppercase"}>
+        Download app
+      </span>
+      <div className="flex items-center gap-1.5">
+        <a
+          href="#download-ios"
+          aria-label="Download on the App Store"
+          className={`inline-flex ${box} items-center justify-center border border-current/30 transition hover:border-current hover:bg-current/10`}
+        >
+          <AppleIcon className={icon} />
+        </a>
+        <a
+          href="#download-android"
+          aria-label="Get it on Google Play"
+          className={`inline-flex ${box} items-center justify-center border border-current/30 transition hover:border-current hover:bg-current/10`}
+        >
+          <AndroidIcon className={icon} />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function DashboardCta({
   children,
   className,
@@ -190,13 +244,15 @@ export function LandingPage() {
               ))}
             </div>
 
-            <div className="hidden items-center gap-4 md:flex">
-              <Link
-                href="/dashboard"
-                className={`text-sm transition-all duration-500 ${scrolled ? "text-muted-foreground hover:text-foreground" : "text-white/70 hover:text-white"}`}
-              >
-                Sign in
-              </Link>
+            <div className="hidden items-center gap-5 md:flex">
+              <DownloadApp
+                className={`inline-flex items-center gap-3 transition-all duration-500 ${
+                  scrolled ? "text-foreground" : "text-white"
+                }`}
+                labelClassName={`text-sm font-semibold tracking-wide uppercase transition-colors ${
+                  scrolled ? "text-muted-foreground" : "text-white/80"
+                }`}
+              />
               <DashboardCta
                 className={`inline-flex h-8 items-center justify-center px-6 text-sm font-semibold tracking-wide uppercase transition-all duration-500 ${
                   scrolled
@@ -259,17 +315,15 @@ export function LandingPage() {
                 </a>
               ))}
             </div>
-            <div className="border-foreground/10 flex gap-4 border-t pt-8">
+            <div className="border-foreground/10 flex flex-col gap-4 border-t pt-8">
+              <DownloadApp
+                large
+                className="text-foreground flex items-center justify-between gap-4"
+                labelClassName="text-base font-semibold tracking-wide uppercase"
+              />
               <Link
                 href="/dashboard"
-                className="border-foreground/20 flex h-14 flex-1 items-center justify-center border text-base font-semibold tracking-wide uppercase"
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/dashboard"
-                className="bg-accent text-white flex h-14 flex-1 items-center justify-center text-base font-semibold tracking-wide uppercase"
+                className="bg-accent text-white flex h-14 w-full items-center justify-center text-base font-semibold tracking-wide uppercase"
                 onClick={() => setMenuOpen(false)}
               >
                 Open console
