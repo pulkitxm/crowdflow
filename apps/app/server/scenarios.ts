@@ -1,5 +1,5 @@
 import { ASSUMED_DEMO_POPULATION } from '@crowdflow/contracts';
-import { arrival, egress, type Scenario } from '@crowdflow/core';
+import { arrival, egress, Scenario } from '@crowdflow/core';
 import type { LoadedCircuit } from './packs.js';
 import type { ScenarioOption } from '@crowdflow/contracts/wire';
 
@@ -68,6 +68,7 @@ export function buildScenario(
   seed: number,
   origins?: string[] | null,
   destination?: string | null,
+  timing: { joinRatePerS?: number; durationS?: number } = {},
 ): { scenario: Scenario; option: ScenarioOption } {
   const option = scenarioOptions(circuit).find((value) => value.id === id);
   if (!option) throw new Error(`unknown scenario ${id}`);
@@ -92,13 +93,14 @@ export function buildScenario(
     origin_names: selectedOrigins.map((zone) => label(circuit, zone)),
     destination_name: label(circuit, selectedDestination),
   };
-  return {
-    scenario:
-      id === 'egress'
-        ? egress(circuit.graph, selectedOrigins, selectedDestination, population, seed)
-        : arrival(circuit.graph, selectedOrigins[0]!, selectedDestination, population, seed),
-    option: resolved,
-  };
+  const base = id === 'egress'
+    ? egress(circuit.graph, selectedOrigins, selectedDestination, population, seed)
+    : selectedOrigins.length === 1
+      ? arrival(circuit.graph, selectedOrigins[0]!, selectedDestination, population, seed)
+      : new Scenario('arrival', `${population} spectators arrive through ${selectedOrigins.length} gates`, selectedOrigins.map((origin, index) => ({ count: Math.floor(population / selectedOrigins.length) + (index < population % selectedOrigins.length ? 1 : 0), origin, destination: selectedDestination, start_s: 0, spread_s: 300 })), 1800, seed);
+  const spread = timing.joinRatePerS == null ? null : population / timing.joinRatePerS;
+  const cohorts = spread == null ? base.cohorts : base.cohorts.map((cohort) => ({ ...cohort, spread_s: spread }));
+  return { scenario: new Scenario(base.name, base.description, cohorts, timing.durationS ?? base.durationS, seed), option: resolved };
 }
 function label(circuit: LoadedCircuit, id: string): string {
   return circuit.pack.zones?.[id]?.name ?? id;

@@ -18,7 +18,7 @@ export function simulatedPeopleQuery(sim: Simulation, circuitId: string, request
   for (const occupant of sim.occupantPositions()) {
     const { x, y } = occupant.position;
     if (x < minX || x > maxX || y < minY || y > maxY) continue;
-    matched += 1;
+    matched += sim.config.population_scale;
     const cellMinX = Math.floor(x / size) * size;
     const cellMinY = Math.floor(y / size) * size;
     const id = `${cellMinX}:${cellMinY}`;
@@ -26,7 +26,7 @@ export function simulatedPeopleQuery(sim: Simulation, circuitId: string, request
       id, min_x: cellMinX, min_y: cellMinY, max_x: cellMinX + size, max_y: cellMinY + size,
       count: 0, person_ids: [],
     };
-    cell.count += 1;
+    cell.count += sim.config.population_scale;
     if (cell.person_ids.length < CELL_ID_SAMPLE_MAX) cell.person_ids.push(occupant.id);
     cells.set(id, cell);
   }

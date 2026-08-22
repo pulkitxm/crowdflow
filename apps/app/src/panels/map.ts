@@ -22,7 +22,15 @@
  *     the view changes, so a tick costs one blit plus the live marks.
  */
 import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
-import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry , RaceStateWire } from "@crowdflow/contracts/wire";
+import type {
+  LiveSnapshot,
+  PeopleQueryResult,
+  StandardsReport,
+  TickEnvelope,
+  VenueGeometry,
+  RaceStateWire,
+  ScenarioSnapshot,
+} from "@crowdflow/contracts/wire";
 import { el, clear } from "../dom";
 import { NO_VALUE, fixed, integer } from "../format";
 import { decayVelocity, easeOutCubic, layerTransform, revealProgress, smoothToward } from "../mapMotion";
@@ -117,6 +125,7 @@ export class MapPanel {
 
   private geometry: VenueGeometry | null = null;
   private race: RaceStateWire | null = null;
+  private scenario: ScenarioSnapshot | null = null;
   private trackLengths: number[] = [];
   private standards: StandardsReport | null = null;
   private rows: ZoneRow[] = [];
@@ -209,6 +218,12 @@ export class MapPanel {
   setSelected(zoneId: string | null): void {
     this.selected = zoneId;
     this.draw();
+  }
+
+  setScenario(snapshot: ScenarioSnapshot | null): void {
+    this.scenario = snapshot;
+    this.draw();
+    this.paintLegend();
   }
 
   updateLive(snapshot: LiveSnapshot): void {
@@ -1283,6 +1298,7 @@ export class MapPanel {
       if (this.grid) this.drawCohorts(ctx, this.grid, width, height, gridProgress);
     }
     if (this.showSectors) this.drawSectors(ctx, width, height);
+    this.drawHazards(ctx);
 
     for (const id of [this.hovered, this.selected]) {
       if (!id) continue;
@@ -1298,6 +1314,53 @@ export class MapPanel {
 
     this.drawCars(ctx);
     ctx.restore();
+  }
+
+  private drawHazards(ctx: CanvasRenderingContext2D): void {
+    const geometry = this.geometry;
+    const zones = geometry?.pack.zones ?? {};
+    const edges = geometry?.pack.edges ?? {};
+    if (!geometry || !this.scenario?.active_hazards.length) return;
+    ctx.save();
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textBaseline = "bottom";
+    for (const hazard of this.scenario.active_hazards) {
+      const edge = edges[hazard.location.edge_id ?? ""];
+      if (edge) {
+        const source = zones[edge.source]?.position;
+        const destination = zones[edge.destination]?.position;
+        if (!source || !destination) continue;
+        const [x1, y1] = this.toScreen(source.x, source.y);
+        const [x2, y2] = this.toScreen(destination.x, destination.y);
+        ctx.strokeStyle = "#ff6367";
+        ctx.lineWidth = 7;
+        ctx.setLineDash([10, 6]);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        this.hazardLabel(ctx, (x1 + x2) / 2, (y1 + y2) / 2, `${hazard.id} WALKWAY ${hazard.mode === "closed" ? "CLOSED" : `${hazard.capacity_percent}%`}`);
+        continue;
+      }
+      const target = hazard.location.position ?? zones[hazard.location.zone_id ?? hazard.location.gate_id ?? ""]?.position;
+      if (!target) continue;
+      const [x, y] = this.toScreen(target.x, target.y);
+      const radius = hazard.type === "fire" ? Math.max(14, Math.min(240, (hazard.radius_m ?? 20) * this.view.scale)) : 18;
+      ctx.fillStyle = "rgba(255, 99, 103, 0.16)";
+      ctx.strokeStyle = "#ff6367";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([7, 5]);
+      ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x - 10, y - 10); ctx.lineTo(x + 10, y + 10); ctx.moveTo(x + 10, y - 10); ctx.lineTo(x - 10, y + 10); ctx.stroke();
+      this.hazardLabel(ctx, x + radius + 5, y, `${hazard.id} ${hazard.type.replaceAll("_", " ").toUpperCase()} ${hazard.mode === "closed" ? "CLOSED" : `${hazard.capacity_percent}%`}`);
+    }
+    ctx.restore();
+  }
+
+  private hazardLabel(ctx: CanvasRenderingContext2D, x: number, y: number, text: string): void {
+    const width = ctx.measureText(text).width;
+    ctx.fillStyle = this.theme === "light" ? "rgba(255, 255, 255, 0.92)" : "rgba(8, 11, 14, 0.9)";
+    ctx.fillRect(x, y - 14, width + 8, 18);
+    ctx.fillStyle = "#ff6367";
+    ctx.fillText(text, x + 4, y + 1);
   }
 
   setRace(race: RaceStateWire | null): void {
@@ -1517,6 +1580,17 @@ export class MapPanel {
 
   private paintLegend(): void {
     clear(this.legend);
+    const activeHazards = this.scenario?.active_hazards.length ?? 0;
+    if (activeHazards > 0) this.legend.append(
+      el(
+        "div",
+        { class: "legend__item legend__item--hazard" },
+        el("span", { class: "legend__glyph", text: "⊗" }),
+        el("span", { class: "legend__word", text: "ACTIVE HAZARDS" }),
+        el("span", { class: "legend__count", text: integer(activeHazards) }),
+        el("span", { class: "legend__note", text: "shape and label mark unsafe routing" }),
+      ),
+    );
     if (this.showKinds) {
       this.paintKindLegend();
       this.paintLiveLegend();

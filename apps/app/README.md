@@ -13,8 +13,8 @@ From the repository root:
 make app
 ```
 
-then open <http://127.0.0.1:5199>. The race-day simulator is available at
-<http://127.0.0.1:5199/simulator>, the HTTP endpoints are under `/api`, and
+then open <http://127.0.0.1:5199/dashboard>. The live scenario control center is
+available at <http://127.0.0.1:5199/simulator>, the HTTP endpoints are under `/api`, and
 live dashboard updates use `/ws` on the same server.
 
 Overridable: `CIRCUIT SCENARIO POPULATION SEED SPEED APP_PORT`.
@@ -24,6 +24,51 @@ make app POPULATION=6000 SEED=7 SPEED=1
 ```
 
 `make test` runs every workspace's `tsc --noEmit` and Vitest suite.
+
+## Scenario control center
+
+The simulator page owns the authoritative run configuration, lifecycle controls,
+emergency controls, live metrics, portal status, and event history. It can start,
+pause, resume, stop, and reset a run without a separate API process. Reset and
+clearing every hazard require typed confirmation.
+
+Fire, gate, walkway, and exit hazards change the server-side venue graph. Closed
+routes are excluded, restricted routes receive a capacity penalty, affected
+people are rerouted, and people without a valid route remain in an awaiting-safe-
+route state. Clearing a hazard restores its graph capacity without clearing other
+active hazards. Emergency evacuation respects every active restriction and
+reports progress, throughput, congestion, and estimated clearance time.
+
+The documented large run is accepted directly by the browser form:
+
+```
+Population: 500000
+Join rate per second: 1000
+Tick interval: 1000
+Duration: 86400
+Movement scale: 90
+```
+
+Large runs use bounded modeled agents, reporting nodes, cohorts, and aggregate
+counts. The dashboard does not create one DOM or canvas object per spectator.
+
+## Control protocol
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/session/state` | Read the current authoritative scenario snapshot. |
+| `POST` | `/api/session` | Validate configuration and start a session. |
+| `POST` | `/api/session/control` | Pause, resume, stop, reset, or change speed. |
+| `POST` | `/api/session/hazards` | Apply a fire, gate, walkway, or exit hazard. |
+| `DELETE` | `/api/session/hazards/:id` | Clear one hazard by stable ID. |
+| `DELETE` | `/api/session/hazards` | Clear all hazards with `CLEAR ALL` confirmation. |
+| `POST` | `/api/session/evacuation` | Enable emergency evacuation mode. |
+
+Every `/ws` connection receives an authoritative snapshot, including idle
+connections and reconnects. Scenario revisions are monotonic, so browser clients
+discard older updates. The simulator and dashboard receive lifecycle, hazard,
+portal availability, rerouting, evacuation, congestion, and event-history changes
+on the same origin.
 
 ## What is on the screen
 

@@ -17,6 +17,13 @@ export interface RouteResult {
   rejected_reason?: string;
 }
 
+export interface OperationalRestrictions {
+  closedEdges?: Iterable<string>;
+  closedZones?: Iterable<string>;
+  edgeCapacity?: Iterable<[string, number]>;
+  zoneCapacity?: Iterable<[string, number]>;
+}
+
 type CacheKey = string;
 
 export class VenueGraph {
@@ -28,7 +35,12 @@ export class VenueGraph {
   private closed = new Set<string>();
   private forbidden = new Set<string>();
   private forbiddenEdges = new Set<string>();
+  private operationalClosedEdges = new Set<string>();
+  private operationalClosedZones = new Set<string>();
+  private edgeCapacityFactors = new Map<string, number>();
+  private zoneCapacityFactors = new Map<string, number>();
   private cache = new Map<CacheKey, RouteResult>();
+  private operationalRevision = 0;
 
   constructor(pack: CircuitPack, sessionState: string | null = null) {
     this.pack = pack;
@@ -59,14 +71,38 @@ export class VenueGraph {
     }
   }
 
-  get routeCacheSize(): number {
-    return this.cache.size;
+  get routeCacheSize(): number { return this.cache.size; }
+  get closedEdges(): Set<string> { return new Set(this.closed); }
+  get forbiddenZones(): Set<string> { return new Set(this.forbidden); }
+  get restrictionsRevision(): number { return this.operationalRevision; }
+
+  setOperationalRestrictions(restrictions: OperationalRestrictions): void {
+    this.operationalClosedEdges = new Set(restrictions.closedEdges ?? []);
+    this.operationalClosedZones = new Set(restrictions.closedZones ?? []);
+    this.edgeCapacityFactors = new Map(restrictions.edgeCapacity ?? []);
+    this.zoneCapacityFactors = new Map(restrictions.zoneCapacity ?? []);
+    for (const factor of [...this.edgeCapacityFactors.values(), ...this.zoneCapacityFactors.values()]) {
+      if (!(factor > 0 && factor <= 1)) throw new Error('capacity factors must be in (0, 1]');
+    }
+    this.operationalRevision += 1;
+    this.cache.clear();
   }
-  get closedEdges(): Set<string> {
-    return new Set(this.closed);
+
+  operationalState(): { closed_edges: string[]; closed_zones: string[]; edge_capacity: Record<string, number>; zone_capacity: Record<string, number> } {
+    return {
+      closed_edges: [...this.operationalClosedEdges].sort(),
+      closed_zones: [...this.operationalClosedZones].sort(),
+      edge_capacity: Object.fromEntries([...this.edgeCapacityFactors].sort(([a], [b]) => a.localeCompare(b))),
+      zone_capacity: Object.fromEntries([...this.zoneCapacityFactors].sort(([a], [b]) => a.localeCompare(b))),
+    };
   }
-  get forbiddenZones(): Set<string> {
-    return new Set(this.forbidden);
+
+  isEdgeAvailable(edgeId: string): boolean { return !this.closed.has(edgeId) && !this.operationalClosedEdges.has(edgeId); }
+  isZoneAvailable(zoneId: string): boolean { return !this.forbidden.has(zoneId) && !this.operationalClosedZones.has(zoneId); }
+  edgeCapacityFactor(edgeId: string): number {
+    const edge = this.pack.edges?.[edgeId];
+    if (!edge) return 0;
+    return Math.min(this.edgeCapacityFactors.get(edgeId) ?? 1, this.zoneCapacityFactors.get(edge.source) ?? 1, this.zoneCapacityFactors.get(edge.destination) ?? 1);
   }
 
   neighbours(zoneId: string): Array<[string, string]> {
@@ -75,7 +111,7 @@ export class VenueGraph {
 
   edgeCost(edgeId: string, states?: Record<string, ZoneState>, avoid?: Set<string>): [number, number] {
     const edge = this.pack.edges?.[edgeId];
-    if (!edge) return [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    if (!edge || !this.isEdgeAvailable(edgeId)) return [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
     const state = states?.[edge.destination] ?? states?.[edge.source];
     const speed = state
       ? Math.max(MIN_SPEED_MS, state.mean_speed_ms)
@@ -86,6 +122,7 @@ export class VenueGraph {
     else if (state?.band === 'critical') cost *= CRITICAL_WEIGHT;
     if (!isTrustworthy(edge.width_m)) cost *= UNTRUSTED_WIDTH_PENALTY;
     if (avoid?.has(edge.source) || avoid?.has(edge.destination)) cost *= AVOID_PENALTY;
+    cost /= this.edgeCapacityFactor(edgeId);
     return [cost, travel];
   }
 
@@ -145,6 +182,15 @@ export class VenueGraph {
         eta_s: 0,
         rejected_reason: `unknown destination ${destination}`,
       };
+    if (!this.isZoneAvailable(destination))
+      return {
+        path: [],
+        edge_ids: [],
+        cost_s: Infinity,
+        distance_m: 0,
+        eta_s: 0,
+        rejected_reason: `destination ${destination} is unavailable`,
+      };
     if (origin === destination) return { path: [origin], edge_ids: [], cost_s: 0, distance_m: 0, eta_s: 0 };
 
     const best = new Map([[origin, 0]]);
@@ -161,7 +207,7 @@ export class VenueGraph {
       seen.add(node);
       if (node === destination) break;
       for (const [next, edgeId] of this.neighbours(node)) {
-        if (seen.has(next)) continue;
+        if (seen.has(next) || !this.isEdgeAvailable(edgeId) || !this.isZoneAvailable(next)) continue;
         let [cost, travel] = this.edgeCost(edgeId, states, avoid);
         if (prefer?.has(edgeId) || prefer?.has(next)) cost *= PREFER_DISCOUNT;
         const arrival = (elapsed.get(node) ?? 0) + travel;
