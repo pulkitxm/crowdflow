@@ -24,9 +24,9 @@ export class ScenarioSession {
   subscribe(listener: (envelope: TickEnvelope) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   note(kind: ConsoleEvent['kind'], severity: ConsoleEvent['severity'], message: string, zoneId?: string): ConsoleEvent { return this.log(kind, severity, message, zoneId); }
   control(action: 'play' | 'pause' | 'step' | 'speed', speed?: number): SessionInfo {
-    if (action === 'play' && this.status !== 'finished') { this.status = 'running'; this.schedule(); }
+    if (action === 'play' && this.status !== 'completed') { this.status = 'running'; this.schedule(); }
     else if (action === 'pause') { this.status = 'paused'; if (this.timer) clearTimeout(this.timer); }
-    else if (action === 'step' && this.status !== 'finished') this.tickOnce();
+    else if (action === 'step' && this.status !== 'completed') this.tickOnce();
     else if (action === 'speed') { if (!speed || speed <= 0) throw new Error('speed must be positive'); this.speed = speed; }
     return this.info();
   }
@@ -50,7 +50,7 @@ export class ScenarioSession {
   }
   private schedule(): void {
     if (this.status !== 'running') return;
-    if (this.tickIndex >= Math.trunc(this.scenario.durationS / this.sim.config.tick_s)) { this.status = 'finished'; return; }
+    if (this.tickIndex >= Math.trunc(this.scenario.durationS / this.sim.config.tick_s)) { this.status = 'completed'; return; }
     const started = performance.now(); this.tickOnce(); const wait = Math.max(0, this.sim.config.tick_s * 1000 / this.speed - (performance.now() - started));
     this.timer = setTimeout(() => this.schedule(), wait);
   }

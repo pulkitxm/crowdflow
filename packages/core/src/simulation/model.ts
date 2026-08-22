@@ -17,7 +17,7 @@ export interface Leg { zone: string; dwell_s: number; until_s?: number }
 export interface Agent {
   id: number; origin: string; destination: string; at: string;
   next_zone: string | null; edge_id: string | null; progress_m: number;
-  desired_speed_ms: number; path: string[]; arrived: boolean; stranded: boolean; depart_at_s: number;
+  desired_speed_ms: number; path: string[]; arrived: boolean; stranded: boolean; awaiting_route: boolean; depart_at_s: number;
   started: boolean; walk_time_s: number; last_route_s: number;
   complies: boolean; participates: boolean;
   itinerary: Leg[]; pending_leg: Leg | null; dwell_until_s: number;
@@ -26,10 +26,10 @@ export interface Agent {
 const LEG_ADVANCE_GUARD = 64;
 
 export interface SimConfig {
-  seed: number; tick_s: number; compliance: number; participation: number; speed_sigma: number;
+  seed: number; tick_s: number; compliance: number; participation: number; speed_sigma: number; movement_scale: number; start_person_id: number;
 }
 export const DEFAULT_SIM_CONFIG: SimConfig = {
-  seed: 42, tick_s: 2, compliance: 0.7, participation: 0.18, speed_sigma: 0.18,
+  seed: 42, tick_s: 2, compliance: 0.7, participation: 0.18, speed_sigma: 0.18, movement_scale: 1, start_person_id: 0,
 };
 
 export class Simulation {
@@ -48,6 +48,7 @@ export class Simulation {
   constructor(readonly graph: VenueGraph, config: Partial<SimConfig> = {}) {
     this.config = { ...DEFAULT_SIM_CONFIG, ...config };
     this.rng = new Random(this.config.seed);
+    this.nextId = this.config.start_person_id;
   }
 
   addAgents(count: number, origin: string, destination: string, startS = 0, spreadS = 0): number {
@@ -55,7 +56,7 @@ export class Simulation {
       const speed = Math.max(0.4, this.rng.gauss(FREE_FLOW_SPEED_MS, this.config.speed_sigma));
       this.agents.push({
         id: this.nextId++, origin, destination, at: origin, next_zone: null, edge_id: null,
-        progress_m: 0, desired_speed_ms: speed, path: [], arrived: false, stranded: false,
+        progress_m: 0, desired_speed_ms: speed, path: [], arrived: false, stranded: false, awaiting_route: false,
         depart_at_s: startS + (spreadS ? this.rng.random() * spreadS : 0), started: false,
         walk_time_s: 0, last_route_s: -1e9, complies: this.rng.random() < this.config.compliance,
         participates: this.rng.random() < this.config.participation,
@@ -121,12 +122,14 @@ export class Simulation {
       agent.complies ? this.prefer : undefined,
     );
     agent.path = result.path.length ? result.path.slice(1) : [];
+    agent.awaiting_route = result.path.length === 0 && agent.at !== agent.destination;
+    agent.stranded = agent.awaiting_route;
     agent.last_route_s = this.timeS;
   }
 
   private enterNextEdge(agent: Agent): void {
     if (!agent.path.length) this.plan(agent);
-    if (!agent.path.length) { agent.arrived = true; agent.stranded = true; return; }
+    if (!agent.path.length) { agent.awaiting_route = true; agent.stranded = true; return; }
     const next = agent.path.shift()!;
     for (const [destination, edgeId] of this.graph.neighbours(agent.at)) {
       if (destination === next) {
@@ -134,7 +137,7 @@ export class Simulation {
       }
     }
     agent.path = []; this.plan(agent);
-    if (!agent.path.length) { agent.arrived = true; agent.stranded = true; }
+    if (!agent.path.length) { agent.awaiting_route = true; agent.stranded = true; }
   }
 
   private settle(agent: Agent): void {
@@ -175,6 +178,10 @@ export class Simulation {
     const occupancy = this.edgeOccupancy();
     for (const agent of this.agents) {
       if (agent.arrived) continue;
+      if (agent.awaiting_route) {
+        this.plan(agent);
+        if (agent.awaiting_route) continue;
+      }
       if (agent.dwell_until_s > 0) {
         if (this.timeS < agent.dwell_until_s) continue;
         agent.dwell_until_s = 0;
@@ -196,9 +203,9 @@ export class Simulation {
       let edge = this.graph.pack.edges?.[agent.edge_id];
       if (!edge) continue;
       const here = occupancy[agent.edge_id] ?? 1;
-      const density = here / Math.max(edge.length_m * edge.width_m.value, 1);
+      const density = here / Math.max(edge.length_m * edge.width_m.value * this.graph.edgeCapacityFactor(agent.edge_id), 1);
       const speed = Math.min(agent.desired_speed_ms, speedAtDensity(density));
-      agent.progress_m += speed * dt;
+      agent.progress_m += speed * dt * this.config.movement_scale;
       agent.walk_time_s += dt;
       while (agent.edge_id && agent.progress_m >= edge.length_m) {
         agent.progress_m -= edge.length_m;
@@ -287,4 +294,29 @@ export class Simulation {
   get active(): number { return this.agents.filter((agent) => agent.started && !agent.arrived).length; }
   get arrived(): number { return this.agents.filter((agent) => agent.arrived).length; }
   get stranded(): number { return this.agents.filter((agent) => agent.stranded).length; }
+  get awaitingRoute(): number { return this.agents.filter((agent) => agent.awaiting_route && !agent.arrived).length; }
+
+  invalidateRoutes(predicate: (agent: Agent) => boolean = () => true): number {
+    let affected = 0;
+    for (const agent of this.agents) {
+      if (agent.arrived || !predicate(agent)) continue;
+      affected += 1;
+      agent.path = [];
+      agent.awaiting_route = false;
+      agent.stranded = false;
+      if (agent.edge_id && !this.graph.isEdgeAvailable(agent.edge_id)) {
+        agent.edge_id = null;
+        agent.next_zone = null;
+        agent.progress_m = 0;
+      }
+    }
+    return affected;
+  }
+
+  stepRoutes(): void {
+    for (const agent of this.agents) {
+      if (agent.arrived || !agent.started) continue;
+      if (!agent.edge_id && !agent.path.length) this.plan(agent);
+    }
+  }
 }

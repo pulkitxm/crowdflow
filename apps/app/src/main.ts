@@ -513,7 +513,8 @@ function handleFrame(frame: SocketFrame): void {
 
   if (frame.type === "hello") {
     if (frame.standards) standards = frame.standards;
-    void loadGeometry(frame.session.circuit_id);
+    const circuitId = frame.session?.circuit_id ?? frame.scenario_snapshot?.circuit_id;
+    if (circuitId) void loadGeometry(circuitId);
     if (frame.last_tick) {
       memory.observe(frame.last_tick);
       latest = frame.last_tick;
