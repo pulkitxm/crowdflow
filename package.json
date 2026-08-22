@@ -9,23 +9,27 @@
     "apps/*"
   ],
   "scripts": {
+    "circuits:generate": "bun scripts/generate-circuit-catalogue.mjs --refresh-source",
+    "circuits:check": "bun scripts/generate-circuit-catalogue.mjs --check && bun scripts/validate-circuit-catalogue.mjs && bun packages/cli/src/main.ts circuit self-test > /dev/null && bun scripts/build-mobile-demo.mjs --check",
     "codegen": "bun run --filter @crowdflow/contracts codegen",
     "comments:check": "bun scripts/check-comments.mjs --selftest && bun scripts/check-comments.mjs",
     "dev": "turbo run dev --filter=app --",
-    "lint": "turbo run lint && biome lint scripts presentation --diagnostic-level=error",
+    "lint": "turbo run lint && biome lint scripts apps/presentation --diagnostic-level=error",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "build": "turbo run build",
-    "check": "bun run comments:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "presentation:check": "bun scripts/check-presentation-routes.mjs",
+    "check": "bun run comments:check && bun run circuits:check && bun run lint && bun run typecheck && bun run test && bun run build && bun run presentation:check",
     "crowdflow": "bun packages/cli/src/main.ts"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",
     "@biomejs/biome": "2.5.9",
     "@types/node": "26.2.0",
+    "svg-path-properties": "2.0.2",
     "turbo": "2.10.11",
     "typescript": "7.0.2",
     "vitest": "4.1.11"

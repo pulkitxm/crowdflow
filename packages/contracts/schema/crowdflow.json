@@ -125,12 +125,23 @@
       },
       "type": "object"
     },
+    "CircuitCapability": {
+      "enum": [
+        "synthetic_simulation",
+        "venue_imported",
+        "venue_reviewed"
+      ],
+      "type": "string"
+    },
     "CircuitPack": {
       "additionalProperties": false,
       "description": "One venue. Swapping circuits must require no code change.",
       "properties": {
         "altitude_m": {
           "type": "number"
+        },
+        "capability": {
+          "$ref": "#/$defs/CircuitCapability"
         },
         "constraints": {
           "$ref": "#/$defs/SafetyConstraints"
@@ -157,8 +168,14 @@
         "id": {
           "type": "string"
         },
+        "layout_id": {
+          "type": "string"
+        },
         "name": {
           "type": "string"
+        },
+        "track_clearance_m": {
+          "$ref": "#/$defs/Sourced"
         },
         "track_length_m": {
           "type": "number"
@@ -174,8 +191,11 @@
         "id",
         "name",
         "geometry_source",
+        "layout_id",
+        "capability",
         "track_length_m",
         "altitude_m",
+        "track_clearance_m",
         "frame"
       ],
       "type": "object"
@@ -427,6 +447,12 @@
           ],
           "description": "observed where available, else the standards prior"
         },
+        "geometry": {
+          "items": {
+            "$ref": "#/$defs/Position"
+          },
+          "type": "array"
+        },
         "gradient": {
           "description": "rise over run; affects walking speed",
           "type": "number"
@@ -450,7 +476,8 @@
         "source",
         "destination",
         "length_m",
-        "width_m"
+        "width_m",
+        "geometry"
       ],
       "type": "object"
     },
@@ -1229,6 +1256,12 @@
           "type": "array"
         },
         "emergency_exits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "never_route_edges": {
           "items": {
             "type": "string"
           },

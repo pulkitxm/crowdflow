@@ -2,8 +2,8 @@
 
 // Contract types are imported, never restated: one authored TypeScript
 // definition of ZoneState serves every runtime and UI.
-import type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "./types.js";
-export type { AnchorKind, AnchorPack, Availability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState };
+import type { AnchorKind, AnchorPack, Availability, CircuitCapability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState } from "./types.js";
+export type { AnchorKind, AnchorPack, Availability, CircuitCapability, CircuitPack, Confidence, CoordinateFrame, Crossing, CrossingKind, CrowdNode, Edge, EventProfile, Forecast, IngestAck, InterventionCandidate, LOSBand, NodeReport, Position, PositionFix, PositionSource, Provenance, RadioAnchor, RerouteCommand, SafetyConstraints, SafetyOutcome, SafetyVerdict, ScoreBreakdown, SensingStatus, Session, Sourced, VenueState, Zone, ZoneKind, ZoneState };
 
 export interface PersonRecord {
   person_id: number;
@@ -123,6 +123,8 @@ export interface RaceSummary {
 export interface CircuitSummary {
   id: string;
   name: string;
+  layout_id: string;
+  capability: CircuitCapability;
   zones: number;
   edges: number;
   crossings: number;
