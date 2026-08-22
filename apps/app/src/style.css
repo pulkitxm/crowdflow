@@ -410,7 +410,12 @@ select {
   position: absolute;
   inset: 0;
   display: block;
-  cursor: crosshair;
+  cursor: grab;
+  touch-action: none;
+}
+
+.map__stage canvas:active {
+  cursor: grabbing;
 }
 
 .map__attribution {

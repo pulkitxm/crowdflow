@@ -25,7 +25,7 @@ import type { LOSBand, Position, Zone, ZoneKind } from "@crowdflow/contracts";
 import type { LiveSnapshot, PeopleQueryResult, StandardsReport, TickEnvelope, VenueGeometry , RaceStateWire } from "@crowdflow/contracts/wire";
 import { el, clear } from "../dom";
 import { NO_VALUE, fixed, integer } from "../format";
-import { easeOutCubic, layerTransform, revealProgress } from "../mapMotion";
+import { decayVelocity, easeOutCubic, layerTransform, revealProgress, smoothToward } from "../mapMotion";
 import type { ZoneRow } from "../model";
 import { COHORT_CAPACITY, buildPeopleCohorts } from "../cohorts";
 import { HEAT_BANDS, heatSpots } from "../heatmap";
@@ -91,7 +91,13 @@ const CAR_CARD_COLOUR = "rgba(16, 20, 26, 0.92)";
 const CAR_TEXT_COLOUR = "#f4fbff";
 const PARK_LABEL_FADE_START = 1.8;
 const PARK_LABEL_FADE_END = 3;
-const ZOOM_ANIMATION_MS = 260;
+/** Focus / programmatic camera moves still use a short eased timeline. */
+const ZOOM_ANIMATION_MS = 320;
+/** Wheel zoom settles with continuous exponential smoothing (not a restarted ease). */
+const ZOOM_HALFLIFE_MS = 48;
+const PAN_INERTIA_HALFLIFE_MS = 140;
+const PAN_STOP_SPEED = 0.04;
+const PAN_CLICK_SLOP = 4;
 const GRID_FADE_MS = 220;
 
 /** Screen radius of a zone glyph, in CSS pixels. Not a threshold — a size. */
@@ -130,7 +136,12 @@ export class MapPanel {
   private staticRotation: 0 | 90 | 180 | 270 = 270;
   private selected: string | null = null;
   private hovered: string | null = null;
-  private dragging: { x: number; y: number } | null = null;
+  private dragging: { x: number; y: number; moved: boolean; pointerId: number } | null = null;
+  private pendingSelect: string | null = null;
+  private panVelocity = { x: 0, y: 0 };
+  private panFrame: number | null = null;
+  private panLastTs = 0;
+  private drawFrame: number | null = null;
   private showKinds = false;
   private live: LiveSnapshot | null = null;
   private grid: PeopleQueryResult | null = null;
@@ -145,6 +156,8 @@ export class MapPanel {
   private viewportHeight = 0;
   private zoomFrame: number | null = null;
   private zoomTargetScale: number | null = null;
+  private zoomPivot: { px: number; py: number; rx: number; ry: number } | null = null;
+  private zoomLastTs = 0;
   private gridFrame: number | null = null;
   private gridFadeStarted = 0;
   private basemap: Basemap = "schematic";
@@ -172,11 +185,15 @@ export class MapPanel {
     if (!context) throw new Error("canvas 2d context unavailable");
     this.context = context;
 
+    canvas.style.touchAction = "none";
     canvas.addEventListener("wheel", this.onWheel, { passive: false });
     canvas.addEventListener("pointerdown", this.onPointerDown);
     canvas.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
+    canvas.addEventListener("pointerup", this.onPointerUp);
+    canvas.addEventListener("pointercancel", this.onPointerUp);
+    canvas.addEventListener("lostpointercapture", this.onPointerUp);
     canvas.addEventListener("pointerleave", () => {
+      if (this.dragging) return;
       this.hovered = null;
       this.paintReadout();
     });
@@ -281,7 +298,7 @@ export class MapPanel {
   }
 
   private get viewIsMoving(): boolean {
-    return this.dragging !== null || this.zoomFrame !== null;
+    return this.dragging !== null || this.zoomFrame !== null || this.panFrame !== null;
   }
 
   /**
@@ -437,6 +454,7 @@ export class MapPanel {
   private animateTo(x: number, y: number, zoom: number): void {
     if (this.canvas.clientWidth <= 0 || this.canvas.clientHeight <= 0) return;
     this.cancelZoom();
+    this.cancelPan();
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
     const targetScale = this.fitScale * Math.min(Math.max(zoom, 0.5), 50);
@@ -474,6 +492,7 @@ export class MapPanel {
   restoreView(zoom: number, center: Position | null): void {
     if (!this.geometry) return;
     this.cancelZoom();
+    this.cancelPan();
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
     if (width <= 0 || height <= 0) return;
@@ -563,6 +582,7 @@ export class MapPanel {
 
   private onWheel = (event: WheelEvent): void => {
     event.preventDefault();
+    this.cancelPan();
     const rect = this.canvas.getBoundingClientRect();
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
@@ -572,45 +592,81 @@ export class MapPanel {
 
   private animateZoom(factor: number, px: number, py: number): number {
     const minScale = this.fitScale * 0.5;
+    const maxScale = this.fitScale * 50;
     const baseScale = this.zoomTargetScale ?? this.view.scale;
-    const targetScale = Math.min(Math.max(baseScale * factor, minScale), this.fitScale * 50);
+    const targetScale = Math.min(Math.max(baseScale * factor, minScale), maxScale);
     this.zoomTargetScale = targetScale;
-    const startView = { ...this.view };
-    const target = this.fromScreen(px, py);
-    const [rx, ry] = this.rotateCoord(target.x, target.y);
-    if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
+    const world = this.fromScreen(px, py);
+    const [rx, ry] = this.rotateCoord(world.x, world.y);
+    this.zoomPivot = { px, py, rx, ry };
     if (this.viewportTimer != null) window.clearTimeout(this.viewportTimer);
-    const started = performance.now();
+    this.ensureZoomLoop();
+    return targetScale / Math.max(this.fitScale, 0.0001);
+  }
+
+  private ensureZoomLoop(): void {
+    if (this.zoomFrame != null) return;
+    this.zoomLastTs = performance.now();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const frame = (now: number): void => {
-      const progress = reduced ? 1 : easeOutCubic((now - started) / ZOOM_ANIMATION_MS);
-      const scale = startView.scale + (targetScale - startView.scale) * progress;
+      const targetScale = this.zoomTargetScale;
+      const pivot = this.zoomPivot;
+      if (targetScale == null || !pivot) {
+        this.zoomFrame = null;
+        return;
+      }
+      const dt = Math.min(now - this.zoomLastTs, 48);
+      this.zoomLastTs = now;
+      const scale = reduced
+        ? targetScale
+        : smoothToward(this.view.scale, targetScale, dt, ZOOM_HALFLIFE_MS);
       this.view = {
         scale,
-        offsetX: px - rx * scale,
-        offsetY: py + ry * scale,
+        offsetX: pivot.px - pivot.rx * scale,
+        offsetY: pivot.py + pivot.ry * scale,
       };
-      if (progress < 1) {
+      const settled = Math.abs(scale - targetScale) < Math.max(this.fitScale * 0.0002, 0.00001);
+      if (!settled && !reduced) {
         this.draw();
         this.emitZoom();
         this.zoomFrame = window.requestAnimationFrame(frame);
-      } else {
-        this.zoomFrame = null;
-        this.zoomTargetScale = null;
-        this.invalidateBaseLayers();
-        this.draw();
-        this.emitZoom();
-        this.notifyViewport();
+        return;
       }
+      this.view = {
+        scale: targetScale,
+        offsetX: pivot.px - pivot.rx * targetScale,
+        offsetY: pivot.py + pivot.ry * targetScale,
+      };
+      this.zoomFrame = null;
+      this.zoomTargetScale = null;
+      this.zoomPivot = null;
+      this.invalidateBaseLayers();
+      this.draw();
+      this.emitZoom();
+      this.notifyViewport();
     };
     this.zoomFrame = window.requestAnimationFrame(frame);
-    return targetScale / Math.max(this.fitScale, 0.0001);
   }
 
   private cancelZoom(): void {
     if (this.zoomFrame != null) window.cancelAnimationFrame(this.zoomFrame);
     this.zoomFrame = null;
     this.zoomTargetScale = null;
+    this.zoomPivot = null;
+  }
+
+  private cancelPan(): void {
+    if (this.panFrame != null) window.cancelAnimationFrame(this.panFrame);
+    this.panFrame = null;
+    this.panVelocity = { x: 0, y: 0 };
+  }
+
+  private scheduleDraw(): void {
+    if (this.drawFrame != null) return;
+    this.drawFrame = window.requestAnimationFrame(() => {
+      this.drawFrame = null;
+      this.draw();
+    });
   }
 
   private emitZoom(): void {
@@ -633,45 +689,122 @@ export class MapPanel {
   }
 
   private onPointerDown = (event: PointerEvent): void => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
     this.cancelZoom();
-    this.dragging = { x: event.clientX, y: event.clientY };
-    const picked = this.pick(event);
-    this.selected = picked;
-    this.onSelect(picked);
-    this.draw();
-    this.paintReadout();
+    this.cancelPan();
+    this.canvas.setPointerCapture(event.pointerId);
+    this.dragging = {
+      x: event.clientX,
+      y: event.clientY,
+      moved: false,
+      pointerId: event.pointerId,
+    };
+    this.pendingSelect = this.pick(event);
+    this.panVelocity = { x: 0, y: 0 };
+    this.panLastTs = performance.now();
+    this.canvas.style.cursor = "grabbing";
   };
 
   private onPointerMove = (event: PointerEvent): void => {
-    if (this.dragging) {
+    if (this.dragging && this.dragging.pointerId === event.pointerId) {
       const dx = event.clientX - this.dragging.x;
       const dy = event.clientY - this.dragging.y;
-      this.dragging = { x: event.clientX, y: event.clientY };
+      const now = performance.now();
+      const dt = Math.max(now - this.panLastTs, 1);
+      // Blend recent deltas so release velocity tracks the gesture, not the last sample.
+      const sampleX = dx / dt;
+      const sampleY = dy / dt;
+      this.panVelocity = {
+        x: this.panVelocity.x * 0.65 + sampleX * 0.35,
+        y: this.panVelocity.y * 0.65 + sampleY * 0.35,
+      };
+      this.panLastTs = now;
+      if (!this.dragging.moved && Math.hypot(dx, dy) > PAN_CLICK_SLOP) {
+        this.dragging.moved = true;
+      }
+      this.dragging = {
+        x: event.clientX,
+        y: event.clientY,
+        moved: this.dragging.moved,
+        pointerId: this.dragging.pointerId,
+      };
       this.view = {
         scale: this.view.scale,
         offsetX: this.view.offsetX + dx,
         offsetY: this.view.offsetY + dy,
       };
-      this.draw();
+      this.scheduleDraw();
       return;
     }
     const hovered = this.pick(event);
     if (hovered !== this.hovered) {
       this.hovered = hovered;
       this.paintReadout();
-      this.draw();
+      this.scheduleDraw();
     }
   };
 
-  private onPointerUp = (): void => {
-    const moved = this.dragging !== null;
+  private onPointerUp = (event: PointerEvent): void => {
+    if (!this.dragging || this.dragging.pointerId !== event.pointerId) return;
+    const moved = this.dragging.moved;
+    const pending = this.pendingSelect;
     this.dragging = null;
-    if (moved) {
+    this.pendingSelect = null;
+    this.canvas.style.cursor = "";
+    try {
+      if (this.canvas.hasPointerCapture(event.pointerId)) {
+        this.canvas.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Capture may already be gone after lostpointercapture.
+    }
+    if (!moved) {
+      this.selected = pending;
+      this.onSelect(pending);
+      this.draw();
+      this.paintReadout();
+      return;
+    }
+    const speed = Math.hypot(this.panVelocity.x, this.panVelocity.y);
+    if (
+      speed > PAN_STOP_SPEED &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      this.startPanInertia();
+      return;
+    }
+    this.panVelocity = { x: 0, y: 0 };
+    this.invalidateBaseLayers();
+    this.draw();
+    this.notifyViewport();
+  };
+
+  private startPanInertia(): void {
+    if (this.panFrame != null) window.cancelAnimationFrame(this.panFrame);
+    this.panLastTs = performance.now();
+    const frame = (now: number): void => {
+      const dt = Math.min(now - this.panLastTs, 48);
+      this.panLastTs = now;
+      this.view = {
+        scale: this.view.scale,
+        offsetX: this.view.offsetX + this.panVelocity.x * dt,
+        offsetY: this.view.offsetY + this.panVelocity.y * dt,
+      };
+      this.panVelocity = decayVelocity(this.panVelocity, dt, PAN_INERTIA_HALFLIFE_MS);
+      const speed = Math.hypot(this.panVelocity.x, this.panVelocity.y);
+      if (speed > PAN_STOP_SPEED) {
+        this.draw();
+        this.panFrame = window.requestAnimationFrame(frame);
+        return;
+      }
+      this.panFrame = null;
+      this.panVelocity = { x: 0, y: 0 };
       this.invalidateBaseLayers();
       this.draw();
       this.notifyViewport();
-    }
-  };
+    };
+    this.panFrame = window.requestAnimationFrame(frame);
+  }
 
   private pick(event: { clientX: number; clientY: number }): string | null {
     const geometry = this.geometry;

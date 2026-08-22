@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { easeOutCubic, layerTransform, revealProgress } from "./mapMotion";
+import { decayVelocity, easeOutCubic, layerTransform, revealProgress, smoothToward } from "./mapMotion";
 
 describe("map motion", () => {
   it("eases quickly before settling on the target", () => {
@@ -22,5 +22,18 @@ describe("map motion", () => {
     expect(transform).toEqual({ scale: 1.5, x: 20, y: 25 });
     expect(40 * transform.scale + transform.x).toBe(80);
     expect(60 * transform.scale + transform.y).toBe(115);
+  });
+
+  it("approaches the target without overshooting", () => {
+    expect(smoothToward(0, 100, 0, 50)).toBe(0);
+    expect(smoothToward(0, 100, 50, 50)).toBe(50);
+    expect(smoothToward(0, 100, 100, 50)).toBe(75);
+    expect(smoothToward(90, 100, 10_000, 50)).toBeCloseTo(100, 5);
+  });
+
+  it("decays pan velocity toward rest", () => {
+    expect(decayVelocity({ x: 8, y: -4 }, 0, 120)).toEqual({ x: 8, y: -4 });
+    expect(decayVelocity({ x: 8, y: -4 }, 120, 120)).toEqual({ x: 4, y: -2 });
+    expect(decayVelocity({ x: 8, y: -4 }, 10_000, 120).x).toBeCloseTo(0, 5);
   });
 });
