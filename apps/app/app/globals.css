@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-titillium), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-titillium), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --color-background: #f7f4f1;
+  --color-foreground: #15151e;
+  --color-muted-foreground: #6c6c75;
+  --color-asphalt: #15151e;
+  --color-accent: #e10600;
+  --color-offwhite: #f7f4f1;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stripe-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-progress {
+  animation: progress 6s linear infinite;
+  transform-origin: left;
+}
+
+.hero-zoom {
+  animation: hero-zoom 12s ease-out forwards;
+}
+
+.hero-rise {
+  opacity: 0;
+  animation: hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-rise-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.hero-rise-delay-2 {
+  animation-delay: 0.28s;
+}
+
+.hero-rise-delay-3 {
+  animation-delay: 0.44s;
+}
+
+.hero-rise-delay-4 {
+  animation-delay: 0.6s;
+}
+
+.curb-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #e10600 0 10px,
+    #f7f4f1 10px 20px
+  );
+  transform-origin: left;
+  animation: stripe-in 1s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+
+.track-lanes {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 80px,
+    rgb(255 255 255 / 0.03) 80px,
+    rgb(255 255 255 / 0.03) 81px
+  );
+}
+
+.telemetry-bars {
+  background: linear-gradient(
+    90deg,
+    rgb(225 6 0 / 0.2) 0%,
+    rgb(225 6 0 / 0.7) 40%,
+    rgb(255 255 255 / 0.5) 70%,
+    rgb(225 6 0 / 0.25) 100%
+  );
+  clip-path: polygon(
+    0 60%,
+    8% 55%,
+    16% 70%,
+    24% 40%,
+    32% 48%,
+    40% 25%,
+    48% 35%,
+    56% 18%,
+    64% 30%,
+    72% 12%,
+    80% 28%,
+    88% 8%,
+    100% 20%,
+    100% 100%,
+    0 100%
+  );
+}
+
+.text-stroke {
+  -webkit-text-stroke: 1.5px currentColor;
+  color: transparent;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+}
