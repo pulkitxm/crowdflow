@@ -10,7 +10,6 @@ const IMG = {
   pit: "/landing/pit-lane.jpg",
   crowd: "/landing/f1-crowd.jpg",
   car: "/landing/open-wheel.jpg",
-  runoff: "/landing/circuit-runoff.jpg",
   formula: "/landing/formula-car.jpg",
 } as const;
 
