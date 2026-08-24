@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
   id-token: write
 
 concurrency:
@@ -25,6 +24,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ vars.PUKBOT_CLIENT_ID }}
+          private-key: ${{ secrets.PUKBOT_PRIVATE_KEY }}
+          owner: pulkitxm
+          repositories: vmax
+          permission-pages: write
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Set up Bun
@@ -42,3 +49,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
